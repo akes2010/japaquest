@@ -8,6 +8,8 @@ const { Q } = require('../db');
 const { sendEmail, testSmtp } = require('../utils/mailer');
 const { getOverrides, getEffectivePartners, clearPartnerCache } = require('../ai/affiliates');
 const { PLATFORMS, shareLinks } = require('../utils/social');
+const { socialDirectConfig } = require('../utils/social');
+const { tagUtm } = require('../utils/utm');
 const { REGIONS, describeAudience, deliverPost } = require('../utils/social-delivery');
 
 router.use(requireAdmin);
@@ -330,8 +332,12 @@ router.post('/send-email', async (req, res) => {
 
 // ── SOCIAL POSTS (marketing) ──────────────────────────────────────────────────
 router.get('/social/platforms', (_req, res) => {
+  const direct = socialDirectConfig();
   res.json({
-    platforms: Object.entries(PLATFORMS).map(([id, p]) => ({ id, name: p.name, icon: p.icon })),
+    platforms: Object.entries(PLATFORMS).map(([id, p]) => ({
+      id, name: p.name, icon: p.icon,
+      direct: !!direct[id], // true = real auto-publish configured for this platform
+    })),
     regions: Object.keys(REGIONS),
     passports: Q.getPassports().map(p => ({ code: p.code, name: p.name, flag: p.flag })),
   });
@@ -407,11 +413,14 @@ router.post('/social/posts/:id/publish', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Prefilled one-click composer links per platform
+// Prefilled one-click composer links per platform (links include the post
+// URL UTM-tagged per platform so manual shares are attributable too)
 router.get('/social/posts/:id/share-links', (req, res) => {
   const post = Q.getSocialPost(parseInt(req.params.id));
   if (!post) return res.status(404).json({ error: 'Post not found' });
-  res.json({ links: shareLinks(post.content, post.link_url || '') });
+  const base = post.link_url || '';
+  const links = shareLinks(post.content, base ? tagUtm(base, { source: 'share', medium: 'social', campaign: `post_${post.id}` }) : '');
+  res.json({ links });
 });
 
 // ── TOOL RESULTS (admin view) ──────────────────────────────────────────────────

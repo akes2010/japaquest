@@ -526,7 +526,7 @@ html,body{height:100%;overflow:hidden}
       <div class="form-group"><label class="form-label">Title (used for in-app delivery) *</label><input class="input" id="so-title" placeholder="e.g. Visa-free getaways for Nigerian passports"/></div>
       <div class="form-group"><label class="form-label">Post content *</label><textarea class="input" id="so-content" rows="4" style="resize:vertical" placeholder="Write the post text — emojis and hashtags welcome…"></textarea></div>
       <div class="form-group"><label class="form-label">Link to include (optional)</label><input class="input" id="so-link" placeholder="https://yourdomain.com"/></div>
-      <div class="form-group" style="margin-bottom:8px"><label class="form-label">Platforms * <span style="color:var(--t4);font-weight:400">(click to toggle)</span></label><div class="m-chips" id="so-platforms"></div></div>
+      <div class="form-group" style="margin-bottom:8px"><label class="form-label">Platforms * <span style="color:var(--t4);font-weight:400">(click to toggle · ⚡ = direct auto-post configured)</span></label><div class="m-chips" id="so-platforms"></div></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px">
         <div><label class="form-label">Target countries <span style="color:var(--t4);font-weight:400">(passport markets)</span></label><div class="m-chips" id="so-countries" style="max-height:86px;overflow-y:auto"></div></div>
         <div><label class="form-label">Target regions</label><div class="m-chips" id="so-regions"></div><div id="so-reach" style="font-size:.7rem;color:var(--o300);margin-top:8px">No targeting → public share only</div></div>
@@ -1016,7 +1016,7 @@ async function loadSocial(){
   try{
     const r=await apiFetch('/api/admin/social/platforms');const d=await r.json();
     soMeta={platforms:d.platforms||[],regions:d.regions||[],passports:d.passports||[]};
-    document.getElementById('so-platforms').innerHTML=soMeta.platforms.map(p=>`<button type="button" class="m-chip" data-id="${p.id}" onclick="soToggle('platforms','${p.id}',this)">${p.icon} ${p.name}</button>`).join('');
+    document.getElementById('so-platforms').innerHTML=soMeta.platforms.map(p=>`<button type="button" class="m-chip" title="${p.direct?'Direct auto-post configured — publishes without manual clicks':''}" data-id="${p.id}" onclick="soToggle('platforms','${p.id}',this)">${p.icon} ${p.name}${p.direct?' ⚡':''}</button>`).join('');
     document.getElementById('so-regions').innerHTML=soMeta.regions.map(rg=>`<button type="button" class="m-chip" data-id="${rg}" onclick="soToggle('regions','${rg}',this)">${rg}</button>`).join('');
     document.getElementById('so-countries').innerHTML=soMeta.passports.map(p=>`<button type="button" class="m-chip" data-id="${p.code}" onclick="soToggle('countries','${p.code}',this)">${p.flag} ${p.code}</button>`).join('');
     await loadSocialPosts();

@@ -12,6 +12,8 @@
  * counted per region/country so the admin can preview reach before posting.
  */
 const { Q } = require('../db');
+const { publishViaWebhook, publishDirect } = require('./social');
+const { tagUtm } = require('./utm');
 
 // Region → ISO country codes (used for region matching on passports/users)
 const REGIONS = {
@@ -75,14 +77,19 @@ function describeAudience(targetCountries, targetRegions) {
  * notifications for targeted users. Returns per-platform results.
  */
 async function deliverPost(post) {
-  const { publishViaWebhook } = require('./social');
   const platforms = JSON.parse(post.platforms_json || '[]');
-  const text = post.content;
+  const campaign = `post_${post.id}`;
   const results = [];
 
-  // 1) Webhook auto-publish where configured
+  // 1) Direct platform posting where configured (real auto-publish), then
+  //    webhook fallback for platforms without a direct integration.
   for (const p of platforms) {
-    results.push(await publishViaWebhook(p, text, post.link_url || ''));
+    // Per-platform UTM-tagged link so traffic is attributable per network
+    const link = post.link_url ? tagUtm(post.link_url, { source: p, medium: 'social', campaign, content: p }) : '';
+    let res = await publishDirect(p, post.content, link);
+    if (res) { results.push(res); continue; }
+    res = await publishViaWebhook(p, post.content, link);
+    results.push({ ...res, utm_url: link || undefined });
   }
 
   // 2) Geo-targeted in-app notification (if any targeting set)
@@ -91,13 +98,14 @@ async function deliverPost(post) {
   if (targetCountries.length || targetRegions.length) {
     const countries = targetCountries.map(c => String(c).toUpperCase());
     const users = Q.getAllUsers(1, 100000, '').users || [];
+    const inAppLink = post.link_url ? tagUtm(post.link_url, { source: 'in-app', medium: 'in-app', campaign }) : '';
     let notified = 0;
     for (const u of users) {
       const code = (u.passport_code || '').toUpperCase();
       const uRegions = regionsForCountry(code);
       if (countries.includes(code) || targetRegions.some(r => uRegions.includes(r))) {
         try {
-          Q.createNotification(u.id, post.title, text + (post.link_url ? `\n\n${post.link_url}` : ''), 'info');
+          Q.createNotification(u.id, post.title, post.content + (inAppLink ? `\n\n${inAppLink}` : ''), 'info');
           notified++;
         } catch {}
       }
