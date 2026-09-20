@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="theme-color" content="#0A1428"/>
+<title>Admin — Japa+</title>
+<link rel="stylesheet" href="/style.css"/>
+<link rel="icon" href="/icons/icon.svg"/>
+<style>
+html,body{height:100%;overflow:hidden}
+#app{display:flex;height:100vh;overflow:hidden}
+#sb{width:230px;flex-shrink:0;background:var(--elev1);border-right:1px solid var(--b1);display:flex;flex-direction:column;overflow-y:auto}
+.sb-top{padding:16px 14px;border-bottom:1px solid var(--b0)}
+.sb-brand{display:flex;align-items:center;gap:9px;margin-bottom:4px}
+.sb-icon{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#C14A1B,#E8742E);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;box-shadow:0 4px 12px rgba(217,90,35,.35);overflow:hidden}
+.sb-icon img{width:100%;height:100%;object-fit:cover}
+.sb-name{font-family:var(--fd);font-size:.92rem;font-weight:700;color:var(--a300)}
+.admin-badge{font-size:.56rem;font-weight:700;background:rgba(139,92,246,.12);color:#C4B5FD;border:1px solid rgba(139,92,246,.25);border-radius:var(--r-pill);padding:2px 8px;margin-left:auto}
+.sb-nav{padding:8px 8px;flex:1}
+.nav-sec{font-size:.58rem;font-weight:600;color:var(--t4);letter-spacing:.1em;text-transform:uppercase;padding:9px 8px 4px}
+.sb-btn{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r-sm);color:var(--t3);font-size:.79rem;font-weight:500;cursor:pointer;transition:all var(--ease);border:1px solid transparent;background:none;width:100%;text-align:left}
+.sb-btn:hover{background:var(--glass);color:var(--t1)}
+.sb-btn.active{background:rgba(217,90,35,.1);color:var(--o300);border-color:rgba(217,90,35,.25)}
+.sb-footer{padding:10px;border-top:1px solid var(--b0);margin-top:auto}
+.sf-email{font-size:.68rem;color:var(--t4);padding:0 2px;margin-bottom:8px}
+.logout-btn{width:100%;padding:7px;background:rgba(200,16,46,.07);border:1px solid rgba(200,16,46,.2);border-radius:var(--r-sm);color:#FF8F9C;font-size:.74rem;cursor:pointer;transition:all var(--ease)}
+.logout-btn:hover{background:rgba(200,16,46,.15)}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{height:54px;border-bottom:1px solid var(--b0);background:rgba(10,20,40,.88);backdrop-filter:blur(20px);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
+.tb-title{font-family:var(--fd);font-size:.95rem;color:var(--a300);flex:1}
+.maint-pill{padding:3px 10px;background:rgba(200,16,46,.1);border:1px solid rgba(200,16,46,.25);border-radius:var(--r-pill);font-size:.63rem;color:#FF8F9C;display:none}
+#content{flex:1;overflow-y:auto;padding:20px}
+.view{display:none}.view.active{display:block}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;transition:all var(--ease)}
+.stat-card:hover{border-color:var(--ba)}
+.sc-lbl{font-size:.63rem;font-weight:600;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.sc-val{font-family:var(--fd);font-size:1.8rem;font-weight:700;color:var(--t1)}
+.sc-sub{font-size:.65rem;color:var(--o300);margin-top:4px}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.chart-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px}
+.cc-title{font-size:.8rem;font-weight:600;color:var(--t1);margin-bottom:14px}
+.bar-chart{display:flex;align-items:flex-end;gap:4px;height:72px}
+.bc-b{flex:1;border-radius:3px 3px 0 0;background:rgba(217,90,35,.35);min-width:6px;cursor:pointer;transition:background var(--ease)}
+.bc-b:hover{background:rgba(217,90,35,.75)}
+.mb-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.mb-name{font-size:.73rem;color:var(--t3);width:65px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mb-bar-w{flex:1;height:5px;background:var(--glass2);border-radius:var(--r-pill);overflow:hidden}
+.mb-bar{height:100%;background:linear-gradient(90deg,#C14A1B,#E8742E);border-radius:var(--r-pill)}
+.mb-count{font-size:.65rem;color:var(--t4);width:32px;text-align:right}
+.tbl-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);overflow:hidden;margin-bottom:18px}
+.tbl-head{padding:13px 16px;border-bottom:1px solid var(--b0);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tbl-title{font-size:.85rem;font-weight:600;color:var(--t1)}
+.act-btn{background:none;border:none;color:var(--t4);font-size:13px;padding:4px 6px;border-radius:var(--r-xs);cursor:pointer;transition:all var(--ease)}
+.act-btn:hover{background:var(--glass2);color:var(--t1)}
+.act-btn.danger:hover{background:rgba(200,16,46,.1);color:var(--r300)}
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:16px}
+.s-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:18px}
+.s-title{font-size:.84rem;font-weight:600;color:var(--t1);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--b0);display:flex;align-items:center;gap:7px}
+.key-wrap{position:relative}
+.key-wrap .input{padding-right:58px;font-family:var(--fm);font-size:.77rem}
+.key-show{position:absolute;right:8px;top:50%;transform:translateY(-60%);background:var(--glass2);border:none;color:var(--t4);font-size:.65rem;border-radius:var(--r-xs);padding:2px 7px;cursor:pointer}
+.key-show:hover{color:var(--t1)}
+.tgl-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--b0)}
+.tgl-row:last-child{border-bottom:none}
+.tgl-lbl{font-size:.8rem;color:var(--t2)}
+.tgl-sub{font-size:.65rem;color:var(--t4);margin-top:2px}
+.plans-admin{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px}
+.pa-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;transition:all var(--ease)}
+.pa-card:hover{border-color:var(--ba)}
+.pa-name{font-size:.9rem;font-weight:600;color:var(--t1);margin-bottom:4px}
+.pa-price{font-family:var(--fd);font-size:1.4rem;color:var(--a300);margin-bottom:5px}
+.pa-limit{font-size:.68rem;color:var(--t4);margin-bottom:8px}
+.pa-models{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px}
+.pa-tag{font-size:.58rem;background:rgba(217,90,35,.1);border:1px solid rgba(217,90,35,.2);border-radius:3px;padding:2px 6px;color:var(--o300)}
+.m-over{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:900;padding:20px;}
+.m-over.open{display:flex}
+.m-box{background:var(--elev1);border:1px solid var(--b2);border-radius:var(--r-xl);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:modalIn .22s ease}
+.m-head{padding:16px 20px;border-bottom:1px solid var(--b0);display:flex;align-items:center;justify-content:space-between}
+.m-title{font-family:var(--fd);font-size:.95rem;color:var(--a300)}
+.m-close{background:var(--glass);border:none;color:var(--t3);width:28px;height:28px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer}
+.m-close:hover{background:rgba(200,16,46,.15);color:var(--r300)}
+.m-body{padding:18px 20px}
+.m-foot{padding:12px 20px;border-top:1px solid var(--b0);display:flex;justify-content:flex-end;gap:8px}
+.m-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.m-chip{padding:4px 10px;border-radius:var(--r-pill);border:1px solid var(--b1);background:transparent;color:var(--t4);font-size:.7rem;cursor:pointer;transition:all var(--ease)}
+.m-chip.on{background:rgba(217,90,35,.1);border-color:rgba(217,90,35,.3);color:var(--o300)}
+.bc-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:18px;margin-bottom:14px;max-width:540px}
+.bc-title{font-size:.84rem;font-weight:600;color:var(--t1);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--b0)}
+.pagination{display:flex;gap:5px;align-items:center;justify-content:center;margin-top:14px;font-size:.76rem;color:var(--t4)}
+.pg-btn{background:var(--glass);border:1px solid var(--b1);border-radius:var(--r-xs);padding:4px 10px;color:var(--t3);cursor:pointer;transition:all var(--ease)}
+.pg-btn:hover,.pg-btn.active{background:rgba(217,90,35,.1);border-color:rgba(217,90,35,.3);color:var(--o300)}
+.logo-preview{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#C14A1B,#E8742E);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:12px;overflow:hidden;border:2px solid var(--b2)}
+.logo-preview img{width:100%;height:100%;object-fit:contain}
+.upload-zone{border:2px dashed var(--b2);border-radius:var(--r-md);padding:20px;text-align:center;cursor:pointer;transition:all var(--ease);position:relative}
+.upload-zone:hover{border-color:var(--bg);background:rgba(217,90,35,.05)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.provider-section{background:var(--elev2);border:1px solid var(--b1);border-radius:var(--r-md);padding:14px;margin-bottom:12px}
+.provider-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:.82rem;font-weight:600;color:var(--t1)}
+.provider-badge-free{font-size:.58rem;background:rgba(0,135,81,.12);color:var(--g300);border:1px solid rgba(0,135,81,.25);border-radius:var(--r-pill);padding:2px 7px}
+.provider-badge-paid{font-size:.58rem;background:rgba(245,158,11,.1);color:var(--a300);border:1px solid rgba(245,158,11,.25);border-radius:var(--r-pill);padding:2px 7px}
+.get-key-link{font-size:.68rem;color:var(--a400);text-decoration:none}
+.get-key-link:hover{color:var(--a300)}
+@media(max-width:768px){.chart-row{grid-template-columns:1fr}.settings-grid{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+
+.pst-pill{background:var(--glass);border:1px solid var(--b1);border-radius:var(--r-sm);padding:9px 12px;font-size:.72rem;color:var(--t4);line-height:1.7;transition:all var(--ease)}
+.pst-pill .pst-dot{font-size:.7rem;margin-right:3px}
+.pst-pill .pst-tag{font-size:.62rem;color:var(--t4)}
+.pst-pill.live{background:rgba(0,135,81,.1);border-color:rgba(0,135,81,.3);color:var(--g300)}
+.pst-pill.live .pst-dot{color:var(--g300)}
+.pst-pill.live .pst-tag{color:var(--g200)}
+.pst-pill.off .pst-dot{color:var(--t4)}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- USER EDIT MODAL -->
+<div class="m-over" id="user-modal" onclick="if(event.target===this)closeM('user-modal')">
+<div class="m-box">
+  <div class="m-head"><div class="m-title">✏️ Edit User</div><button class="m-close" onclick="closeM('user-modal')">✕</button></div>
+  <div class="m-body">
+    <input type="hidden" id="edit-id"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Full Name</label><input class="input" id="edit-name"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Email</label><input class="input" id="edit-email" type="email"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Plan</label><select class="input" id="edit-plan"></select></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Role</label><select class="input" id="edit-role"><option value="user">User</option><option value="admin">Admin</option></select></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Status</label><select class="input" id="edit-status"><option value="active">Active</option><option value="banned">Banned</option></select></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Country</label><input class="input" id="edit-country"/></div>
+    </div>
+  </div>
+  <div class="m-foot">
+    <button class="btn btn-danger btn-sm" onclick="resetUserPw()">Reset Password</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-ghost btn-sm" onclick="closeM('user-modal')">Cancel</button>
+    <button class="btn btn-primary btn-sm" onclick="saveUser()">Save Changes</button>
+  </div>
+</div>
+</div>
+
+<!-- PLAN MODAL -->
+<div class="m-over" id="plan-modal" onclick="if(event.target===this)closeM('plan-modal')">
+<div class="m-box">
+  <div class="m-head"><div class="m-title" id="plan-modal-title">Plan</div><button class="m-close" onclick="closeM('plan-modal')">✕</button></div>
+  <div class="m-body">
+    <input type="hidden" id="pm-id"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Plan Name *</label><input class="input" id="pm-name" placeholder="e.g. Pro"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Slug (no spaces) *</label><input class="input" id="pm-slug" placeholder="e.g. pro"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Price (USD/mo, 0=free)</label><input class="input" id="pm-price" type="number" step=".01" min="0" placeholder="0"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Daily Limit (99999=∞)</label><input class="input" id="pm-limit" type="number" min="1" placeholder="10"/></div>
+    </div>
+    <div class="form-group" style="margin-top:10px;margin-bottom:10px"><label class="form-label">Badge Label (optional)</label><input class="input" id="pm-badge" placeholder="e.g. Popular  or  Best Value"/></div>
+    <div><label class="form-label">AI Models Included <span style="color:var(--t4);font-weight:400">(click to toggle)</span></label><div class="m-chips" id="pm-models"></div></div>
+    <div class="form-group" style="margin-top:12px;margin-bottom:10px"><label class="form-label">Features (one per line)</label><textarea class="input" id="pm-features" rows="5" style="resize:vertical" placeholder="100 messages/day&#10;All visa types&#10;5 AI models&#10;Priority support"></textarea></div>
+    <div class="tgl-row" style="margin-top:4px"><div><div class="tgl-lbl">Active (visible to users)</div></div><label class="toggle"><input type="checkbox" id="pm-active" checked/><span class="toggle-sl"></span></label></div>
+  </div>
+  <div class="m-foot"><button class="btn btn-ghost btn-sm" onclick="closeM('plan-modal')">Cancel</button><button class="btn btn-primary btn-sm" onclick="savePlan()">💾 Save Plan</button></div>
+</div>
+</div>
+
+<!-- NOTIFY MODAL -->
+<div class="m-over" id="notif-modal" onclick="if(event.target===this)closeM('notif-modal')">
+<div class="m-box" style="max-width:440px">
+  <div class="m-head"><div class="m-title" id="notif-modal-title">📢 Send Notification</div><button class="m-close" onclick="closeM('notif-modal')">✕</button></div>
+  <div class="m-body">
+    <input type="hidden" id="notif-uid"/>
+    <div id="notif-target-desc" style="font-size:.75rem;color:var(--t4);margin-bottom:14px;padding:9px;background:var(--elev2);border-radius:var(--r-sm)"></div>
+    <div class="form-group"><label class="form-label">Title</label><input class="input" id="notif-title-i" placeholder="Notification title"/></div>
+    <div class="form-group"><label class="form-label">Message</label><textarea class="input" id="notif-msg-i" rows="3" style="resize:vertical;margin-bottom:0" placeholder="Your message…"></textarea></div>
+    <div class="form-group" style="margin-top:10px;margin-bottom:0"><label class="form-label">Type</label><select class="input" id="notif-type-i"><option value="info">ℹ️ Info</option><option value="success">✅ Success</option><option value="warning">⚠️ Warning</option><option value="error">❌ Error</option></select></div>
+  </div>
+  <div class="m-foot"><button class="btn btn-ghost btn-sm" onclick="closeM('notif-modal')">Cancel</button><button class="btn btn-primary btn-sm" onclick="sendNotif()">Send</button></div>
+</div>
+</div>
+
+<!-- CONV MESSAGES MODAL -->
+<div class="m-over" id="conv-modal" onclick="if(event.target===this)closeM('conv-modal')">
+<div class="m-box" style="max-width:660px">
+  <div class="m-head"><div class="m-title" id="conv-modal-title">Conversation</div><button class="m-close" onclick="closeM('conv-modal')">✕</button></div>
+  <div class="m-body" id="conv-modal-body" style="max-height:55vh;overflow-y:auto"></div>
+</div>
+</div>
+
+<div id="app">
+<div id="sb">
+  <div class="sb-top">
+    <div class="sb-brand">
+      <div class="sb-icon" id="sb-icon">✈</div>
+      <div class="sb-name" id="sb-name">Japa+</div>
+      <div class="admin-badge">ADMIN</div>
+    </div>
+  </div>
+  <div class="sb-nav">
+    <div class="nav-sec">Overview</div>
+    <button class="sb-btn active" id="snav-overview" onclick="sw('overview')">📊 Dashboard</button>
+    <button class="sb-btn" id="snav-users" onclick="sw('users')">👥 Users</button>
+    <button class="sb-btn" id="snav-convs" onclick="sw('convs')">💬 Conversations</button>
+    <div class="nav-sec">Configuration</div>
+    <button class="sb-btn" id="snav-ai" onclick="sw('ai')">🤖 AI Engine</button>
+    <button class="sb-btn" id="snav-plans" onclick="sw('plans')">💳 Plans</button>
+    <button class="sb-btn" id="snav-partners" onclick="sw('partners')">🔗 Travel Partners</button>
+    <button class="sb-btn" id="snav-email" onclick="sw('email')">📧 Email / SMTP</button>
+    <button class="sb-btn" id="snav-notif-s" onclick="sw('notif-s')">🔔 Notifications</button>
+    <button class="sb-btn" id="snav-general" onclick="sw('general')">⚙️ System Settings</button>
+    <div class="nav-sec">Tools</div>
+    <button class="sb-btn" id="snav-broadcast" onclick="sw('broadcast')">📢 Broadcast</button>
+    <button class="sb-btn" id="snav-social" onclick="sw('social')">📣 Social Posts</button>
+    <button class="sb-btn" onclick="window.open('/dashboard','_blank')">👁️ View App</button>
+  </div>
+  <div class="sb-footer">
+    <div class="sf-email" id="sf-email">admin@visaguru.ai</div>
+    <button class="logout-btn" onclick="doLogout()">↩ Sign Out</button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <div class="tb-title" id="tb-title">Dashboard Overview</div>
+    <div class="maint-pill" id="maint-pill">🔧 Maintenance ON</div>
+    <button class="btn btn-ghost btn-sm" onclick="sw('general')" style="font-size:.7rem">⚙ Settings</button>
+  </div>
+  <div id="content">
+
+  <!-- OVERVIEW -->
+  <div class="view active" id="view-overview">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="sc-lbl">Total Users</div><div class="sc-val" id="st-users">—</div><div class="sc-sub" id="st-users-sub">loading…</div></div>
+      <div class="stat-card"><div class="sc-lbl">New Today</div><div class="sc-val" id="st-today">—</div><div class="sc-sub">Registered</div></div>
+      <div class="stat-card"><div class="sc-lbl">Conversations</div><div class="sc-val" id="st-convs">—</div><div class="sc-sub">All time</div></div>
+      <div class="stat-card"><div class="sc-lbl">Messages Today</div><div class="sc-val" id="st-msgs">—</div><div class="sc-sub">All users</div></div>
+      <div class="stat-card"><div class="sc-lbl">Active Today</div><div class="sc-val" id="st-active">—</div><div class="sc-sub">Unique users</div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card"><div class="cc-title">📈 Daily Signups (30 days)</div><div class="bar-chart" id="signup-chart"><div style="color:var(--t4);font-size:.75rem;padding:10px">No data yet</div></div></div>
+      <div class="chart-card"><div class="cc-title">🤖 Top AI Models</div><div id="models-chart"><div style="color:var(--t4);font-size:.75rem">No usage yet</div></div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card"><div class="cc-title">🔗 Partner Clicks (30 days)</div><div id="clicks-chart"><div style="color:var(--t4);font-size:.75rem">No clicks yet</div></div></div>
+      <div class="chart-card"><div class="cc-title">🔗 Top Partners</div><div id="clicks-partners"><div style="color:var(--t4);font-size:.75rem">No clicks yet</div></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="chart-card"><div class="cc-title">💳 Plan Distribution</div><div id="plan-dist"></div></div>
+      <div class="chart-card"><div class="cc-title">⚡ Quick Actions</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="openNotifModal(null,true)">📢 Broadcast to All</button>
+          <button class="btn btn-ghost btn-sm" onclick="sw('users')">👥 Manage Users</button>
+          <button class="btn btn-ghost btn-sm" onclick="sw('ai')">🔑 Configure AI Keys</button>
+          <button class="btn btn-ghost btn-sm" onclick="sw('plans')">💳 Manage Plans</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USERS -->
+  <div class="view" id="view-users">
+    <div class="tbl-card">
+      <div class="tbl-head">
+        <div class="tbl-title">👥 User Management</div>
+        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+          <input class="input" id="user-search" placeholder="🔍 Search users…" style="width:200px" oninput="searchUsers(this.value)"/>
+          <button class="btn btn-primary btn-sm" onclick="openNotifModal(null,true)">📢 Broadcast</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>User</th><th>Country</th><th>Plan</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody id="users-tbody"><tr><td colspan="7" style="text-align:center;padding:24px"><div class="spinner" style="margin:0 auto;border-top-color:var(--o400);border-color:var(--glass2)"></div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="users-pg"></div>
+    </div>
+  </div>
+
+  <!-- CONVERSATIONS -->
+  <div class="view" id="view-convs">
+    <div class="tbl-card">
+      <div class="tbl-head">
+        <div class="tbl-title">💬 All Conversations</div>
+        <input class="input" id="conv-search" placeholder="🔍 Search…" style="width:200px" oninput="searchConvs(this.value)"/>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Title</th><th>User</th><th>Model</th><th>Msgs</th><th>Updated</th><th>Actions</th></tr></thead>
+          <tbody id="convs-tbody"><tr><td colspan="6" style="text-align:center;padding:24px"><div class="spinner" style="margin:0 auto;border-top-color:var(--o400);border-color:var(--glass2)"></div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="convs-pg"></div>
+    </div>
+  </div>
+
+  <!-- AI ENGINE -->
+  <div class="view" id="view-ai">
+    <div style="max-width:900px">
+      <div style="margin-bottom:16px">
+        <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">🤖 AI Engine Configuration</div>
+        <div style="font-size:.78rem;color:var(--t4)">Keys are <strong style="color:var(--o300)">live the moment you save</strong> — no separate test/live mode. The Verify button just confirms the key is valid before saving.</div>
+      </div>
+
+      <!-- PROVIDER STATUS DASHBOARD -->
+      <div style="background:var(--elev2);border:1px solid rgba(217,90,35,.25);border-radius:var(--r-lg);padding:16px;margin-bottom:18px">
+        <div style="font-size:.75rem;font-weight:600;color:var(--t2);margin-bottom:12px">⚡ Live Provider Status</div>
+        <div id="pstatus" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">
+          <div id="pst-anthropic" class="pst-pill off"><span class="pst-dot">●</span> Anthropic<br/><span class="pst-tag">Claude Sonnet 4</span></div>
+          <div id="pst-openrouter" class="pst-pill off"><span class="pst-dot">●</span> OpenRouter<br/><span class="pst-tag">DeepSeek · Qwen · Llama</span></div>
+          <div id="pst-groq" class="pst-pill off"><span class="pst-dot">●</span> Groq<br/><span class="pst-tag">Llama · Mixtral fast</span></div>
+          <div id="pst-gemini" class="pst-pill off"><span class="pst-dot">●</span> Google Gemini<br/><span class="pst-tag">Flash (free) · Pro</span></div>
+          <div id="pst-together" class="pst-pill off"><span class="pst-dot">●</span> Together AI<br/><span class="pst-tag">Llama · Mixtral</span></div>
+          <div id="pst-huggingface" class="pst-pill off"><span class="pst-dot">●</span> HuggingFace<br/><span class="pst-tag">Mistral · Zephyr</span></div>
+        </div>
+      </div>
+
+      <!-- Anthropic -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <span>✨ Anthropic</span><span class="provider-badge-paid">Paid</span>
+          <a href="https://console.anthropic.com" target="_blank" class="get-key-link" style="margin-left:auto">Get API Key →</a>
+        </div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Claude Sonnet 4 API Key</label>
+          <div class="key-wrap"><input class="input" id="ai_anthropic_key" type="password" placeholder="sk-ant-api03-…"/><button class="key-show" onclick="toggleKey('ai_anthropic_key')">Show</button></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="testAI('claude')">🔍 Verify</button> <span style="font-size:.66rem;color:var(--t4)">← checks key is valid before saving</span>
+      </div>
+
+      <!-- OpenRouter -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <span>🔄 OpenRouter</span><span class="provider-badge-free">Free Tier</span>
+          <a href="https://openrouter.ai/keys" target="_blank" class="get-key-link" style="margin-left:auto">Get Free Key →</a>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">One key unlocks DeepSeek R1, Qwen 2.5 72B, Llama 3.3 70B, Gemma 3 27B, Mistral 7B — all free tier.</div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">API Key</label>
+          <div class="key-wrap"><input class="input" id="ai_openrouter_key" type="password" placeholder="sk-or-v1-…"/><button class="key-show" onclick="toggleKey('ai_openrouter_key')">Show</button></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="testAI('deepseek')">🔍 Verify</button>
+      </div>
+
+      <!-- Groq -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <span>⚡ Groq</span><span class="provider-badge-free">Free Tier</span>
+          <a href="https://console.groq.com/keys" target="_blank" class="get-key-link" style="margin-left:auto">Get Free Key →</a>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">Ultra-fast inference. Free tier: Llama 70B, Mixtral 8x7B, Gemma 2 9B. 14,400 requests/day.</div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Groq API Key</label>
+          <div class="key-wrap"><input class="input" id="ai_groq_key" type="password" placeholder="gsk_…"/><button class="key-show" onclick="toggleKey('ai_groq_key')">Show</button></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="testAI('groq')">🔍 Verify</button>
+      </div>
+
+      <!-- Google Gemini -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <span>🔮 Google Gemini</span><span class="provider-badge-free">Free Tier</span>
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" class="get-key-link" style="margin-left:auto">Get Free Key →</a>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">Gemini 1.5 Flash is free. Get key at Google AI Studio in under 2 minutes.</div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Gemini API Key</label>
+          <div class="key-wrap"><input class="input" id="ai_gemini_key" type="password" placeholder="AIza…"/><button class="key-show" onclick="toggleKey('ai_gemini_key')">Show</button></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="testAI('gemini')">🔍 Verify</button>
+      </div>
+
+      <!-- Together AI -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <span>🤝 Together AI</span><span class="provider-badge-free">Free Tier</span>
+          <a href="https://api.together.ai/settings/api-keys" target="_blank" class="get-key-link" style="margin-left:auto">Get Free Key →</a>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">$1 free credit on signup. 50+ open-source models including Llama 70B, Mixtral, and more.</div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Together AI API Key</label>
+          <div class="key-wrap"><input class="input" id="ai_together_key" type="password" placeholder="…"/><button class="key-show" onclick="toggleKey('ai_together_key')">Show</button></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="testAI('together')">🔍 Verify</button>
+      </div>
+
+      <!-- HuggingFace -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <span>🤗 HuggingFace</span><span class="provider-badge-free">Free</span>
+          <a href="https://huggingface.co/settings/tokens" target="_blank" class="get-key-link" style="margin-left:auto">Get Free Token →</a>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">Free inference for Mistral 7B and Zephyr 7B. Models may take ~20s to load on first call.</div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Access Token</label>
+          <div class="key-wrap"><input class="input" id="ai_huggingface_key" type="password" placeholder="hf_…"/><button class="key-show" onclick="toggleKey('ai_huggingface_key')">Show</button></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="testAI('mistral7b')">🔍 Verify</button>
+      </div>
+
+      <!-- AI Behaviour -->
+      <div class="s-card" style="margin-bottom:14px">
+        <div class="s-title">⚙️ AI Behaviour</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Default Model</label>
+            <select class="input" id="ai_default_model">
+              <option value="claude">✨ Claude Sonnet 4 (Anthropic)</option>
+              <option value="deepseek">🔍 DeepSeek R1 (OpenRouter/Free)</option>
+              <option value="qwen">🧠 Qwen 2.5 72B (OpenRouter/Free)</option>
+              <option value="llama">🦙 Llama 3.3 70B (OpenRouter/Free)</option>
+              <option value="gemma">💎 Gemma 3 27B (OpenRouter/Free)</option>
+              <option value="llama-groq">⚡ Llama 70B (Groq/Fast)</option>
+              <option value="mixtral-groq">⚡ Mixtral 8x7B (Groq/Fast)</option>
+              <option value="gemini-flash">🔮 Gemini 1.5 Flash (Google)</option>
+              <option value="llama-together">🤝 Llama 70B (Together)</option>
+              <option value="mistral7b">🤗 Mistral 7B (HuggingFace)</option>
+            </select></div>
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Max Tokens per Response</label><input class="input" id="ai_max_tokens" type="number" placeholder="1200"/></div>
+        </div>
+        <div class="tgl-row" style="margin-top:10px"><div><div class="tgl-lbl">Enable Streaming</div><div class="tgl-sub">Real-time token output</div></div><label class="toggle"><input type="checkbox" id="ai_stream"/><span class="toggle-sl"></span></label></div>
+      </div>
+      <div class="s-card" style="margin-bottom:14px">
+        <div class="s-title">📝 System Prompt Add-on</div>
+        <textarea class="input" id="ai_system_prompt_addon" rows="3" style="resize:vertical;margin-bottom:0" placeholder="Extra instructions added to the visa AI prompt…"></textarea>
+      </div>
+      <div style="background:rgba(217,90,35,.07);border:1px solid rgba(217,90,35,.22);border-radius:var(--r-md);padding:12px 16px;margin-bottom:14px;font-size:.78rem;color:var(--t3)">
+        ⚡ <strong style="color:var(--o300)">Saving makes keys live immediately.</strong> Users will be able to use the configured AI models as soon as you save. No extra steps needed.
+      </div>
+      <button class="btn btn-primary btn-lg" onclick="saveAI()" id="save-ai-btn" style="min-width:240px">💾 Save & Activate AI Keys →</button>
+    </div>
+  </div>
+
+  <!-- PLANS -->
+  <div class="view" id="view-plans">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="font-family:var(--fd);font-size:1rem;color:var(--a300)">💳 Plans Management</div>
+      <button class="btn btn-primary btn-sm" onclick="openPlanModal()">➕ New Plan</button>
+    </div>
+    <div class="plans-admin" id="plans-grid"><div style="color:var(--t4);font-size:.8rem">Loading…</div></div>
+  </div>
+
+  <!-- EMAIL -->
+  <div class="view" id="view-email">
+    <div style="max-width:900px">
+      <div class="settings-grid">
+        <div class="s-card"><div class="s-title">🔧 SMTP Configuration</div>
+          <div class="form-group"><label class="form-label">SMTP Host</label><input class="input" id="smtp_host" placeholder="smtp.gmail.com"/></div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Port</label><input class="input" id="smtp_port" type="number" placeholder="587"/></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Secure</label><select class="input" id="smtp_secure"><option value="0">TLS (587)</option><option value="1">SSL (465)</option></select></div>
+          </div><div style="height:10px"></div>
+          <div class="form-group"><label class="form-label">Username</label><input class="input" id="smtp_user" placeholder="your@email.com"/></div>
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Password / App Password</label>
+            <div class="key-wrap"><input class="input" id="smtp_pass" type="password" placeholder="App password"/><button class="key-show" onclick="toggleKey('smtp_pass')">Show</button></div></div>
+        </div>
+        <div class="s-card"><div class="s-title">✉️ Sender Identity</div>
+          <div class="form-group"><label class="form-label">From Name</label><input class="input" id="smtp_from_name" placeholder="Japa+"/></div>
+          <div class="form-group"><label class="form-label">From Email</label><input class="input" id="smtp_from_email" type="email" placeholder="noreply@yourdomain.com"/></div>
+          <div style="background:var(--elev2);border:1px solid var(--b1);border-radius:var(--r-md);padding:12px;margin-bottom:12px;font-size:.72rem;color:var(--t4);line-height:1.8"><strong style="color:var(--t2)">SMTP Guides:</strong><br/>Gmail: smtp.gmail.com:587 → 2FA → App Passwords<br/>Mailgun: smtp.mailgun.org:587<br/>SendGrid: smtp.sendgrid.net:587<br/>Brevo: smtp-relay.brevo.com:587</div>
+          <div style="display:flex;gap:7px">
+            <input class="input" id="test-email-to" placeholder="Test recipient email" style="flex:1"/>
+            <button class="btn btn-ghost btn-sm" onclick="testEmail()" style="white-space:nowrap;flex-shrink:0">📤 Test</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="saveEmail()">💾 Save Email Settings</button>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION SETTINGS -->
+  <div class="view" id="view-notif-s">
+    <div style="max-width:500px">
+      <div class="s-card" style="margin-bottom:14px"><div class="s-title">🔔 Notification Settings</div>
+        <div class="tgl-row"><div><div class="tgl-lbl">Welcome Email on Registration</div></div><label class="toggle"><input type="checkbox" id="notif_welcome_email"/><span class="toggle-sl"></span></label></div>
+        <div class="tgl-row"><div><div class="tgl-lbl">New User Alert to Admin</div></div><label class="toggle"><input type="checkbox" id="notif_new_user_alert"/><span class="toggle-sl"></span></label></div>
+        <div class="tgl-row"><div><div class="tgl-lbl">Usage Limit Alerts to Users</div></div><label class="toggle"><input type="checkbox" id="notif_usage_alert"/><span class="toggle-sl"></span></label></div>
+        <div class="form-group" style="margin-top:12px"><label class="form-label">Alert Threshold (%)</label><input class="input" id="notif_usage_threshold" type="number" min="50" max="99" placeholder="80"/><div class="form-hint">Alert fires at this % of daily limit</div></div>
+        <div class="tgl-row"><div><div class="tgl-lbl">System Notifications (in-app)</div></div><label class="toggle"><input type="checkbox" id="notif_system_alerts"/><span class="toggle-sl"></span></label></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveNotifs()">💾 Save Settings</button>
+    </div>
+  </div>
+
+  <!-- GENERAL SETTINGS -->
+  <div class="view" id="view-general">
+    <div style="max-width:900px">
+      <div class="settings-grid">
+        <div class="s-card"><div class="s-title">🏢 App Identity</div>
+          <div style="margin-bottom:14px">
+            <label class="form-label">App Logo</label>
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+              <div class="logo-preview" id="logo-preview-box">✈</div>
+              <div>
+                <div style="font-size:.76rem;color:var(--t1);margin-bottom:4px">Upload Image Logo</div>
+                <div style="font-size:.68rem;color:var(--t4);margin-bottom:8px">PNG, JPG, SVG up to 2MB</div>
+                <div class="upload-zone" style="padding:10px 16px;display:inline-block">
+                  <input type="file" accept=".png,.jpg,.jpeg,.svg,.webp" onchange="uploadLogo(this)"/>
+                  <span style="font-size:.76rem;color:var(--o300)">📁 Choose file…</span>
+                </div>
+              </div>
+            </div>
+            <label class="form-label">Logo Emoji (fallback if no image)</label>
+            <input class="input" id="app_logo" placeholder="✈" maxlength="4"/>
+          </div>
+          <div class="form-group"><label class="form-label">App Name</label><input class="input" id="app_name" placeholder="Japa+"/></div>
+          <div class="form-group"><label class="form-label">Tagline</label><input class="input" id="app_tagline" placeholder="African Visa Intelligence Platform"/></div>
+          <div class="form-group"><label class="form-label">Support Email</label><input class="input" id="support_email" type="email"/></div>
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">App URL</label><input class="input" id="app_url" placeholder="https://yourdomain.com"/></div>
+        </div>
+        <div class="s-card"><div class="s-title">🔒 Access Control</div>
+          <div class="tgl-row"><div><div class="tgl-lbl">Maintenance Mode</div><div class="tgl-sub">Block all user access (admins still work)</div></div><label class="toggle"><input type="checkbox" id="maintenance_mode" onchange="updateMaintBadge(this.checked)"/><span class="toggle-sl"></span></label></div>
+          <div class="tgl-row"><div><div class="tgl-lbl">Open Registration</div><div class="tgl-sub">Allow new user sign-ups</div></div><label class="toggle"><input type="checkbox" id="registration_open"/><span class="toggle-sl"></span></label></div>
+          <div style="margin-top:14px;padding:12px;background:var(--elev2);border:1px solid var(--b1);border-radius:var(--r-md);font-size:.74rem;color:var(--t4);line-height:1.7">⚠️ Change admin credentials via <strong style="color:var(--t2)">Users → edit admin account</strong>. Never share admin credentials.</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="saveGeneral()">💾 Save System Settings</button>
+    </div>
+  </div>
+
+  <!-- PARTNERS -->
+  <div class="view" id="view-partners">
+    <div style="margin-bottom:16px">
+      <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">🔗 Travel Partners (Travelpayouts)</div>
+      <div style="font-size:.78rem;color:var(--t4)">One-place booking links surfaced in chats and the user dashboard. Edits are <strong style="color:var(--o300)">live immediately</strong> — no restart. Names, URLs, blurbs, matching keywords and visibility.</div>
+    </div>
+    <div id="partners-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"><div style="color:var(--t4);font-size:.8rem">Loading…</div></div>
+    <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="openPartnerModal()">➕ Add Partner</button>
+      <span style="font-size:.7rem;color:var(--t4)">Keywords are comma-separated words/phrases from traveller messages that trigger this partner in chat.</span>
+    </div>
+  </div>
+
+  <!-- SOCIAL POSTS -->
+  <div class="view" id="view-social">
+    <div style="margin-bottom:16px">
+      <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">📣 Social Posts & Promotion</div>
+      <div style="font-size:.78rem;color:var(--t4)">Promote Japa+ everywhere. Share to any network with prefilled composer links, or schedule posts with country/region targeting — targeted posts are also delivered in-app to matching travellers when due.</div>
+    </div>
+
+    <div class="bc-card" style="max-width:760px">
+      <div class="bc-title">✍️ Compose Post</div>
+      <div class="form-group"><label class="form-label">Title (used for in-app delivery) *</label><input class="input" id="so-title" placeholder="e.g. Visa-free getaways for Nigerian passports"/></div>
+      <div class="form-group"><label class="form-label">Post content *</label><textarea class="input" id="so-content" rows="4" style="resize:vertical" placeholder="Write the post text — emojis and hashtags welcome…"></textarea></div>
+      <div class="form-group"><label class="form-label">Link to include (optional)</label><input class="input" id="so-link" placeholder="https://yourdomain.com"/></div>
+      <div class="form-group" style="margin-bottom:8px"><label class="form-label">Platforms * <span style="color:var(--t4);font-weight:400">(click to toggle)</span></label><div class="m-chips" id="so-platforms"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px">
+        <div><label class="form-label">Target countries <span style="color:var(--t4);font-weight:400">(passport markets)</span></label><div class="m-chips" id="so-countries" style="max-height:86px;overflow-y:auto"></div></div>
+        <div><label class="form-label">Target regions</label><div class="m-chips" id="so-regions"></div><div id="so-reach" style="font-size:.7rem;color:var(--o300);margin-top:8px">No targeting → public share only</div></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:6px">
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Schedule for later</label><input class="input" id="so-schedule" type="datetime-local"/></div>
+        <button class="btn btn-primary btn-sm" onclick="saveSocialPost(false)">💾 Save Draft</button>
+        <button class="btn btn-ghost btn-sm" onclick="saveSocialPost(true)">📣 Publish Now</button>
+        <button class="btn btn-ghost btn-sm" onclick="scheduleSocialPost()">⏰ Schedule</button>
+      </div>
+    </div>
+
+    <div class="tbl-card" style="max-width:900px">
+      <div class="tbl-head"><div class="tbl-title">📋 Posts</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Post</th><th>Platforms</th><th>Targeting</th><th>Status</th><th>When</th><th>Actions</th></tr></thead>
+          <tbody id="social-tbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--t4)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- BROADCAST -->
+  <div class="view" id="view-broadcast">
+    <div style="max-width:540px">
+      <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:18px">📢 Broadcast Messages</div>
+      <div class="bc-card"><div class="bc-title">📱 In-App Notification</div>
+        <div class="form-group"><label class="form-label">Title</label><input class="input" id="bc-title" placeholder="Announcement title"/></div>
+        <div class="form-group"><label class="form-label">Message</label><textarea class="input" id="bc-msg" rows="3" style="resize:vertical;margin-bottom:0" placeholder="Your message to all users…"></textarea></div>
+        <div class="form-group" style="margin-top:10px;margin-bottom:14px"><label class="form-label">Type</label><select class="input" id="bc-type"><option value="info">ℹ️ Info</option><option value="success">✅ Success</option><option value="warning">⚠️ Warning</option></select></div>
+        <button class="btn btn-primary" onclick="sendBroadcast()">📢 Send to All Users</button>
+      </div>
+      <div class="bc-card"><div class="bc-title">📧 Email Broadcast</div>
+        <div class="alert alert-warning" style="font-size:.74rem;margin-bottom:12px">⚠️ Sends to ALL registered users. Requires SMTP.</div>
+        <div class="form-group"><label class="form-label">Subject</label><input class="input" id="bc-email-subj" placeholder="Important update…"/></div>
+        <div class="form-group" style="margin-bottom:14px"><label class="form-label">HTML Body</label><textarea class="input" id="bc-email-body" rows="5" style="resize:vertical;margin-bottom:0" placeholder="&lt;h2&gt;Hello!&lt;/h2&gt;&lt;p&gt;Your message here…&lt;/p&gt;"></textarea></div>
+        <button class="btn btn-primary" onclick="emailBroadcast()">📧 Email All Users</button>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</div>
+</div>
+
+<!-- PARTNER EDIT MODAL -->
+<div class="m-over" id="partner-modal" onclick="if(event.target===this)closeM('partner-modal')">
+<div class="m-box" style="max-width:520px">
+  <div class="m-head"><div class="m-title" id="partner-modal-title">🔗 Edit Partner</div><button class="m-close" onclick="closeM('partner-modal')">✕</button></div>
+  <div class="m-body">
+    <input type="hidden" id="pm2-id"/>
+    <div style="display:grid;grid-template-columns:70px 1fr;gap:10px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Icon</label><input class="input" id="pm2-icon" maxlength="4" placeholder="✈️"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Name *</label><input class="input" id="pm2-name" placeholder="e.g. Aviasales"/></div>
+    </div>
+    <div class="form-group" style="margin-top:10px"><label class="form-label">Affiliate URL *</label><input class="input" id="pm2-url" placeholder="https://partner.tpx.lu/xxxx" style="font-family:var(--fm);font-size:.77rem"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Category</label><input class="input" id="pm2-tag" placeholder="e.g. Flights / eSIM / Insurance"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Type key</label><input class="input" id="pm2-type" placeholder="flight / esim / insurance…"/></div>
+    </div>
+    <div class="form-group" style="margin-top:10px"><label class="form-label">Chat blurb</label><input class="input" id="pm2-blurb" placeholder="compare airline fares and grab the cheapest dates"/></div>
+    <div class="form-group" style="margin-top:10px;margin-bottom:0"><label class="form-label">Match keywords (comma-separated)</label><input class="input" id="pm2-keywords" placeholder="flight, flights, airline, airfare"/></div>
+    <div class="tgl-row" style="margin-top:12px"><div><div class="tgl-lbl">Enabled</div><div class="tgl-sub">Shown in chats and the user booking grid</div></div><label class="toggle"><input type="checkbox" id="pm2-enabled" checked/><span class="toggle-sl"></span></label></div>
+  </div>
+  <div class="m-foot"><button class="btn btn-ghost btn-sm" onclick="closeM('partner-modal')">Cancel</button><button class="btn btn-primary btn-sm" onclick="savePartner()">💾 Save Partner</button></div>
+</div>
+</div>
+
+<script>
+var tok=localStorage.getItem('vg_token'),role=localStorage.getItem('vg_role');
+if(!tok||role!=='admin'){window.location.href='/admin-login';}
+// KEY FIX: store plans in array, reference by index — no JSON in onclick
+var allPlans=[],selPlanModels=[],usersPage=1,convsPage=1,userQ='',convQ='',convRows=[];
+// Keep in sync with the models the /api/ai/chat dispatcher can serve
+const ALL_MODELS=['claude','openai','deepseek','deepseek2','qwen','llama','gemma','mistral','llama-groq','mixtral-groq','gemini-flash','gemini-pro','llama-together','mistral7b','zephyr','ollama'];
+const MICONS={claude:'✨',openai:'🧠',deepseek:'🔍',deepseek2:'🔍',qwen:'🧠',llama:'🦙',gemma:'💎',mistral:'🌪️','llama-groq':'⚡','mixtral-groq':'⚡','gemini-flash':'🔮','gemini-pro':'🔮','llama-together':'🤝',mistral7b:'🤗',zephyr:'🤗',ollama:'🏠'};
+
+async function apiFetch(path,opts={}){
+  const liveToken=localStorage.getItem('vg_token')||'';
+  const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':'Bearer '+liveToken,...(opts.headers||{})}});
+  if(r.status===401){localStorage.clear();window.location.href='/admin-login';}
+  if(r.status===403){showToast('Admin access required','error');throw new Error('Forbidden');}
+  return r;
+}
+
+async function init(){
+  try{
+    const[appR,statsR]=await Promise.all([fetch('/api/app-info'),apiFetch('/api/admin/stats')]);
+    const appD=await appR.json();const statsD=await statsR.json();
+    // Update branding including logo image
+    const logoUrl=appD.logoUrl||'';
+    const logoEmoji=appD.logo||'✈';
+    const sbIcon=document.getElementById('sb-icon');
+    if(logoUrl){sbIcon.innerHTML=`<img src="${logoUrl}" alt="logo" style="width:100%;height:100%;object-fit:contain"/>`;document.getElementById('logo-preview-box').innerHTML=`<img src="${logoUrl}" alt="logo" style="width:100%;height:100%;object-fit:contain"/>`;}
+    else{sbIcon.textContent=logoEmoji;}
+    document.getElementById('sb-name').textContent=appD.name||'Japa+';
+    document.title='Admin — '+(appD.name||'Japa+');
+    const u=JSON.parse(localStorage.getItem('vg_user')||'{}');
+    document.getElementById('sf-email').textContent=u.email||'admin@visaguru.ai';
+    updateMaintBadge(appD.maintenance);
+    renderStats(statsD);loadPlans();loadClicks();
+  }catch(e){console.error('Init:',e);}
+}
+
+function sw(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.sb-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v)?.classList.add('active');
+  document.getElementById('snav-'+v)?.classList.add('active');
+  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',broadcast:'Broadcast',social:'Social Posts & Promotion'};
+  document.getElementById('tb-title').textContent=T[v]||v;
+  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();
+  if(v==='overview')loadClicks();
+}
+
+function renderStats(d){
+  document.getElementById('st-users').textContent=d.totalUsers||0;
+  document.getElementById('st-users-sub').textContent='+'+(d.today||0)+' today';
+  document.getElementById('st-today').textContent=d.today||0;
+  document.getElementById('st-convs').textContent=d.totalConvs||0;
+  document.getElementById('st-msgs').textContent=d.todayMsgs||0;
+  document.getElementById('st-active').textContent=d.activeToday||0;
+  const sc=document.getElementById('signup-chart');
+  const signups=d.dailySignups||[];const max=Math.max(...signups.map(s=>s.count),1);
+  sc.innerHTML=signups.length?signups.map(s=>`<div class="bc-b" style="height:${Math.max(6,Math.round((s.count/max)*65))}px" title="${s.date}: ${s.count}"></div>`).join(''):'<div style="color:var(--t4);font-size:.75rem;padding:10px">No data yet</div>';
+  const mc=document.getElementById('models-chart');
+  const models=d.topModels||[];const mmax=Math.max(...models.map(m=>m.count),1);
+  mc.innerHTML=models.length?models.map(m=>`<div class="mb-row"><span style="font-size:.9rem;width:18px">${MICONS[m.model]||'🤖'}</span><span class="mb-name">${m.model}</span><div class="mb-bar-w"><div class="mb-bar" style="width:${Math.round((m.count/mmax)*100)}%"></div></div><span class="mb-count">${m.count}</span></div>`).join(''):'<div style="color:var(--t4);font-size:.75rem">No usage yet</div>';
+  const total=Math.max(d.totalUsers||1,1);
+  document.getElementById('plan-dist').innerHTML=(d.planDist||[]).map(p=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:.74rem"><span style="color:var(--t3);width:80px">${p.name}</span><div style="flex:1;height:5px;background:var(--glass2);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.round(((p.count||0)/total)*100)}%;background:linear-gradient(90deg,#C14A1B,#E8742E);border-radius:3px"></div></div><span style="color:var(--t4)">${p.count||0}</span></div>`).join('');
+}
+
+// ── USERS ─────────────────────────────────────────────────────────────────────
+async function loadUsers(page=1){
+  usersPage=page;const tbody=document.getElementById('users-tbody');
+  tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px"><div class="spinner" style="margin:0 auto;border-top-color:var(--o400);border-color:var(--glass2)"></div></td></tr>';
+  const r=await apiFetch(`/api/admin/users?page=${page}&limit=15&search=${encodeURIComponent(userQ)}`);
+  const d=await r.json();
+  tbody.innerHTML=(d.users||[]).length?(d.users||[]).map(u=>`<tr>
+    <td><div style="font-weight:500;color:var(--t1)">${esc(u.name)}</div><div style="font-size:.65rem;color:var(--t4)">${esc(u.email)}</div></td>
+    <td>${u.country_flag||''} ${esc(u.country||'—')}</td>
+    <td><span class="badge ${u.plan_slug==='pro'?'badge-gold':u.plan_slug==='enterprise'?'badge-purple':'badge-gray'}">${u.plan_name||'Free'}</span></td>
+    <td><span class="badge ${u.role==='admin'?'badge-purple':'badge-gray'}">${u.role}</span></td>
+    <td><span class="badge ${u.status==='active'?'badge-green':'badge-red'}">${u.status}</span></td>
+    <td style="font-size:.72rem;color:var(--t4)">${new Date(u.created_at).toLocaleDateString()}</td>
+    <td><button class="act-btn" onclick="editUserById(${u.id})" title="Edit">✏️</button> <button class="act-btn" onclick="openNotifModal(${u.id},false)" title="Notify">📢</button>${u.role!=='admin'?` <button class="act-btn danger" onclick="delUser(${u.id},'${esc(u.name)}')" title="Delete">🗑</button>`:''}</td>
+  </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--t4);padding:26px">No users found</td></tr>';
+  renderPag('users-pg',d.pages||1,page,loadUsers);
+}
+function searchUsers(q){userQ=q;clearTimeout(searchUsers._t);searchUsers._t=setTimeout(()=>loadUsers(1),300);}
+
+// Use ID-based lookup — fixes the JSON-in-onclick bug
+var usersCache={};
+async function editUserById(id){
+  // Fetch user details
+  const r=await apiFetch(`/api/admin/users/${id}`);
+  const d=await r.json();
+  editUser(d.user);
+}
+function editUser(u){
+  document.getElementById('edit-id').value=u.id;
+  document.getElementById('edit-name').value=u.name||'';
+  document.getElementById('edit-email').value=u.email||'';
+  document.getElementById('edit-role').value=u.role||'user';
+  document.getElementById('edit-status').value=u.status||'active';
+  document.getElementById('edit-country').value=u.country||'';
+  document.getElementById('edit-plan').innerHTML=allPlans.map(p=>`<option value="${p.id}"${p.id===u.plan_id?' selected':''}>${p.name}</option>`).join('');
+  openM('user-modal');
+}
+async function saveUser(){
+  const id=document.getElementById('edit-id').value;
+  const data={name:document.getElementById('edit-name').value,email:document.getElementById('edit-email').value,plan_id:parseInt(document.getElementById('edit-plan').value),role:document.getElementById('edit-role').value,status:document.getElementById('edit-status').value,country:document.getElementById('edit-country').value};
+  const r=await apiFetch(`/api/admin/users/${id}`,{method:'PUT',body:JSON.stringify(data)});
+  const d=await r.json();
+  if(!r.ok)return showToast(d.error,'error');
+  closeM('user-modal');loadUsers(usersPage);showToast('User updated ✅');
+}
+async function delUser(id,name){
+  if(!confirm(`Delete "${name}"? This removes all their conversations.`))return;
+  const r=await apiFetch(`/api/admin/users/${id}`,{method:'DELETE'});
+  if(r.ok){loadUsers(usersPage);showToast('User deleted');}else{const d=await r.json();showToast(d.error,'error');}
+}
+async function resetUserPw(){
+  const id=document.getElementById('edit-id').value;
+  const r=await apiFetch(`/api/admin/users/${id}/reset-password`,{method:'POST'});const d=await r.json();
+  if(!r.ok)return showToast(d.error,'error');
+  alert(`New password: ${d.new_password}\n\nShare securely — ask user to change it immediately.`);
+}
+
+// ── CONVERSATIONS ─────────────────────────────────────────────────────────────
+async function loadConvs(page=1){
+  convsPage=page;const tbody=document.getElementById('convs-tbody');
+  tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px"><div class="spinner" style="margin:0 auto;border-top-color:var(--o400);border-color:var(--glass2)"></div></td></tr>';
+  const r=await apiFetch(`/api/admin/conversations?page=${page}&limit=15&search=${encodeURIComponent(convQ)}`);const d=await r.json();
+  convRows=d.rows||[];
+  tbody.innerHTML=convRows.length?convRows.map((c,i)=>`<tr>
+    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1)">${esc(c.title)}</td>
+    <td><div style="font-size:.77rem;color:var(--t1)">${esc(c.user_name||'—')}</div><div style="font-size:.64rem;color:var(--t4)">${esc(c.user_email||'')}</div></td>
+    <td style="font-size:.73rem">${c.model||'—'}</td><td>${c.msg_count||0}</td>
+    <td style="font-size:.71rem;color:var(--t4)">${new Date(c.updated_at).toLocaleDateString()}</td>
+    <td><button class="act-btn" onclick="viewConvRow(${i})" title="View">👁️</button> <button class="act-btn danger" onclick="delConv('${c.uuid}')" title="Delete">🗑</button></td>
+  </tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--t4);padding:26px">No conversations found</td></tr>';
+  renderPag('convs-pg',d.pages||1,page,loadConvs);
+}
+function searchConvs(q){convQ=q;clearTimeout(searchConvs._t);searchConvs._t=setTimeout(()=>loadConvs(1),300);}
+function viewConvRow(i){const c=convRows[i];if(c)viewConv(c.uuid,c.title);}
+async function viewConv(uuid,title){
+  document.getElementById('conv-modal-title').textContent=title;
+  document.getElementById('conv-modal-body').innerHTML='<div style="text-align:center;padding:20px"><div class="spinner" style="margin:0 auto;border-top-color:var(--o400);border-color:var(--glass2)"></div></div>';
+  openM('conv-modal');
+  const r=await apiFetch(`/api/admin/conversations/${uuid}/messages`);const d=await r.json();
+  document.getElementById('conv-modal-body').innerHTML=(d.messages||[]).length?(d.messages||[]).map(m=>`<div style="margin-bottom:10px;padding:10px 12px;border-radius:8px;background:${m.role==='user'?'rgba(217,90,35,.08)':'var(--elev2)'};border:1px solid ${m.role==='user'?'rgba(217,90,35,.22)':'var(--b1)'}"><div style="font-size:.62rem;color:var(--t4);margin-bottom:4px">${m.role==='user'?'👤 User':'🤖 '+(m.model||'AI')} · ${new Date(m.created_at).toLocaleString()}</div><div style="font-size:.78rem;color:var(--t2);white-space:pre-wrap;line-height:1.6">${esc(m.content)}</div></div>`).join(''):'<div style="color:var(--t4);text-align:center;padding:20px">No messages</div>';
+}
+async function delConv(uuid){if(!confirm('Delete?'))return;await apiFetch(`/api/admin/conversations/${uuid}`,{method:'DELETE'});loadConvs(convsPage);showToast('Deleted');}
+
+// ── PLANS ─────────────────────────────────────────────────────────────────────
+async function loadPlans(){
+  const r=await apiFetch('/api/admin/plans');const d=await r.json();
+  allPlans=d.plans||[];
+  const grid=document.getElementById('plans-grid');if(!grid)return;
+  grid.innerHTML=allPlans.length?allPlans.map((p,i)=>`
+    <div class="pa-card">
+      <div class="pa-name">${esc(p.name)} ${p.badge?`<span class="badge badge-gold" style="font-size:.58rem">${p.badge}</span>`:''}</div>
+      <div class="pa-price">${p.price===0?'Free':'$'+p.price}<span style="font-size:.72rem;color:var(--t4);font-family:var(--ff)">${p.price===0?'':'/mo'}</span></div>
+      <div class="pa-limit">${p.daily_limit>=99999?'Unlimited':p.daily_limit} msgs/day</div>
+      <div class="pa-models">${(Array.isArray(p.models)?p.models:[]).map(m=>`<span class="pa-tag">${m}</span>`).join('')}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" style="flex:1;font-size:.7rem" onclick="openPlanByIndex(${i})">✏️ Edit</button>
+        ${p.slug!=='free'?`<button class="btn btn-danger btn-sm" onclick="delPlan(${p.id})">🗑</button>`:''}
+      </div>
+    </div>`).join(''):'<div style="color:var(--t4);font-size:.8rem">No plans configured</div>';
+}
+
+// Use index-based lookup — completely avoids JSON-in-onclick problem
+function openPlanByIndex(i){openPlanModal(allPlans[i]);}
+
+function openPlanModal(plan){
+  document.getElementById('plan-modal-title').textContent=plan?'✏️ Edit Plan — '+plan.name:'➕ New Plan';
+  document.getElementById('pm-id').value=plan?.id||'';
+  document.getElementById('pm-name').value=plan?.name||'';
+  document.getElementById('pm-slug').value=plan?.slug||'';
+  document.getElementById('pm-price').value=plan?.price??0;
+  document.getElementById('pm-limit').value=plan?.daily_limit||10;
+  document.getElementById('pm-badge').value=plan?.badge||'';
+  document.getElementById('pm-active').checked=plan?plan.active==1:true;
+  selPlanModels=plan?(Array.isArray(plan.models)?plan.models:JSON.parse(plan.models||'[]')):[];
+  document.getElementById('pm-models').innerHTML=ALL_MODELS.map(id=>`<button class="m-chip${selPlanModels.includes(id)?' on':''}" onclick="togglePM('${id}',this)">${MICONS[id]||''} ${id}</button>`).join('');
+  const feats=plan?(Array.isArray(plan.features)?plan.features:JSON.parse(plan.features||'[]')):[];
+  document.getElementById('pm-features').value=feats.join('\n');
+  openM('plan-modal');
+}
+
+function togglePM(id,el){
+  if(selPlanModels.includes(id)){selPlanModels=selPlanModels.filter(m=>m!==id);el.classList.remove('on');}
+  else{selPlanModels.push(id);el.classList.add('on');}
+}
+
+async function savePlan(){
+  const name=document.getElementById('pm-name').value.trim();
+  const slug=document.getElementById('pm-slug').value.trim();
+  if(!name||!slug){showToast('Name and slug are required','error');return;}
+  const id=document.getElementById('pm-id').value;
+  const data={
+    id:id?parseInt(id):null,
+    name,slug,
+    price:parseFloat(document.getElementById('pm-price').value)||0,
+    daily_limit:parseInt(document.getElementById('pm-limit').value)||10,
+    badge:document.getElementById('pm-badge').value.trim(),
+    active:document.getElementById('pm-active').checked?1:0,
+    models:[...selPlanModels],
+    features:document.getElementById('pm-features').value.split('\n').map(l=>l.trim()).filter(Boolean),
+    sort_order:0
+  };
+  const r=await apiFetch('/api/admin/plans',{method:'PUT',body:JSON.stringify(data)});
+  const d=await r.json();
+  if(!r.ok)return showToast(d.error,'error');
+  closeM('plan-modal');await loadPlans();showToast('Plan saved ✅');
+}
+
+async function delPlan(id){
+  if(!confirm('Delete plan? Users on it will move to Free.'))return;
+  await apiFetch(`/api/admin/plans/${id}`,{method:'DELETE'});
+  loadPlans();showToast('Plan deleted');
+}
+
+// ── TRAVEL PARTNERS ───────────────────────────────────────────────────────────
+var tpPartners=[];
+async function loadPartners(){
+  const grid=document.getElementById('partners-grid');
+  grid.innerHTML='<div style="color:var(--t4);font-size:.8rem">Loading…</div>';
+  try{
+    const r=await apiFetch('/api/admin/affiliates');const d=await r.json();
+    tpPartners=d.partners||[];
+    grid.innerHTML=tpPartners.length?tpPartners.map((p,i)=>`
+      <div class="pa-card" style="${p.enabled?'':'opacity:.45'}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:1.2rem">${p.icon||'🔗'}</span>
+          <div class="pa-name" style="margin:0">${esc(p.name)}</div>
+          <span class="pa-tag" style="margin-left:auto">${esc(p.tag||'Travel')}</span>
+        </div>
+        <div style="font-size:.7rem;color:var(--t4);word-break:break-all;margin-bottom:8px">${esc(p.url)}</div>
+        <div style="font-size:.72rem;color:var(--t3);margin-bottom:8px">${esc(p.blurb||'')}</div>
+        <div class="pa-models">${(p.keywords||[]).slice(0,4).map(k=>`<span class="pa-tag">${esc(k)}</span>`).join('')}${(p.keywords||[]).length>4?`<span class="pa-tag">+${p.keywords.length-4}</span>`:''}</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-ghost btn-sm" style="flex:1;font-size:.7rem" onclick="openPartnerModal(${i})">✏️ Edit</button>
+          <label class="toggle" title="Show/hide everywhere"><input type="checkbox" ${p.enabled?'checked':''} onchange="togglePartner(${i},this.checked)"/><span class="toggle-sl"></span></label>
+          <button class="btn btn-danger btn-sm" onclick="delPartner(${i})" title="Remove">🗑</button>
+        </div>
+      </div>`).join(''):'<div style="color:var(--t4);font-size:.8rem">No partners configured</div>';
+  }catch(e){grid.innerHTML='<div style="color:#FF8F9C;font-size:.8rem">Failed to load partners</div>';}
+  renderPartnerBadges();
+}
+function openPartnerModal(i){
+  const p=typeof i==='number'?tpPartners[i]:null;
+  document.getElementById('partner-modal-title').textContent=p?'✏️ Edit — '+p.name:'➕ Add Partner';
+  document.getElementById('pm2-id').value=p?p.id:'new';
+  document.getElementById('pm2-icon').value=p?.icon||'🔗';
+  document.getElementById('pm2-name').value=p?.name||'';
+  document.getElementById('pm2-url').value=p?.url||'';
+  document.getElementById('pm2-tag').value=p?.tag||'';
+  document.getElementById('pm2-type').value=p?.type||'misc';
+  document.getElementById('pm2-blurb').value=p?.blurb||'';
+  document.getElementById('pm2-keywords').value=(p?.keywords||[]).join(', ');
+  document.getElementById('pm2-enabled').checked=p?p.enabled!==false:true;
+  openM('partner-modal');
+}
+async function savePartner(){
+  let id=document.getElementById('pm2-id').value;
+  const name=document.getElementById('pm2-name').value.trim();
+  const url=document.getElementById('pm2-url').value.trim();
+  if(!name||!url)return showToast('Name and URL are required','error');
+  if(id==='new'){
+    id=name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'partner';
+    while(tpPartners.some(p=>p.id===id))id=id+'-x';
+  }
+  const body={name,icon:document.getElementById('pm2-icon').value.trim()||'🔗',url,tag:document.getElementById('pm2-tag').value.trim()||'Travel',type:document.getElementById('pm2-type').value.trim()||'misc',blurb:document.getElementById('pm2-blurb').value.trim(),keywords:document.getElementById('pm2-keywords').value,enabled:document.getElementById('pm2-enabled').checked};
+  const r=await apiFetch('/api/admin/affiliates/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify(body)});
+  const d=await r.json();
+  if(!r.ok)return showToast(d.error||'Save failed','error');
+  closeM('partner-modal');loadPartners();showToast('Partner saved ✅ — live in chats now');
+}
+async function togglePartner(i,on){
+  const p=tpPartners[i];
+  const r=await apiFetch('/api/admin/affiliates/'+encodeURIComponent(p.id),{method:'PUT',body:JSON.stringify({enabled:on})});
+  const d=await r.json();
+  if(!r.ok){showToast(d.error||'Failed','error');loadPartners();return;}
+  showToast(on?p.name+' shown':p.name+' hidden');
+  loadPartners();
+}
+async function delPartner(i){
+  const p=tpPartners[i];
+  if(!confirm('Remove "'+p.name+'" from chats and the booking grid?'))return;
+  const r=await apiFetch('/api/admin/affiliates/'+encodeURIComponent(p.id),{method:'DELETE'});
+  const d=await r.json();
+  if(!r.ok)return showToast(d.error||'Failed','error');
+  loadPartners();showToast('Partner removed');
+}
+
+// ── AI SETTINGS ────────────────────────────────────────────────────────────────
+async function loadAI(){
+  const r=await apiFetch('/api/admin/settings/ai');const d=await r.json();const s=d.settings||{};
+  const keys=['ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_default_model','ai_max_tokens','ai_system_prompt_addon'];
+  keys.forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k]||'';});
+  document.getElementById('ai_stream').checked=s.ai_stream!=='0';
+  updateProviderStatus(s);
+}
+function updateProviderStatus(settings){
+  const map={
+    'pst-anthropic': 'ai_anthropic_key',
+    'pst-openrouter': 'ai_openrouter_key',
+    'pst-groq': 'ai_groq_key',
+    'pst-gemini': 'ai_gemini_key',
+    'pst-together': 'ai_together_key',
+    'pst-huggingface': 'ai_huggingface_key',
+  };
+  for(const [id, key] of Object.entries(map)){
+    const el=document.getElementById(id);
+    if(!el) continue;
+    const hasKey = settings[key] && settings[key].length > 0;
+    el.classList.toggle('live', hasKey);
+    el.classList.toggle('off', !hasKey);
+  }
+}
+async function saveAI(){
+  const keyFields=['ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key'];
+  const settings={ai_default_model:document.getElementById('ai_default_model').value,ai_max_tokens:document.getElementById('ai_max_tokens').value,ai_stream:document.getElementById('ai_stream').checked?'1':'0',ai_system_prompt_addon:document.getElementById('ai_system_prompt_addon').value};
+  keyFields.forEach(k=>{const v=document.getElementById(k)?.value;if(v&&!v.startsWith('••••'))settings[k]=v;});
+  const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});
+  const d=await r.json();r.ok?showToast('AI settings saved ✅'):showToast(d.error,'error');
+}
+async function testAI(model){showToast('Testing…');const r=await apiFetch('/api/admin/settings/test-ai',{method:'POST',body:JSON.stringify({model})});const d=await r.json();r.ok?showToast(d.message):showToast(d.error,'error');}
+
+// ── EMAIL ─────────────────────────────────────────────────────────────────────
+async function loadEmail(){const r=await apiFetch('/api/admin/settings/email');const d=await r.json();const s=d.settings||{};['smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from_name','smtp_from_email','smtp_secure'].forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k]||'';});}
+async function saveEmail(){const fields=['smtp_host','smtp_port','smtp_user','smtp_from_name','smtp_from_email','smtp_secure'];const settings=fields.reduce((a,k)=>({...a,[k]:document.getElementById(k)?.value||''}),{});const pass=document.getElementById('smtp_pass').value;if(pass&&!pass.startsWith('••••'))settings.smtp_pass=pass;const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});const d=await r.json();r.ok?showToast('Email settings saved ✅'):showToast(d.error,'error');}
+async function testEmail(){const to=document.getElementById('test-email-to').value;if(!to)return showToast('Enter recipient email','error');showToast('Sending test…');const r=await apiFetch('/api/admin/settings/test-email',{method:'POST',body:JSON.stringify({to})});const d=await r.json();r.ok?showToast(d.message):showToast(d.error,'error');}
+
+// ── NOTIF SETTINGS ────────────────────────────────────────────────────────────
+async function loadNotifS(){const r=await apiFetch('/api/admin/settings/notifications');const d=await r.json();const s=d.settings||{};['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts'].forEach(k=>{const el=document.getElementById(k);if(el)el.checked=s[k]==='1';});document.getElementById('notif_usage_threshold').value=s.notif_usage_threshold||'80';}
+async function saveNotifs(){const tgls=['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts'];const settings=tgls.reduce((a,k)=>({...a,[k]:document.getElementById(k).checked?'1':'0'}),{});settings.notif_usage_threshold=document.getElementById('notif_usage_threshold').value;const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});const d=await r.json();r.ok?showToast('Notification settings saved ✅'):showToast(d.error,'error');}
+
+// ── GENERAL SETTINGS ──────────────────────────────────────────────────────────
+async function loadGeneral(){
+  const r=await apiFetch('/api/admin/settings/general');const d=await r.json();const s=d.settings||{};
+  ['app_name','app_tagline','app_logo','support_email','app_url'].forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k]||'';});
+  document.getElementById('maintenance_mode').checked=s.maintenance_mode==='1';
+  document.getElementById('registration_open').checked=s.registration_open!=='0';
+  updateMaintBadge(s.maintenance_mode==='1');
+  // Show existing logo
+  if(s.app_logo_url){document.getElementById('logo-preview-box').innerHTML=`<img src="${s.app_logo_url}" style="width:100%;height:100%;object-fit:contain"/>`;}
+  else if(s.app_logo){document.getElementById('logo-preview-box').textContent=s.app_logo;}
+}
+async function saveGeneral(){
+  const fields=['app_name','app_tagline','app_logo','support_email','app_url'];
+  const settings=fields.reduce((a,k)=>({...a,[k]:document.getElementById(k)?.value||''}),{});
+  settings.maintenance_mode=document.getElementById('maintenance_mode').checked?'1':'0';
+  settings.registration_open=document.getElementById('registration_open').checked?'1':'0';
+  const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});
+  const d=await r.json();
+  if(r.ok){showToast('Settings saved ✅');updateMaintBadge(document.getElementById('maintenance_mode').checked);}
+  else showToast(d.error,'error');
+}
+function updateMaintBadge(on){const b=document.getElementById('maint-pill');if(b)b.style.display=on?'block':'none';}
+
+// ── LOGO UPLOAD ────────────────────────────────────────────────────────────────
+async function uploadLogo(input){
+  if(!input.files||!input.files[0])return;
+  const file=input.files[0];
+  if(file.size>2*1024*1024){showToast('File too large (max 2MB)','error');return;}
+  showToast('Uploading logo…');
+  const fd=new FormData();fd.append('logo',file);
+  const r=await fetch('/api/admin/upload/logo',{method:'POST',headers:{'Authorization':'Bearer '+localStorage.getItem('vg_token')},body:fd});
+  const d=await r.json();
+  if(!r.ok){showToast(d.error||'Upload failed','error');return;}
+  showToast('Logo uploaded ✅');
+  document.getElementById('logo-preview-box').innerHTML=`<img src="${d.url}?t=${Date.now()}" style="width:100%;height:100%;object-fit:contain"/>`;
+  document.getElementById('sb-icon').innerHTML=`<img src="${d.url}?t=${Date.now()}" style="width:100%;height:100%;object-fit:contain"/>`;
+}
+
+// ── BROADCAST ─────────────────────────────────────────────────────────────────
+function openNotifModal(userId,isBroadcast){
+  document.getElementById('notif-uid').value=userId||'';
+  document.getElementById('notif-title-i').value='';document.getElementById('notif-msg-i').value='';
+  document.getElementById('notif-modal-title').textContent=isBroadcast?'📢 Broadcast to All':'📢 Notify User';
+  document.getElementById('notif-target-desc').textContent=isBroadcast?'This will be sent to ALL registered users as a global in-app notification.':'This notification will be sent only to this specific user.';
+  openM('notif-modal');
+}
+async function sendNotif(){
+  const uid=document.getElementById('notif-uid').value;
+  const title=document.getElementById('notif-title-i').value;const message=document.getElementById('notif-msg-i').value;const type=document.getElementById('notif-type-i').value;
+  if(!title||!message)return showToast('Title and message required','error');
+  const r=!uid?await apiFetch('/api/admin/broadcast',{method:'POST',body:JSON.stringify({title,message,type})}):await apiFetch(`/api/admin/users/${uid}/notify`,{method:'POST',body:JSON.stringify({title,message,type})});
+  const d=await r.json();r.ok?(closeM('notif-modal'),showToast(d.message)):showToast(d.error,'error');
+}
+async function sendBroadcast(){const title=document.getElementById('bc-title').value,message=document.getElementById('bc-msg').value,type=document.getElementById('bc-type').value;if(!title||!message)return showToast('Required','error');const r=await apiFetch('/api/admin/broadcast',{method:'POST',body:JSON.stringify({title,message,type})});const d=await r.json();if(r.ok){showToast(d.message);document.getElementById('bc-title').value='';document.getElementById('bc-msg').value='';}else showToast(d.error,'error');}
+async function emailBroadcast(){const subject=document.getElementById('bc-email-subj').value,html=document.getElementById('bc-email-body').value;if(!subject||!html)return showToast('Subject and body required','error');if(!confirm('Send email to ALL users?'))return;showToast('Sending…');const r=await apiFetch('/api/admin/send-email',{method:'POST',body:JSON.stringify({subject,html,all_users:true})});const d=await r.json();r.ok?showToast(d.message):showToast(d.error,'error');}
+
+// ── AFFILIATE CLICK ANALYTICS ────────────────────────────────────────────────
+async function loadClicks(){
+  try{
+    const r=await apiFetch('/api/admin/affiliates/stats');const d=await r.json();
+    const cc=document.getElementById('clicks-chart');if(!cc)return;
+    const daily=d.daily||[];const max=Math.max(...daily.map(x=>x.clicks),1);
+    cc.innerHTML=daily.length?daily.map(x=>`<div class="bc-b" style="height:${Math.max(5,Math.round((x.clicks/max)*65))}px" title="${x.date}: ${x.clicks} clicks"></div>`).join(''):'<div style="color:var(--t4);font-size:.75rem;padding:10px">No clicks yet — links appear in chat replies and the user Book view</div>';
+    const cp=document.getElementById('clicks-partners');
+    const parts=(d.byPartner||[]).slice(0,8);const pmax=Math.max(...parts.map(p=>p.clicks),1);
+    cp.innerHTML=parts.length?parts.map(p=>`<div class="mb-row"><span class="mb-name">${esc(p.partner)}</span><div class="mb-bar-w"><div class="mb-bar" style="width:${Math.round((p.clicks/pmax)*100)}%"></div></div><span class="mb-count">${p.clicks}</span></div>`).join(''):'<div style="color:var(--t4);font-size:.75rem">No clicks yet</div>';
+    tpClickCounts={};(d.byPartner||[]).forEach(p=>{tpClickCounts[p.partner.toLowerCase()]=p.clicks;});
+    if(tpPartners.length)renderPartnerBadges();
+  }catch{}
+}
+var tpClickCounts={};
+function renderPartnerBadges(){
+  document.querySelectorAll('#partners-grid .pa-card').forEach(card=>{
+    const name=card.querySelector('.pa-name')?.textContent?.trim();if(!name)return;
+    const n=tpClickCounts[name.toLowerCase()]||0;
+    let badge=card.querySelector('.click-badge');
+    if(!badge){badge=document.createElement('span');badge.className='click-badge';badge.style.cssText='font-size:.58rem;background:rgba(217,90,35,.1);border:1px solid rgba(217,90,35,.25);color:var(--o300);border-radius:999px;padding:2px 8px;margin-left:auto';card.firstElementChild.appendChild(badge);}
+    badge.textContent=n?n+' click'+(n===1?'':'s'):'0 clicks';
+  });
+}
+
+// ── SOCIAL POSTS ──────────────────────────────────────────────────────────────
+var soMeta={platforms:[],regions:[],passports:[]},soSel={platforms:[],countries:[],regions:[]};
+async function loadSocial(){
+  try{
+    const r=await apiFetch('/api/admin/social/platforms');const d=await r.json();
+    soMeta={platforms:d.platforms||[],regions:d.regions||[],passports:d.passports||[]};
+    document.getElementById('so-platforms').innerHTML=soMeta.platforms.map(p=>`<button type="button" class="m-chip" data-id="${p.id}" onclick="soToggle('platforms','${p.id}',this)">${p.icon} ${p.name}</button>`).join('');
+    document.getElementById('so-regions').innerHTML=soMeta.regions.map(rg=>`<button type="button" class="m-chip" data-id="${rg}" onclick="soToggle('regions','${rg}',this)">${rg}</button>`).join('');
+    document.getElementById('so-countries').innerHTML=soMeta.passports.map(p=>`<button type="button" class="m-chip" data-id="${p.code}" onclick="soToggle('countries','${p.code}',this)">${p.flag} ${p.code}</button>`).join('');
+    await loadSocialPosts();
+  }catch(e){showToast('Failed to load social config','error');}
+}
+function soToggle(kind,id,el){
+  const arr=soSel[kind];const i=arr.indexOf(id);
+  if(i>=0){arr.splice(i,1);el.classList.remove('on');}else{arr.push(id);el.classList.add('on');}
+  soPreview();
+}
+var soPrevT=null;
+function soPreview(){
+  clearTimeout(soPrevT);
+  soPrevT=setTimeout(async()=>{
+    try{
+      const r=await apiFetch('/api/admin/social/audience',{method:'POST',body:JSON.stringify({target_countries:soSel.countries,target_regions:soSel.regions})});
+      const d=await r.json();
+      document.getElementById('so-reach').textContent=d.note||'';
+    }catch{}
+  },300);
+}
+function soPayload(publish){
+  const title=document.getElementById('so-title').value.trim();
+  const content=document.getElementById('so-content').value.trim();
+  const link=document.getElementById('so-link').value.trim();
+  if(!title||!content){showToast('Title and content are required','error');return null;}
+  if(!soSel.platforms.length){showToast('Pick at least one platform','error');return null;}
+  return {title,content,link_url:link,platforms:[...soSel.platforms],target_countries:[...soSel.countries],target_regions:[...soSel.regions],publish};
+}
+function soClear(){
+  document.getElementById('so-title').value='';document.getElementById('so-content').value='';document.getElementById('so-link').value='';document.getElementById('so-schedule').value='';
+  soSel={platforms:[],countries:[],regions:[]};
+  document.querySelectorAll('#so-platforms .m-chip,#so-countries .m-chip,#so-regions .m-chip').forEach(c=>c.classList.remove('on'));
+  document.getElementById('so-reach').textContent='No targeting → public share only';
+}
+async function saveSocialPost(publishNow){
+  const body=soPayload(publishNow);if(!body)return;
+  const r=await apiFetch('/api/admin/social/posts',{method:'POST',body:JSON.stringify(body)});
+  const d=await r.json();
+  if(!r.ok)return showToast(d.error||'Save failed','error');
+  showToast(publishNow?'Published 📣':'Draft saved');
+  soClear();loadSocialPosts();
+}
+async function scheduleSocialPost(){
+  const body=soPayload(false);if(!body)return;
+  const when=document.getElementById('so-schedule').value;
+  if(!when)return showToast('Pick a date & time first','error');
+  body.scheduled_at=new Date(when).toISOString().slice(0,19).replace('T',' ');
+  const r=await apiFetch('/api/admin/social/posts',{method:'POST',body:JSON.stringify(body)});
+  const d=await r.json();
+  if(!r.ok)return showToast(d.error||'Save failed','error');
+  showToast('Scheduled ⏰ — the scheduler delivers it automatically');
+  soClear();loadSocialPosts();
+}
+async function loadSocialPosts(){
+  const tb=document.getElementById('social-tbody');
+  try{
+    const r=await apiFetch('/api/admin/social/posts');const d=await r.json();
+    const posts=d.posts||[];
+    tb.innerHTML=posts.length?posts.map(p=>{
+      const plat=p.platforms.map(id=>{const m=soMeta.platforms.find(x=>x.id===id);return m?m.icon:id;}).join(' ');
+      const tgt=[...p.target_countries,...p.target_regions].join(', ')||'public';
+      const st=p.status==='posted'?'<span class="badge badge-green">posted</span>':p.status==='scheduled'?'<span class="badge badge-gold">scheduled</span>':'<span class="badge badge-gray">draft</span>';
+      const when=p.posted_at||p.scheduled_at||p.created_at||'';
+      return `<tr>
+        <td style="max-width:240px"><div style="font-weight:500;color:var(--t1)">${esc(p.title)}</div><div style="font-size:.66rem;color:var(--t4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.content)}</div></td>
+        <td style="font-size:.85rem">${plat}</td>
+        <td style="font-size:.72rem;color:var(--t3)">${esc(tgt)}</td>
+        <td>${st}</td>
+        <td style="font-size:.7rem;color:var(--t4)">${when}</td>
+        <td style="white-space:nowrap">
+          ${p.status!=='posted'?`<button class="act-btn" title="Publish now" onclick="publishSocial(${p.id})">📣</button>`:''}
+          <button class="act-btn" title="Share links" onclick="shareSocial(${p.id})">🔗</button>
+          <button class="act-btn danger" title="Delete" onclick="delSocial(${p.id})">🗑</button>
+        </td>
+      </tr>`;}).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--t4);padding:24px">No posts yet — compose your first promo above</td></tr>';
+  }catch{tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#FF8F9C;padding:20px">Failed to load posts</td></tr>';}
+}
+async function publishSocial(id){
+  showToast('Publishing…');
+  const r=await apiFetch(`/api/admin/social/posts/${id}/publish`,{method:'POST'});
+  const d=await r.json();
+  if(!r.ok)return showToast(d.error||'Failed','error');
+  showToast('Published 📣 — targeted users notified in-app');loadSocialPosts();
+}
+async function delSocial(id){
+  if(!confirm('Delete this post?'))return;
+  await apiFetch(`/api/admin/social/posts/${id}`,{method:'DELETE'});
+  loadSocialPosts();showToast('Deleted');
+}
+async function shareSocial(id){
+  const r=await apiFetch(`/api/admin/social/posts/${id}/share-links`);
+  const d=await r.json();
+  const names={twitter:'𝕏 / Twitter',facebook:'📘 Facebook',linkedin:'💼 LinkedIn',whatsapp:'💬 WhatsApp',telegram:'✈️ Telegram',reddit:'👽 Reddit',pinterest:'📌 Pinterest',email:'📧 Email',threads:'🧵 Threads',bluesky:'🦋 Bluesky',tumblr:'📱 Tumblr',viber:'📞 Viber',line:'💬 LINE',vk:'🌐 VK',xing:'🌐 XING'};
+  const rows=Object.entries(d.links||{}).map(([k,u])=>`<a class="book-link" href="${u}" target="_blank" rel="noopener"><span>${names[k]||k}</span><span class="partner">Opens ready-to-post →</span></a>`).join('');
+  openShareModal(rows);
+}
+function openShareModal(rows){
+  let m=document.getElementById('share-modal');
+  if(!m){
+    m=document.createElement('div');m.id='share-modal';m.className='m-over';m.setAttribute('onclick','if(event.target===this)this.classList.remove("open")');
+    m.innerHTML='<div class="m-box" style="max-width:460px"><div class="m-head"><div class="m-title">🔗 Share everywhere</div><button class="m-close" onclick="document.getElementById(\'share-modal\').classList.remove(\'open\')">✕</button></div><div class="m-body book-links" id="share-links-body" style="display:flex;flex-direction:column;gap:6px"></div></div>';
+    document.body.appendChild(m);
+  }
+  document.getElementById('share-links-body').innerHTML=rows;
+  m.classList.add('open');
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function openM(id){document.getElementById(id).classList.add('open');}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.m-over.open').forEach(m=>m.classList.remove('open'));});
+function toggleKey(id){const el=document.getElementById(id);el.type=el.type==='password'?'text':'password';el.nextElementSibling.textContent=el.type==='password'?'Show':'Hide';}
+function renderPag(elId,totalPages,current,fn){const el=document.getElementById(elId);if(!el||totalPages<=1){if(el)el.innerHTML='';return;}let h=`<span>Page ${current}/${totalPages}</span>`;if(current>1)h+=`<button class="pg-btn" onclick="${fn.name}(${current-1})">←</button>`;const s=Math.max(1,current-2),e=Math.min(totalPages,current+2);for(let i=s;i<=e;i++)h+=`<button class="pg-btn${i===current?' active':''}" onclick="${fn.name}(${i})">${i}</button>`;if(current<totalPages)h+=`<button class="pg-btn" onclick="${fn.name}(${current+1})">→</button>`;el.innerHTML=h;}
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');t.style.borderColor=type==='error'?'rgba(200,16,46,.35)':'rgba(217,90,35,.35)';clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function doLogout(){localStorage.clear();window.location.href='/admin-login';}
+
+init();
+</script>
+</body>
+</html>

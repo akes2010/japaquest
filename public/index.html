@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="description" content="Japa+ — visa answers, embassy-ready letters, real trip budgets. Built for African passports, by people who have done the japa journey."/>
+<meta name="theme-color" content="#0A1428"/>
+<meta property="og:title" content="Japa+ — Travel smart. Land ready."/>
+<title>Japa+ — Travel smart. Land ready.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/style.css"/>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="icon" href="/icons/icon.svg"/>
+<style>
+/* ── Japa+ landing theme ─────────────────────────────────────────────────── */
+:root{
+  --ink:#0A1428; --ink2:#101E38; --paper:#F7F3EA; --paper2:#EFE8D8;
+  --accent:#E8613C; --accent2:#F07B4F; --green:#0E7B4F; --green2:#16A06A;
+  --gold:#D9A441; --line:rgba(10,20,40,.12); --line2:rgba(10,20,40,.22);
+  --mut:rgba(10,20,40,.62); --mut2:rgba(10,20,40,.44);
+  --fd:'Fraunces',Georgia,serif; --ff:'Outfit',system-ui,sans-serif;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--ff);background:var(--paper);color:var(--ink);line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+button{font-family:var(--ff);cursor:pointer;border:none;background:none}
+::selection{background:var(--accent);color:#fff}
+/* Grain overlay for paper texture */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.5;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+.wrap{max-width:1160px;margin:0 auto;padding:0 28px}
+/* ── Reveal animation system ─────────────────────────────────────────────── */
+.rv{opacity:0;transform:translateY(26px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.rv.on{opacity:1;transform:none}
+.rv.d1{transition-delay:.08s}.rv.d2{transition-delay:.16s}.rv.d3{transition-delay:.24s}.rv.d4{transition-delay:.32s}
+@media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}*{animation:none!important}}
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+nav{position:sticky;top:0;z-index:100;background:rgba(247,243,234,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1160px;margin:0 auto;padding:0 28px;height:70px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--fd);font-weight:700;font-size:1.35rem;letter-spacing:-.01em}
+.logo-mark{width:38px;height:38px;border-radius:12px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:1.15rem;position:relative;overflow:hidden}
+.logo-mark::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 25%,rgba(232,97,60,.55),transparent 55%)}
+.logo-mark span{position:relative;z-index:1}
+.logo-plus{color:var(--accent)}
+.nav-links{display:flex;gap:4px}
+.nav-link{padding:8px 14px;border-radius:99px;font-size:.92rem;font-weight:500;color:var(--mut);transition:all .25s var(--ease)}
+.nav-link:hover{color:var(--ink);background:rgba(10,20,40,.06)}
+.nav-cta{display:flex;gap:10px;align-items:center}
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 26px;border-radius:99px;font-size:.95rem;font-weight:600;transition:transform .3s var(--ease),box-shadow .3s var(--ease),background .3s var(--ease);position:relative;overflow:hidden}
+.btn:active{transform:scale(.97)}
+.btn-ink{background:var(--ink);color:var(--paper);box-shadow:0 10px 24px -10px rgba(10,20,40,.45)}
+.btn-ink:hover{transform:translateY(-2px);box-shadow:0 16px 32px -12px rgba(10,20,40,.5)}
+.btn-ink::after{content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-20deg);transition:left .6s var(--ease)}
+.btn-ink:hover::after{left:130%}
+.btn-acc{background:var(--accent);color:#fff;box-shadow:0 10px 24px -10px rgba(232,97,60,.55)}
+.btn-acc:hover{background:var(--accent2);transform:translateY(-2px);box-shadow:0 16px 34px -12px rgba(232,97,60,.6)}
+.btn-line{border:1.5px solid var(--line2);color:var(--ink);background:transparent}
+.btn-line:hover{border-color:var(--ink);background:rgba(10,20,40,.04)}
+.btn-sm{padding:9px 18px;font-size:.86rem}
+.btn-lg{padding:16px 34px;font-size:1.04rem}
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+#hero{position:relative;padding:84px 0 90px;overflow:hidden}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+.kicker{display:inline-flex;align-items:center;gap:9px;font-size:.78rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--green);margin-bottom:22px}
+.kicker::before{content:'';width:34px;height:2px;background:var(--green)}
+.hero-h1{font-family:var(--fd);font-size:clamp(2.6rem,5.6vw,4.35rem);font-weight:600;line-height:1.04;letter-spacing:-.025em;margin-bottom:22px}
+.hero-h1 em{font-style:italic;color:var(--accent);position:relative;white-space:nowrap}
+.hero-h1 em::after{content:'';position:absolute;left:0;right:0;bottom:.04em;height:.42em;background:rgba(232,97,60,.16);z-index:-1;border-radius:4px;transform:scaleX(0);transform-origin:left;animation:hl 1s .9s var(--ease) forwards}
+@keyframes hl{to{transform:scaleX(1)}}
+.hero-lede{font-size:1.13rem;color:var(--mut);max-width:520px;line-height:1.75;margin-bottom:34px}
+.hero-btns{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:40px}
+.hero-proof{display:flex;align-items:center;gap:14px;font-size:.88rem;color:var(--mut)}
+.avatars{display:flex}
+.avatars span{width:34px;height:34px;border-radius:50%;border:2.5px solid var(--paper);margin-left:-9px;display:flex;align-items:center;justify-content:center;font-size:.95rem;background:var(--paper2)}
+.avatars span:first-child{margin-left:0}
+/* Ticket mock — the human touch */
+.ticket{background:#fff;border-radius:22px;border:1px solid var(--line);box-shadow:0 30px 70px -30px rgba(10,20,40,.35),0 4px 14px rgba(10,20,40,.06);overflow:hidden;transform:rotate(1.6deg);transition:transform .5s var(--ease);animation:drift 7s ease-in-out infinite}
+.ticket:hover{transform:rotate(0deg) scale(1.015)}
+@keyframes drift{0%,100%{transform:rotate(1.6deg) translateY(0)}50%{transform:rotate(1.1deg) translateY(-9px)}}
+.tk-top{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px dashed var(--line2)}
+.tk-brand{font-family:var(--fd);font-weight:700;font-size:1.05rem}
+.tk-brand i{color:var(--accent);font-style:normal}
+.tk-tag{font-size:.66rem;font-weight:700;letter-spacing:.12em;color:var(--green);background:rgba(14,123,79,.09);padding:4px 11px;border-radius:99px}
+.tk-route{display:flex;align-items:center;justify-content:space-between;padding:26px 24px 20px}
+.tk-code{font-family:var(--fd);font-size:2.5rem;font-weight:600;letter-spacing:-.02em}
+.tk-code small{display:block;font-family:var(--ff);font-size:.72rem;font-weight:500;color:var(--mut2);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.tk-mid{flex:1;text-align:center;padding:0 18px;position:relative}
+.tk-dash{height:2px;background:repeating-linear-gradient(90deg,var(--line2) 0 7px,transparent 7px 14px);position:relative}
+.tk-plane{position:absolute;top:-13px;left:0;font-size:1.15rem;animation:fly 4.5s var(--ease) infinite}
+@keyframes fly{0%{left:0;opacity:0}12%{opacity:1}88%{opacity:1}100%{left:calc(100% - 22px);opacity:0}}
+.tk-note{text-align:center;font-size:.78rem;color:var(--mut);padding:0 24px 8px}
+.tk-note b{color:var(--green)}
+.tk-bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:16px 24px 22px}
+.tk-cell{background:var(--paper);border-radius:12px;padding:10px 12px}
+.tk-k{font-size:.6rem;font-weight:700;letter-spacing:.1em;color:var(--mut2);text-transform:uppercase}
+.tk-v{font-size:.86rem;font-weight:600;margin-top:2px}
+.tk-v.ok{color:var(--green)}
+/* ── Marquee strip ───────────────────────────────────────────────────────── */
+.strip{background:var(--ink);color:var(--paper);padding:15px 0;overflow:hidden;transform:rotate(-.6deg) scale(1.01);border-radius:6px;position:relative;z-index:2}
+.strip-track{display:flex;gap:0;width:max-content;animation:scroll 30s linear infinite}
+.strip:hover .strip-track{animation-play-state:paused}
+@keyframes scroll{to{transform:translateX(-50%)}}
+.strip-item{display:inline-flex;align-items:center;gap:10px;padding:0 26px;font-size:.85rem;font-weight:500;letter-spacing:.04em;white-space:nowrap}
+.strip-item i{font-style:normal;color:var(--gold);font-size:.7rem}
+/* ── Sections ────────────────────────────────────────────────────────────── */
+section{position:relative;z-index:2}
+.sec-head{max-width:640px;margin-bottom:52px}
+.sec-head.center{margin-left:auto;margin-right:auto;text-align:center}
+.sec-kicker{font-size:.75rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+.sec-title{font-family:var(--fd);font-size:clamp(1.9rem,3.6vw,2.85rem);font-weight:600;line-height:1.12;letter-spacing:-.02em;margin-bottom:14px}
+.sec-title em{font-style:italic;color:var(--green)}
+.sec-sub{font-size:1.02rem;color:var(--mut);line-height:1.75}
+/* Steps — editorial numbered list */
+#how{padding:96px 0 60px}
+.step{display:grid;grid-template-columns:110px 1fr;gap:26px;padding:34px 0;border-top:1px solid var(--line);align-items:start;transition:background .3s var(--ease)}
+.step:last-child{border-bottom:1px solid var(--line)}
+.step:hover{background:rgba(10,20,40,.025)}
+.step-no{font-family:var(--fd);font-size:3.4rem;font-weight:500;color:transparent;-webkit-text-stroke:1.5px var(--line2);line-height:1;transition:all .35s var(--ease)}
+.step:hover .step-no{color:var(--accent);-webkit-text-stroke:0;transform:translateX(6px)}
+.step-h{font-family:var(--fd);font-size:1.45rem;font-weight:600;margin-bottom:8px;letter-spacing:-.01em}
+.step-p{color:var(--mut);font-size:1rem;line-height:1.75;max-width:560px}
+.step-quote{margin-top:12px;font-size:.86rem;color:var(--green);font-weight:500}
+/* Chat cards — Features section */
+#features{padding:96px 0;background:var(--ink);color:var(--paper);border-radius:34px;margin:0 14px}
+#features .sec-kicker{color:var(--gold)}
+#features .sec-sub{color:rgba(247,243,234,.66)}
+.chat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.chat-card{background:rgba(247,243,234,.05);border:1px solid rgba(247,243,234,.1);border-radius:20px;padding:24px;transition:all .4s var(--ease);opacity:0;transform:translateY(26px)}
+.chat-card.on{opacity:1;transform:none}
+.chat-card:hover{background:rgba(247,243,234,.09);border-color:rgba(232,97,60,.45);transform:translateY(-5px)}
+.cc-q{font-size:.92rem;font-weight:500;color:rgba(247,243,234,.92);margin-bottom:14px;line-height:1.55}
+.cc-q::before{content:'“';font-family:var(--fd);color:var(--gold);font-size:1.4em;margin-right:2px}
+.cc-a{font-size:.82rem;color:rgba(247,243,234,.55);line-height:1.7;border-top:1px dashed rgba(247,243,234,.14);padding-top:13px}
+.cc-a b{color:var(--gold);font-weight:600}
+.cc-tag{display:inline-block;margin-top:14px;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,243,234,.4)}
+/* Destinations */
+#destinations{padding:96px 0 80px}
+.dest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.dest-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;transition:all .35s var(--ease);cursor:pointer;position:relative;overflow:hidden}
+.dest-card::before{content:'';position:absolute;bottom:0;left:0;width:100%;height:3px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease)}
+.dest-card:hover{transform:translateY(-4px);box-shadow:0 18px 40px -18px rgba(10,20,40,.3)}
+.dest-card:hover::before{transform:scaleX(1)}
+.dc-flag{font-size:1.9rem;margin-bottom:10px;display:block}
+.dc-name{font-family:var(--fd);font-weight:600;font-size:1.02rem;margin-bottom:6px}
+.dc-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.dc-status{font-size:.64rem;font-weight:700;padding:3px 9px;border-radius:99px;letter-spacing:.03em}
+.st-visa_free{background:rgba(14,123,79,.1);color:var(--green)}
+.st-voa{background:rgba(217,164,65,.16);color:#8a6420}
+.st-evisa{background:rgba(232,97,60,.1);color:var(--accent)}
+.st-eta{background:rgba(59,91,219,.1);color:#4a66d8}
+.st-visa_required{background:rgba(10,20,40,.07);color:var(--mut)}
+.st-needs_verification{background:rgba(10,20,40,.05);color:var(--mut2)}
+.dc-budget{font-size:.72rem;color:var(--mut2);margin-left:auto}
+/* Voices — testimonial-style human quotes */
+#voices{padding:96px 0;background:var(--paper2);border-radius:34px;margin:0 14px}
+.voice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.voice{background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:16px;transition:all .35s var(--ease)}
+.voice:hover{transform:translateY(-4px);box-shadow:0 20px 44px -20px rgba(10,20,40,.28)}
+.v-quote{font-family:var(--fd);font-size:1.06rem;line-height:1.55;letter-spacing:-.005em;flex:1}
+.v-quote::before{content:'“';color:var(--accent);font-size:1.6em;line-height:0;vertical-align:-.28em;margin-right:2px}
+.v-who{display:flex;align-items:center;gap:11px;border-top:1px solid var(--line);padding-top:15px}
+.v-ava{width:40px;height:40px;border-radius:50%;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem}
+.v-name{font-weight:600;font-size:.88rem}
+.v-role{font-size:.74rem;color:var(--mut2)}
+/* Pricing */
+#pricing{padding:96px 0}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-items:stretch}
+.plan{background:#fff;border:1px solid var(--line);border-radius:22px;padding:28px 24px;display:flex;flex-direction:column;position:relative;transition:all .35s var(--ease)}
+.plan:hover{transform:translateY(-5px);box-shadow:0 24px 50px -22px rgba(10,20,40,.32)}
+.plan.hot{background:var(--ink);color:var(--paper);border-color:var(--ink);transform:scale(1.03)}
+.plan.hot:hover{transform:scale(1.03) translateY(-5px)}
+.plan-badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:5px 14px;border-radius:99px;white-space:nowrap}
+.p-name{font-family:var(--fd);font-size:1.15rem;font-weight:600;margin-bottom:4px}
+.p-price{font-family:var(--fd);font-size:2.5rem;font-weight:600;letter-spacing:-.02em;margin:8px 0 2px}
+.p-price small{font-size:.85rem;font-family:var(--ff);font-weight:400;color:inherit;opacity:.55}
+.p-for{font-size:.8rem;color:var(--mut2);margin-bottom:18px;min-height:36px}
+.plan.hot .p-for{color:rgba(247,243,234,.55)}
+.p-list{list-style:none;flex:1;display:flex;flex-direction:column;gap:9px;margin-bottom:22px}
+.p-list li{font-size:.85rem;display:flex;gap:9px;align-items:flex-start;line-height:1.5}
+.p-list li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0}
+.plan.hot .p-list li::before{color:var(--gold)}
+.p-btn{margin-top:auto}
+/* Final band */
+#cta{padding:110px 0;text-align:center;position:relative;overflow:hidden}
+#cta .big{font-family:var(--fd);font-size:clamp(2.2rem,5vw,3.6rem);font-weight:600;line-height:1.08;letter-spacing:-.02em;max-width:760px;margin:0 auto 18px}
+#cta .big em{font-style:italic;color:var(--accent)}
+#cta .sub{color:var(--mut);font-size:1.05rem;max-width:480px;margin:0 auto 36px;line-height:1.75}
+.stamp{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(520px,80vw);opacity:.05;pointer-events:none;font-family:var(--fd);font-weight:700;font-size:clamp(4rem,14vw,10rem);letter-spacing:.02em;white-space:nowrap;user-select:none}
+/* Footer */
+footer{border-top:1px solid var(--line);padding:52px 0 30px;background:var(--paper)}
+.ft{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:32px;margin-bottom:40px}
+.fb p{font-size:.85rem;color:var(--mut);line-height:1.7;margin-top:10px;max-width:280px}
+.fc h5{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut2);margin-bottom:14px}
+.fc ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+.fc a{font-size:.88rem;color:var(--mut);transition:color .2s}
+.fc a:hover{color:var(--accent)}
+.fb-bottom{border-top:1px solid var(--line);padding-top:22px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--mut2)}
+/* ── Modals (light theme to match) ───────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(10,20,40,.55);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;z-index:9000;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--paper);border:1px solid var(--line);border-radius:26px;width:100%;max-width:430px;max-height:92vh;overflow-y:auto;box-shadow:0 40px 90px -20px rgba(10,20,40,.5);animation:pop .35s var(--ease)}
+@keyframes pop{from{opacity:0;transform:scale(.94) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-head{padding:26px 28px 0;text-align:center}
+.modal-emoji{width:54px;height:54px;margin:0 auto 12px;border-radius:18px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:1.5rem}
+.modal-title{font-family:var(--fd);font-size:1.45rem;font-weight:600;letter-spacing:-.01em}
+.modal-sub{font-size:.85rem;color:var(--mut);margin-top:5px}
+.modal-body{padding:22px 28px}
+.modal-foot{padding:15px 28px;border-top:1px solid var(--line);text-align:center;font-size:.85rem;color:var(--mut)}
+.modal-foot a,.link{color:var(--accent);font-weight:600}
+.modal-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;background:rgba(10,20,40,.06);color:var(--mut);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;border:none;transition:all .25s}
+.modal-close:hover{background:rgba(232,97,60,.12);color:var(--accent)}
+.modal{position:relative}
+/* Form fields (light) */
+.f-group{margin-bottom:15px}
+.f-label{display:block;font-size:.76rem;font-weight:600;color:var(--mut);margin-bottom:6px;letter-spacing:.02em}
+.f-input{width:100%;background:#fff;border:1.5px solid var(--line2);border-radius:14px;padding:12px 15px;font-size:.93rem;font-family:var(--ff);color:var(--ink);transition:all .25s var(--ease)}
+.f-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(232,97,60,.12)}
+.f-input::placeholder{color:rgba(10,20,40,.32)}
+select.f-input option{background:#fff;color:var(--ink)}
+.f-note{text-align:right;margin:-6px 0 16px}
+.f-note a{font-size:.8rem;color:var(--accent);font-weight:600}
+.btn-full{width:100%}
+/* Alerts + toast (light) */
+.alert{padding:11px 15px;border-radius:12px;font-size:.84rem;margin-bottom:14px;display:none;line-height:1.5}
+.alert.show{display:block}
+.alert-error{background:rgba(200,45,45,.07);border:1px solid rgba(200,45,45,.25);color:#B3282D}
+.alert-success{background:rgba(14,123,79,.08);border:1px solid rgba(14,123,79,.28);color:#0C6B44}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);z-index:9999;background:var(--ink);color:var(--paper);border-radius:99px;padding:12px 22px;font-size:.86rem;box-shadow:0 16px 40px -12px rgba(10,20,40,.5);display:none;opacity:0;transition:all .35s var(--ease);white-space:nowrap}
+#toast.show{display:block;opacity:1;transform:translateX(-50%) translateY(0)}
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media(max-width:960px){
+  .hero-grid{grid-template-columns:1fr;gap:48px}
+  .ticket{max-width:460px;margin:0 auto;transform:rotate(0)}
+  .chat-grid,.voice-grid{grid-template-columns:1fr 1fr}
+  .ft{grid-template-columns:1fr 1fr}
+}
+@media(max-width:640px){
+  .wrap{padding:0 20px}
+  .nav-links{display:none}
+  .chat-grid,.voice-grid{grid-template-columns:1fr}
+  .hero-h1{font-size:2.35rem}
+  #features,#voices{margin:0 8px;border-radius:24px;padding:64px 0}
+  .step{grid-template-columns:64px 1fr;gap:16px;padding:26px 0}
+  .step-no{font-size:2.3rem}
+  .tk-code{font-size:1.9rem}
+  .plan.hot{transform:none}
+  .plan.hot:hover{transform:translateY(-5px)}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════ NAV ══════════ -->
+<nav>
+  <div class="nav-in">
+    <a class="logo" href="/">
+      <div class="logo-mark"><span>λ</span></div>
+      Japa<span class="logo-plus">+</span>
+    </a>
+    <div class="nav-links">
+      <a href="#how" class="nav-link">How it works</a>
+      <a href="#features" class="nav-link">What you get</a>
+      <a href="#destinations" class="nav-link">Destinations</a>
+      <a href="#pricing" class="nav-link">Pricing</a>
+    </div>
+    <div class="nav-cta">
+      <button class="btn btn-line btn-sm" onclick="openModal('login-modal')">Sign in</button>
+      <button class="btn btn-ink btn-sm" onclick="openModal('register-modal')">Start free</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════ HERO ══════════ -->
+<section id="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="kicker rv">For African passports</div>
+      <h1 class="hero-h1 rv d1">Visas, letters &amp; budgets —<br/>sorted before you <em>fly.</em></h1>
+      <p class="hero-lede rv d2">You tell us where you're going. We check verified visa rules for your passport, write your embassy letters, and cost the whole trip — so nothing catches you at the airport.</p>
+      <div class="hero-btns rv d3">
+        <button class="btn btn-acc btn-lg" onclick="openModal('register-modal')">Plan my trip — free</button>
+        <button class="btn btn-line btn-lg" onclick="openModal('login-modal')">I already have an account</button>
+      </div>
+      <div class="hero-proof rv d4">
+        <div class="avatars"><span>🇳🇬</span><span>🇬🇭</span><span>🇰🇪</span><span>🇿🇦</span></div>
+        <span>Built around <b>9 African passports</b> — start free, no card.</span>
+      </div>
+    </div>
+    <div class="rv d2">
+      <div class="ticket">
+        <div class="tk-top">
+          <div class="tk-brand">Japa<i>+</i> boarding pass</div>
+          <div class="tk-tag">✓ VERIFIED DATA</div>
+        </div>
+        <div class="tk-route">
+          <div class="tk-code">LOS<small>Lagos</small></div>
+          <div class="tk-mid"><div class="tk-dash"></div><div class="tk-plane">✈</div></div>
+          <div class="tk-code" style="text-align:right">LHR<small>London</small></div>
+        </div>
+        <div class="tk-note">Standard Visitor visa · <b>£115</b> · apply 3–8 weeks ahead</div>
+        <div class="tk-bottom">
+          <div class="tk-cell"><div class="tk-k">Passport</div><div class="tk-v">🇳🇬 Nigeria</div></div>
+          <div class="tk-cell"><div class="tk-k">Status</div><div class="tk-v">Visa required</div></div>
+          <div class="tk-cell"><div class="tk-k">Trip budget</div><div class="tk-v ok">~$1,290</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ MARQUEE ══════════ -->
+<div class="strip" aria-hidden="true">
+  <div class="strip-track" id="strip-track">
+    <span class="strip-item">Visa rules from official sources <i>✦</i></span>
+    <span class="strip-item">Embassy-ready cover letters <i>✦</i></span>
+    <span class="strip-item">Real trip budgets in dollars <i>✦</i></span>
+    <span class="strip-item">Flight &amp; hotel shortcuts <i>✦</i></span>
+    <span class="strip-item">9 African passports covered <i>✦</i></span>
+    <span class="strip-item">Free to start <i>✦</i></span>
+  </div>
+</div>
+
+<!-- ══════════ HOW IT WORKS ══════════ -->
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker rv">How it works</div>
+      <h2 class="sec-title rv d1">Three steps between you<br/>and the <em>departure gate</em></h2>
+    </div>
+    <div class="step rv">
+      <div class="step-no">01</div>
+      <div>
+        <div class="step-h">Tell us the trip</div>
+        <p class="step-p">“I want to take my family to Dubai in December, 10 days, mid-range budget.” That's all we need — plain language, the way you'd say it to a friend who knows travel.</p>
+        <div class="step-quote">— works for visas, study abroad, work routes, or a quick getaway</div>
+      </div>
+    </div>
+    <div class="step rv d1">
+      <div class="step-no">02</div>
+      <div>
+        <div class="step-h">We check your passport against verified rules</div>
+        <p class="step-p">Visa status, exact fees, processing times, bank-balance expectations, the documents that actually matter — pulled from our database of official sources, not forum guesses. When something is uncertain, we say so plainly.</p>
+        <div class="step-quote">— 40+ destinations · 9 passports · sources cited on every answer</div>
+      </div>
+    </div>
+    <div class="step rv d2">
+      <div class="step-no">03</div>
+      <div>
+        <div class="step-h">Leave with letters and numbers</div>
+        <p class="step-p">A cover letter the embassy expects, a checklist you can tick off, a day-by-day budget in real dollars — downloadable, printable, ready to submit. Then book your flights and hotels through our partners at the same price you'd pay anyway.</p>
+        <div class="step-quote">— everything saved to your account, nothing lost in WhatsApp threads</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ FEATURES (chat-style) ══════════ -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker rv">What you get</div>
+      <h2 class="sec-title rv d1">Ask like you'd ask a <em>well-travelled friend</em></h2>
+      <p class="sec-sub rv d2">Every answer is grounded in verified visa data for your exact passport — then finished with the practical details forums never agree on.</p>
+    </div>
+    <div class="chat-grid">
+      <div class="chat-card"><div class="cc-q">Do I need a visa for Turkey with a Nigerian passport?</div><div class="cc-a"><b>Yes — eVisa.</b> Apply on evisa.gov.tr only, $60, passport 6+ months valid. Approval usually lands within 24–72 hours. Avoid third-party “agents”.</div><span class="cc-tag">Visa intelligence</span></div>
+      <div class="chat-card"><div class="cc-q">Write my UK visitor visa cover letter — I'm a Lagos-based engineer</div><div class="cc-a"><b>Draft ready.</b> Purpose, itinerary, home ties, financial capacity — in the format UKVI caseworkers expect. Download, personalise the [FILL IN] fields, submit.</div><span class="cc-tag">Document writer</span></div>
+      <div class="chat-card"><div class="cc-q">Cheapest month to fly Lagos → Dubai, and where to stay under $60 a night?</div><div class="cc-a"><b>November wins.</b> Before the December rush — expect ~$450 return. Deira gives you $45–60 hotels 10 minutes from the metro. Compare airlines here →</div><span class="cc-tag">Flights &amp; stays</span></div>
+      <div class="chat-card"><div class="cc-q">Which countries can I visit visa-free on a Ghanaian passport?</div><div class="cc-a"><b>Start close:</b> Nigeria, Senegal, Rwanda — all visa-free, 90 days. Then eTA destinations like Kenya ($30, approved in days). Sorted from easiest to build travel history first.</div><span class="cc-tag">Passport power</span></div>
+      <div class="chat-card"><div class="cc-q">How much should I actually budget for 10 days in Dubai?</div><div class="cc-a"><b>≈ $1,290</b> excluding flights — hotel ~$35/night, food ~$25/day, metro ~$2/trip. Plus visa ~$90 and travel insurance. Full breakdown, day by day.</div><span class="cc-tag">Budget planning</span></div>
+      <div class="chat-card"><div class="cc-q">How much bank balance for a Schengen visa, and how do I avoid rejection?</div><div class="cc-a"><b>≈ €80 × your days,</b> plus the traps: sudden lump deposits, salary paid in cash, statements older than 3 months. We walk your exact profile through it.</div><span class="cc-tag">Financial guidance</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ DESTINATIONS ══════════ -->
+<section id="destinations">
+  <div class="wrap">
+    <div class="sec-head center">
+      <div class="sec-kicker rv">Live from the database</div>
+      <h2 class="sec-title rv d1">Know before you <em>apply</em></h2>
+      <p class="sec-sub rv d2">A taste of what's inside. Create a free account to see every destination for your passport — with fees, processing times and requirements.</p>
+    </div>
+    <div class="dest-grid" id="dest-preview-grid">
+      <div style="grid-column:1/-1;text-align:center;color:var(--mut2);padding:30px"><span class="spinner-light"></span> Loading destinations…</div>
+    </div>
+    <div style="text-align:center;margin-top:30px" class="rv">
+      <button class="btn btn-line btn-lg" onclick="openModal('register-modal')">See all destinations for your passport →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ VOICES ══════════ -->
+<section id="voices">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker rv">Why people stick with it</div>
+      <h2 class="sec-title rv d1">Less guesswork. Fewer <em>£115 lessons.</em></h2>
+    </div>
+    <div class="voice-grid">
+      <div class="voice rv">
+        <div class="v-quote">My cousin spent months and two rejections figuring out the UK process. I did it once, first try, with the checklist and letter from here.</div>
+        <div class="v-who"><div class="v-ava">CA</div><div><div class="v-name">Chidi A.</div><div class="v-role">Software engineer · Lagos → London</div></div></div>
+      </div>
+      <div class="voice rv d1">
+        <div class="v-quote">I asked about studying in Canada and got universities, scholarship links, and what proof of funds really means — in one conversation, not forty tabs.</div>
+        <div class="v-who"><div class="v-ava">AM</div><div><div class="v-name">Amara M.</div><div class="v-role">Final-year student · Accra</div></div></div>
+      </div>
+      <div class="voice rv d2">
+        <div class="v-quote">The budget breakdown was accurate to within about $40 of what Dubai actually cost me. That never happens with travel advice.</div>
+        <div class="v-who"><div class="v-ava">KO</div><div><div class="v-name">Kwame O.</div><div class="v-role">First-time flyer · Kumasi → Dubai</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ PRICING ══════════ -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="sec-head center">
+      <div class="sec-kicker rv">Pricing</div>
+      <h2 class="sec-title rv d1">Start free. Upgrade when it's <em>worth it to you.</em></h2>
+    </div>
+    <div class="plans" id="plans-wrap">
+      <div style="grid-column:1/-1;text-align:center;color:var(--mut2);padding:40px"><span class="spinner-light"></span> Loading plans…</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ FINAL CTA ══════════ -->
+<section id="cta">
+  <div class="stamp" aria-hidden="true">JAPA+</div>
+  <div class="wrap">
+    <h2 class="big rv">Your passport already <em>works.</em><br/>You just need the playbook.</h2>
+    <p class="sub rv d1">Free account, thirty seconds, no card. Ask your first question before the kettle boils.</p>
+    <div class="rv d2" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-acc btn-lg" onclick="openModal('register-modal')">Create my free account</button>
+      <button class="btn btn-line btn-lg" onclick="openModal('login-modal')">Sign in</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer>
+  <div class="wrap">
+    <div class="ft">
+      <div class="fb">
+        <a class="logo" href="/" style="font-size:1.2rem"><div class="logo-mark" style="width:32px;height:32px;border-radius:10px;font-size:1rem"><span>λ</span></div>Japa<span class="logo-plus">+</span></a>
+        <p id="fn-tag">Travel smart. Land ready. Visa answers, embassy-ready letters and honest budgets for African passports.</p>
+      </div>
+      <div class="fc"><h5>Platform</h5><ul>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#features">What you get</a></li>
+        <li><a href="#destinations">Destinations</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+      </ul></div>
+      <div class="fc"><h5>Popular guides</h5><ul>
+        <li><a href="#" onclick="openModal('register-modal')">🇬🇧 UK visitor visa</a></li>
+        <li><a href="#" onclick="openModal('register-modal')">🇦🇪 Dubai trips</a></li>
+        <li><a href="#" onclick="openModal('register-modal')">🇪🇺 Schengen basics</a></li>
+        <li><a href="#" onclick="openModal('register-modal')">🇨🇦 Study in Canada</a></li>
+      </ul></div>
+      <div class="fc"><h5>Account</h5><ul>
+        <li><a href="#" onclick="openModal('register-modal')">Create account</a></li>
+        <li><a href="#" onclick="openModal('login-modal')">Sign in</a></li>
+        <li><a href="/admin-login">Admin</a></li>
+        <li><a id="fn-support" href="mailto:support@japaplus.app">Support</a></li>
+      </ul></div>
+    </div>
+    <div class="fb-bottom">
+      <p>© 2026 Japa+. Not a substitute for official embassy advice — we always show you the source.</p>
+      <p>Made with 🌍 for African travellers</p>
+    </div>
+  </div>
+</footer>
+
+<!-- ══════════ LOGIN MODAL ══════════ -->
+<div class="modal-overlay" id="login-modal" onclick="if(event.target===this)closeModal('login-modal')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('login-modal')">✕</button>
+    <div class="modal-head">
+      <div class="modal-emoji">✈</div>
+      <div class="modal-title">Welcome back</div>
+      <div class="modal-sub">Sign in to pick up where you left off</div>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-error" id="login-err"></div>
+      <div class="f-group"><label class="f-label">Email</label><input class="f-input" id="login-email" type="email" placeholder="you@example.com" autocomplete="email"/></div>
+      <div class="f-group"><label class="f-label">Password</label><input class="f-input" id="login-pass" type="password" placeholder="Your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <div class="f-note"><a href="#" onclick="openModal('forgot-modal');closeModal('login-modal')">Forgot password?</a></div>
+      <button class="btn btn-ink btn-full btn-lg" onclick="doLogin()" id="login-btn">Sign in</button>
+    </div>
+    <div class="modal-foot">New here? <a href="#" onclick="openModal('register-modal');closeModal('login-modal')">Create a free account</a></div>
+  </div>
+</div>
+
+<!-- ══════════ REGISTER MODAL ══════════ -->
+<div class="modal-overlay" id="register-modal" onclick="if(event.target===this)closeModal('register-modal')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('register-modal')">✕</button>
+    <div class="modal-head">
+      <div class="modal-emoji">🌍</div>
+      <div class="modal-title">Create your free account</div>
+      <div class="modal-sub">Thirty seconds. No card. First question on us.</div>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-error" id="reg-err"></div>
+      <div class="alert alert-success" id="reg-ok"></div>
+      <div class="f-group"><label class="f-label">Full name</label><input class="f-input" id="reg-name" type="text" placeholder="e.g. Adaeze Okonkwo"/></div>
+      <div class="f-group"><label class="f-label">Email</label><input class="f-input" id="reg-email" type="email" placeholder="you@example.com" autocomplete="email"/></div>
+      <div class="f-group"><label class="f-label">Password</label><input class="f-input" id="reg-pass" type="password" placeholder="At least 8 characters" onkeydown="if(event.key==='Enter')doRegister()"/></div>
+      <div class="f-group" style="margin-bottom:20px"><label class="f-label">Passport country</label>
+        <select class="f-input" id="reg-country">
+          <option value="Nigeria" data-flag="🇳🇬" data-code="NG">🇳🇬 Nigeria</option>
+          <option value="Ghana" data-flag="🇬🇭" data-code="GH">🇬🇭 Ghana</option>
+          <option value="Kenya" data-flag="🇰🇪" data-code="KE">🇰🇪 Kenya</option>
+          <option value="South Africa" data-flag="🇿🇦" data-code="ZA">🇿🇦 South Africa</option>
+          <option value="Ethiopia" data-flag="🇪🇹" data-code="ET">🇪🇹 Ethiopia</option>
+          <option value="Cameroon" data-flag="🇨🇲" data-code="CM">🇨🇲 Cameroon</option>
+          <option value="Tanzania" data-flag="🇹🇿" data-code="TZ">🇹🇿 Tanzania</option>
+          <option value="Uganda" data-flag="🇺🇬" data-code="UG">🇺🇬 Uganda</option>
+          <option value="Senegal" data-flag="🇸🇳" data-code="SN">🇸🇳 Senegal</option>
+          <option value="Other Africa" data-flag="🌍" data-code="NG">🌍 Other Africa</option>
+        </select>
+      </div>
+      <button class="btn btn-acc btn-full btn-lg" onclick="doRegister()" id="reg-btn">Start free — no card needed</button>
+    </div>
+    <div class="modal-foot">Already with us? <a href="#" onclick="openModal('login-modal');closeModal('register-modal')">Sign in</a></div>
+  </div>
+</div>
+
+<!-- ══════════ FORGOT MODAL ══════════ -->
+<div class="modal-overlay" id="forgot-modal" onclick="if(event.target===this)closeModal('forgot-modal')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('forgot-modal')">✕</button>
+    <div class="modal-head">
+      <div class="modal-emoji">🔐</div>
+      <div class="modal-title">Reset password</div>
+      <div class="modal-sub">We'll send a reset link to your email</div>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-error" id="forgot-err"></div>
+      <div class="alert alert-success" id="forgot-ok"></div>
+      <div class="f-group"><label class="f-label">Email</label><input class="f-input" id="forgot-email" type="email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doForgot()"/></div>
+      <button class="btn btn-ink btn-full btn-lg" onclick="doForgot()" id="forgot-btn">Send reset link</button>
+    </div>
+    <div class="modal-foot"><a href="#" onclick="openModal('login-modal');closeModal('forgot-modal')">← Back to sign in</a></div>
+  </div>
+</div>
+
+<script>
+/* ── Brand + dynamic data (same endpoints as before) ─────────────────────── */
+const tok=localStorage.getItem('vg_token');
+const rol=localStorage.getItem('vg_role');
+if(tok){window.location.href=rol==='admin'?'/admin':'/dashboard';}
+
+fetch('/api/app-info').then(r=>r.json()).then(d=>{
+  const name=d.name||'Japa+';
+  if(name && name!=='Japa+')document.title=name+' — Travel smart. Land ready.';
+  document.getElementById('fn-tag').textContent=(d.tagline||'Travel smart. Land ready.')+'. Visa answers, embassy-ready letters and honest budgets for African passports.';
+  if(d.supportEmail)document.getElementById('fn-support').href='mailto:'+d.supportEmail;
+  if(d.maintenance){document.body.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px;background:#0A1428;color:#F7F3EA;text-align:center;padding:24px;font-family:Outfit,sans-serif"><div style="font-size:3rem">🛠️</div><h2 style="font-family:Fraunces,serif">We're tidying up</h2><p style="opacity:.7">Back shortly — your plans are safe.</p></div>`;return;}
+}).catch(()=>{});
+
+/* Destinations preview */
+fetch('/api/visa/destinations?passport=NG&purpose=Tourism').then(r=>r.json()).then(d=>{
+  const dests=(d.destinations||[]).slice(0,8);
+  document.getElementById('dest-preview-grid').innerHTML=dests.map(x=>`
+    <div class="dest-card" onclick="openModal('register-modal')">
+      <span class="dc-flag">${x.flag}</span>
+      <div class="dc-name">${x.name}</div>
+      <div class="dc-meta">
+        <span class="dc-status st-${x.visaStatus||'needs_verification'}">${SL[x.visaStatus]||'Check embassy'}</span>
+        ${x.avgDailyBudget?`<span class="dc-budget">~$${x.avgDailyBudget}/day</span>`:''}
+      </div>
+    </div>`).join('');
+}).catch(()=>{document.getElementById('dest-preview-grid').innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--mut2);padding:30px">Create a free account to explore the full destination database.</div>';});
+const SL={visa_free:'Visa-free',voa:'On arrival',evisa:'eVisa',eta:'eTA',visa_required:'Visa required',needs_verification:'Check embassy'};
+
+/* Plans */
+fetch('/api/user/plans').then(r=>r.json()).then(d=>{
+  const plans=d.plans||[];
+  if(!plans.length){document.getElementById('plans-wrap').innerHTML='<p style="color:var(--mut2);text-align:center">Plans coming soon.</p>';return;}
+  const hottest=plans.reduce((a,p)=>(p.badge&&!a)?p:((p.badge&&(!a||plans.indexOf(p)<plans.indexOf(a)))?p:a),null);
+  document.getElementById('plans-wrap').innerHTML=plans.map(p=>{
+    const hot=hottest&&p.id===hottest.id;
+    return `<div class="plan${hot?' hot':''}">
+      ${p.badge?`<div class="plan-badge">${p.badge}</div>`:''}
+      <div class="p-name">${p.name}</div>
+      <div class="p-price">${p.price===0?'Free':'$'+p.price}<small>${p.price===0?'':'/mo'}</small></div>
+      <div class="p-for">${p.daily_limit>=99999?'Unlimited conversations':p.daily_limit+' conversations a day'}</div>
+      <ul class="p-list">${(p.features||[]).map(f=>`<li>${f}</li>`).join('')}</ul>
+      <button class="btn ${hot?'btn-acc':'btn-line'} btn-full p-btn" onclick="openModal('register-modal')">${p.price===0?'Start free':'Choose '+p.name}</button>
+    </div>`;}).join('');
+}).catch(()=>{});
+
+/* ── Modals ──────────────────────────────────────────────────────────────── */
+function openModal(id){
+  const el=document.getElementById(id);if(!el)return;
+  el.classList.add('open');
+  setTimeout(()=>{const f=el.querySelector('input:not([disabled])');if(f)f.focus();},80);
+}
+function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
+function setBtn(id,loading,text){const b=document.getElementById(id);b.disabled=loading;b.innerHTML=loading?'<span class="spin"></span> '+text:text;}
+function showToast(msg){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800);}
+
+/* ── Auth (unchanged API contract) ───────────────────────────────────────── */
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-err');err.classList.remove('show');
+  if(!email||!pass){err.textContent='Enter your email and password.';err.classList.add('show');return;}
+  setBtn('login-btn',true,'Signing in…');
+  try{
+    const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Login failed');
+    localStorage.setItem('vg_token',d.token);localStorage.setItem('vg_role',d.user.role);localStorage.setItem('vg_user',JSON.stringify(d.user));
+    window.location.href=d.user.role==='admin'?'/admin':'/dashboard';
+  }catch(e){err.textContent=e.message;err.classList.add('show');setBtn('login-btn',false,'Sign in');}
+}
+async function doRegister(){
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-pass').value;
+  const sel=document.getElementById('reg-country');
+  const country=sel.value;const flag=sel.options[sel.selectedIndex]?.dataset?.flag||'🌍';
+  const code=sel.options[sel.selectedIndex]?.dataset?.code||'NG';
+  const err=document.getElementById('reg-err');const ok=document.getElementById('reg-ok');
+  err.classList.remove('show');ok.classList.remove('show');
+  if(!name||!email||!pass){err.textContent='Fill in every field to continue.';err.classList.add('show');return;}
+  if(pass.length<8){err.textContent='Password needs at least 8 characters.';err.classList.add('show');return;}
+  setBtn('reg-btn',true,'Creating account…');
+  try{
+    const r=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass,country,country_flag:flag,passport_code:code})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Registration failed');
+    localStorage.setItem('vg_token',d.token);localStorage.setItem('vg_role',d.user.role);localStorage.setItem('vg_user',JSON.stringify(d.user));
+    ok.textContent='Account created — taking you in…';ok.classList.add('show');
+    setTimeout(()=>window.location.href='/dashboard',700);
+  }catch(e){err.textContent=e.message;err.classList.add('show');setBtn('reg-btn',false,'Start free — no card needed');}
+}
+async function doForgot(){
+  const email=document.getElementById('forgot-email').value.trim();
+  const err=document.getElementById('forgot-err');const ok=document.getElementById('forgot-ok');
+  err.classList.remove('show');ok.classList.remove('show');
+  if(!email){err.textContent='Enter the email on your account.';err.classList.add('show');return;}
+  setBtn('forgot-btn',true,'Sending…');
+  try{const r=await fetch('/api/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});const d=await r.json();ok.textContent=d.message||'Reset link sent if the email exists.';ok.classList.add('show');}
+  catch{err.textContent='Request failed — try again.';err.classList.add('show');}
+  setBtn('forgot-btn',false,'Send reset link');
+}
+
+/* ── Scroll reveal ───────────────────────────────────────────────────────── */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target);}}),{threshold:.12});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+document.querySelectorAll('.chat-card').forEach((el,i)=>{el.style.transitionDelay=(i%3)*.09+'s';io.observe(el);});
+
+/* Duplicate marquee content for seamless loop */
+const track=document.getElementById('strip-track');
+if(track)track.innerHTML+=track.innerHTML;
+
+/* Light spinner for this page */
+const st=document.createElement('style');
+st.textContent='.spinner-light{display:inline-block;width:14px;height:14px;border:2px solid rgba(10,20,40,.15);border-top-color:var(--accent);border-radius:50%;animation:spn .7s linear infinite;vertical-align:-2px;margin-right:8px}@keyframes spn{to{transform:rotate(360deg)}}.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spn .7s linear infinite;vertical-align:-2px}';
+document.head.appendChild(st);
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+</script>
+
+<!-- ══════════ CONCIERGE CHATBOT ══════════ -->
+<style>
+.cp-fab{position:fixed;right:22px;bottom:22px;z-index:900;width:62px;height:62px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,var(--ink) 0%,#1E2F52 100%);color:#F7F3EA;font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(10,20,40,.35);transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;animation:cpPulse 3s ease-in-out infinite}
+.cp-fab:hover{transform:scale(1.08) rotate(-6deg);box-shadow:0 14px 38px rgba(10,20,40,.45)}
+.cp-fab span{position:absolute;top:4px;right:4px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid #fff;animation:cpBlink 2s infinite}
+@keyframes cpPulse{0%,100%{box-shadow:0 10px 30px rgba(10,20,40,.35),0 0 0 0 rgba(217,90,35,.35)}50%{box-shadow:0 10px 30px rgba(10,20,40,.35),0 0 0 12px rgba(217,90,35,0)}}
+@keyframes cpBlink{0%,100%{opacity:1}50%{opacity:.5}}
+.cp-panel{position:fixed;right:22px;bottom:96px;z-index:901;width:min(380px,calc(100vw - 32px));max-height:min(600px,calc(100vh - 130px));display:flex;flex-direction:column;background:var(--paper);border:1.5px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 24px 70px rgba(10,20,40,.4);opacity:0;transform:translateY(16px) scale(.97);pointer-events:none;transition:opacity .28s,transform .28s cubic-bezier(.34,1.4,.64,1)}
+.cp-panel.open{opacity:1;transform:none;pointer-events:auto}
+.cp-head{display:flex;align-items:center;gap:11px;padding:14px 16px;background:var(--ink);color:var(--paper)}
+.cp-ava{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#E8742E);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.cp-head-t{flex:1;min-width:0}
+.cp-head-t b{display:block;font-size:.92rem;font-family:'Fraunces',serif}
+.cp-head-t small{display:flex;align-items:center;gap:5px;font-size:.7rem;opacity:.75}
+.cp-head-t small::before{content:'';width:6px;height:6px;border-radius:50%;background:#4ADE80;animation:cpBlink 2s infinite}
+.cp-x{background:none;border:none;color:var(--paper);opacity:.65;font-size:19px;cursor:pointer;padding:4px 8px;border-radius:8px}
+.cp-x:hover{opacity:1;background:rgba(255,255,255,.12)}
+.cp-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+.cp-msgs::-webkit-scrollbar{width:5px}.cp-msgs::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.cp-m{max-width:86%;padding:10px 14px;border-radius:16px;font-size:.86rem;line-height:1.55;animation:cpIn .3s ease both;white-space:pre-wrap;word-wrap:break-word}
+@keyframes cpIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.cp-m.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:5px}
+.cp-m.bot b{color:var(--accent-ink)}
+.cp-m.me{align-self:flex-end;background:var(--ink);color:var(--paper);border-bottom-right-radius:5px}
+.cp-typing{display:flex;gap:4px;padding:12px 16px;align-self:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;border-bottom-left-radius:5px}
+.cp-typing i{width:7px;height:7px;border-radius:50%;background:var(--t3);animation:cpDot 1.2s infinite}
+.cp-typing i:nth-child(2){animation-delay:.15s}.cp-typing i:nth-child(3){animation-delay:.3s}
+@keyframes cpDot{0%,60%,100%{transform:none;opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+.cp-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px}
+.cp-chip{font-size:.74rem;padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:all .18s;font-family:inherit}
+.cp-chip:hover{border-color:var(--accent);color:var(--accent-ink);background:#FDF0E7;transform:translateY(-1px)}
+.cp-in{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);background:#FBF8F1}
+.cp-in input{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;font-size:.87rem;font-family:inherit;background:#fff;color:var(--ink);outline:none;transition:border-color .2s}
+.cp-in input:focus{border-color:var(--accent)}
+.cp-send{width:42px;height:42px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;transition:transform .18s,filter .18s}
+.cp-send:hover{transform:scale(1.06);filter:brightness(1.08)}
+.cp-note{text-align:center;font-size:.66rem;color:var(--t3);padding:0 16px 10px;background:#FBF8F1}
+@media(max-width:640px){.cp-panel{right:16px;bottom:88px}.cp-fab{right:16px;bottom:16px}}
+@media(prefers-reduced-motion:reduce){.cp-fab,.cp-m,.cp-panel{animation:none!important;transition:none!important}}
+</style>
+
+<button class="cp-fab" id="cp-fab" aria-label="Chat with the Japa+ concierge">💬<span></span></button>
+<div class="cp-panel" id="cp-panel" role="dialog" aria-label="Japa+ concierge chat">
+  <div class="cp-head">
+    <div class="cp-ava">🛃</div>
+    <div class="cp-head-t"><b>Japa+ Concierge</b><small>Online · answers from our verified visa data</small></div>
+    <button class="cp-x" id="cp-close" aria-label="Close chat">×</button>
+  </div>
+  <div class="cp-msgs" id="cp-msgs"></div>
+  <div class="cp-chips" id="cp-chips"></div>
+  <form class="cp-in" id="cp-form">
+    <input id="cp-text" type="text" placeholder="Ask about visas, budgets, seasons…" autocomplete="off" maxlength="400"/>
+    <button class="cp-send" type="submit" aria-label="Send">➤</button>
+  </form>
+  <div class="cp-note">Grounded in verified embassy data · Full AI planning inside your free account</div>
+</div>
+
+<script>
+/* ── Landing concierge ──────────────────────────────────────────────────── */
+(function(){
+  const fab=document.getElementById('cp-fab'),panel=document.getElementById('cp-panel'),
+        msgs=document.getElementById('cp-msgs'),chips=document.getElementById('cp-chips'),
+        form=document.getElementById('cp-form'),input=document.getElementById('cp-text');
+  let busy=false,opened=false;
+
+  const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const logAff=(name,url)=>{try{fetch('/api/chat/affiliate-click',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({partner:name,url}),keepalive:true}).catch(()=>{});}catch{}};
+  const md=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,(m,t,u)=>{try{logAff(t.replace(/^[^\w]+|[^\w]+$/g,'')||'partner',u);}catch{}return '<a href="'+u+'" target="_blank" rel="noopener nofollow sponsored" style="color:var(--accent-ink);font-weight:600;text-decoration:underline">'+t+'</a>';})
+    .replace(/(^|\s)(https?:\/\/[^\s<]+)/g,(m,pre,u)=>{try{logAff(u.replace(/^https?:\/\//,'').split('/')[0],u);}catch{}return pre+'<a href="'+u+'" target="_blank" rel="noopener nofollow sponsored" style="color:var(--accent-ink);font-weight:600;text-decoration:underline">'+u+'</a>';});
+
+  function add(role,text){
+    const d=document.createElement('div');d.className='cp-m '+role;d.innerHTML=md(text);
+    msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;
+  }
+  function setChips(list){
+    chips.innerHTML='';
+    (list||[]).forEach(t=>{const b=document.createElement('button');b.type='button';b.className='cp-chip';b.textContent=t;b.onclick=()=>{if(!busy)send(t);};chips.appendChild(b);});
+  }
+  const typing=()=>{const d=document.createElement('div');d.className='cp-typing';d.innerHTML='<i></i><i></i><i></i>';msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;};
+
+  async function send(text){
+    text=(text||input.value).trim();if(!text||busy)return;
+    input.value='';busy=true;
+    add('me',text);setChips([]);
+    const t=typing();
+    try{
+      const h={'Content-Type':'application/json'};
+      const tok=localStorage.getItem('vg_token');if(tok)h.Authorization='Bearer '+tok;
+      const r=await fetch('/api/chat',{method:'POST',headers:h,body:JSON.stringify({message:text})});
+      const d=await r.json();
+      t.remove();
+      add('bot',d.reply||'Hmm, I hit a snag — try that again.');
+      setChips(d.suggestions);
+    }catch{
+      t.remove();add('bot','Connection hiccup — check the server and try again.');
+    }
+    busy=false;input.focus();
+  }
+
+  form.addEventListener('submit',e=>{e.preventDefault();send();});
+
+  function open(){
+    panel.classList.add('open');opened=true;
+    if(!msgs.children.length){
+      add('bot',"Hey! I'm the Japa+ concierge. Ask me about visa requirements for your passport, where you can go visa-free, trip budgets, or the best months to travel — I answer from our verified database.");
+      setChips(['Where can Nigerians go visa-free?','Do I need a visa for Turkey?','Budget for 7 days in Nairobi?','When is the best time to visit Kenya?']);
+    }
+    setTimeout(()=>input.focus(),250);
+  }
+  function close(){panel.classList.remove('open');}
+
+  fab.addEventListener('click',()=>panel.classList.contains('open')?close():open());
+  document.getElementById('cp-close').addEventListener('click',close);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+
+  /* Nudge: gentle attention after 8s if never opened */
+  setTimeout(()=>{if(!opened&&!panel.classList.contains('open'))fab.animate([{transform:'scale(1)'},{transform:'scale(1.12)'},{transform:'scale(1)'}],{duration:500,iterations:2});},8000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "Japa+ — Travel smart. Land ready.",
+  "short_name": "Japa+",
+  "description": "Visa answers, embassy-ready letters and honest trip budgets for African passports.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F7F3EA",
+  "theme_color": "#0A1428",
+  "categories": ["travel", "utilities", "productivity"],
+  "lang": "en",
+  "icons": [
+    {"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+    {"src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Start Chat", "short_name": "Chat", "description": "Ask your first travel question", "url": "/dashboard", "icons": [{"src": "/icons/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Visa Tools", "short_name": "Tools", "description": "Checklists and cover letters", "url": "/dashboard", "icons": [{"src": "/icons/icon-192.png", "sizes": "192x192"}]}
+  ]
+}

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="theme-color" content="#0A1428"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<title>Admin Login — Japa+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/style.css"/>
+<link rel="icon" href="/icons/icon.svg"/>
+<style>
+:root{--ink:#0A1428;--ink2:#101E38;--paper:#F7F3EA;--paper2:#EFE8D8;--accent:#E8613C;--accent2:#F07B4F;--green:#0E7B4F;--gold:#D9A441;--line:rgba(10,20,40,.12);--line2:rgba(10,20,40,.22);--mut:rgba(10,20,40,.62);--mut2:rgba(10,20,40,.44);--fd:'Fraunces',Georgia,serif;--ff:'Outfit',system-ui,sans-serif;--ease:cubic-bezier(.22,1,.36,1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--ff);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;position:relative;overflow:hidden;background:var(--paper);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.5;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+.card{position:relative;z-index:2;width:100%;max-width:420px;animation:rise .6s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.card-inner{background:#fff;border:1px solid var(--line);border-radius:26px;padding:40px 36px;box-shadow:0 30px 70px -30px rgba(10,20,40,.35),0 4px 14px rgba(10,20,40,.06)}
+.logo-wrap{text-align:center;margin-bottom:28px}
+.logo-icon{width:62px;height:62px;border-radius:20px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto 14px;position:relative;overflow:hidden}
+.logo-icon::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 25%,rgba(232,97,60,.55),transparent 55%)}
+.logo-icon span{position:relative;z-index:1}
+.logo-name{font-family:var(--fd);font-size:1.5rem;font-weight:600;letter-spacing:-.01em}
+.logo-name i{font-style:normal;color:var(--accent)}
+.logo-sub{font-size:.68rem;font-weight:700;color:var(--green);letter-spacing:.14em;text-transform:uppercase;background:rgba(14,123,79,.08);border:1px solid rgba(14,123,79,.18);border-radius:99px;display:inline-block;padding:4px 13px;margin-top:8px}
+.card-title{font-family:var(--fd);font-size:1.25rem;font-weight:600;margin-bottom:4px;text-align:center}
+.card-sub{font-size:.85rem;color:var(--mut);text-align:center;margin-bottom:24px}
+.f-group{margin-bottom:15px}
+.f-label{display:block;font-size:.76rem;font-weight:600;color:var(--mut);margin-bottom:6px}
+.f-input{width:100%;background:#fff;border:1.5px solid var(--line2);border-radius:14px;padding:12px 15px;font-size:.93rem;font-family:var(--ff);color:var(--ink);transition:all .25s var(--ease)}
+.f-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(232,97,60,.12)}
+.btn-ink{width:100%;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 26px;border-radius:99px;font-size:.98rem;font-weight:600;background:var(--ink);color:var(--paper);transition:all .3s var(--ease);border:none;cursor:pointer;font-family:var(--ff)}
+.btn-ink:hover{transform:translateY(-2px);box-shadow:0 16px 32px -12px rgba(10,20,40,.5)}
+.btn-ink:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.hint-box{background:var(--paper);border:1px dashed var(--line2);border-radius:16px;padding:14px 16px;margin-top:22px;font-size:.76rem;color:var(--mut);line-height:1.9}
+.hint-box strong{color:var(--ink)}
+.hint-box code{color:var(--accent);background:rgba(232,97,60,.08);padding:1px 7px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.72rem}
+.back-link{display:block;text-align:center;margin-top:18px;font-size:.82rem;color:var(--mut2);transition:color .2s}
+.back-link:hover{color:var(--accent)}
+.alert{padding:11px 15px;border-radius:12px;font-size:.84rem;margin-bottom:14px;display:none;line-height:1.5}
+.alert.show{display:block}
+.alert-error{background:rgba(200,45,45,.07);border:1px solid rgba(200,45,45,.25);color:#B3282D}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);z-index:9999;background:var(--ink);color:var(--paper);border-radius:99px;padding:12px 22px;font-size:.86rem;display:none;opacity:0;transition:all .35s var(--ease)}
+#toast.show{display:block;opacity:1;transform:translateX(-50%) translateY(0)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spn .7s linear infinite;vertical-align:-2px}
+@keyframes spn{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<div class="card">
+  <div class="card-inner">
+    <div class="logo-wrap">
+      <div class="logo-icon" id="app-logo"><span>λ</span></div>
+      <div class="logo-name" id="app-name">Japa<i>+</i></div>
+      <div class="logo-sub">Admin Console</div>
+    </div>
+    <div class="card-title">Welcome back</div>
+    <div class="card-sub">Sign in to manage the platform</div>
+
+    <div id="err-box" class="alert alert-error"></div>
+
+    <div class="f-group">
+      <label class="f-label">Email address</label>
+      <input class="f-input" id="em" type="email" value="admin@jagaguru.ai" autocomplete="username" placeholder="admin@jagaguru.ai"/>
+    </div>
+    <div class="f-group" style="margin-bottom:22px">
+      <label class="f-label">Password</label>
+      <input class="f-input" id="pw" type="password" value="Admin@1234!" autocomplete="current-password" placeholder="Your admin password" onkeydown="if(event.key==='Enter')go()"/>
+    </div>
+
+    <button id="btn" class="btn-ink" onclick="go()">Sign in to admin</button>
+
+    <div class="hint-box">
+      <strong>Default credentials:</strong><br/>
+      Email: <code>admin@jagaguru.ai</code><br/>
+      Password: <code>Admin@1234!</code><br/><br/>
+      If login fails: <code>node reset-admin.js</code>
+    </div>
+    <a class="back-link" href="/">← Back to main site</a>
+  </div>
+</div>
+
+<script>
+fetch('/api/app-info').then(r=>r.json()).then(d=>{
+  document.getElementById('app-name').textContent=d.name||'Japa+';
+  document.title='Admin Login — '+(d.name||'Japa+');
+}).catch(()=>{});
+
+var t=localStorage.getItem('vg_token'),rl=localStorage.getItem('vg_role');
+if(t&&rl==='admin')window.location.href='/admin';
+
+function showErr(msg){var e=document.getElementById('err-box');e.textContent=msg;e.classList.add('show');}
+function hideErr(){document.getElementById('err-box').classList.remove('show');}
+function setBtn(load){var b=document.getElementById('btn');b.disabled=load;b.innerHTML=load?'<span class="spinner"></span> Signing in…':'Sign in to admin';}
+
+function go(){
+  hideErr();
+  var email=document.getElementById('em').value.trim();
+  var pass=document.getElementById('pw').value;
+  if(!email){showErr('Please enter your email address.');return;}
+  if(!pass){showErr('Please enter your password.');return;}
+  setBtn(true);
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST','/api/auth/login',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.onload=function(){
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(xhr.status===200&&d.token){
+        if(d.user.role!=='admin'){showErr('This account does not have admin access.');setBtn(false);return;}
+        localStorage.setItem('vg_token',d.token);
+        localStorage.setItem('vg_role',d.user.role);
+        localStorage.setItem('vg_user',JSON.stringify(d.user));
+        showToast('Welcome back, '+d.user.name+'! 🎉');
+        setTimeout(function(){window.location.href='/admin';},600);
+      }else{showErr(d.error||'Invalid email or password.');setBtn(false);}
+    }catch(e){showErr('Server error: '+(e.message||'Unknown'));setBtn(false);}
+  };
+  xhr.onerror=function(){showErr('Cannot connect to server. Is it running on port 4000?');setBtn(false);};
+  xhr.send(JSON.stringify({email:email,password:pass}));
+}
+
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2800);}
+</script>
+</body>
+</html>

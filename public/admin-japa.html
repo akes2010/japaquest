@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="theme-color" content="#0A1428"/>
+<title>Japa Editorial Console — Japa+</title>
+<link rel="stylesheet" href="/style.css"/>
+<link rel="icon" href="/icons/icon.svg"/>
+<style>
+html,body{height:100%;overflow:hidden}
+#app{display:flex;height:100vh;overflow:hidden}
+#sb{width:220px;flex-shrink:0;background:var(--elev1);border-right:1px solid var(--b1);display:flex;flex-direction:column}
+.sb-head{padding:16px 14px;border-bottom:1px solid var(--b0)}
+.sb-logo{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.sb-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#C14A1B,#E8742E);display:flex;align-items:center;justify-content:center;font-size:14px}
+.sb-app{font-family:var(--fd);font-size:.85rem;font-weight:700;color:var(--a300)}
+.sb-tag{font-size:.58rem;background:rgba(139,92,246,.12);color:#C4B5FD;border:1px solid rgba(139,92,246,.25);border-radius:var(--r-pill);padding:2px 7px;margin-top:3px;display:inline-block}
+.sb-nav{padding:8px;flex:1;overflow-y:auto}
+.nsc{font-size:.56rem;font-weight:600;color:var(--t4);letter-spacing:.1em;text-transform:uppercase;padding:8px 6px 3px}
+.nb{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--r-sm);color:var(--t3);font-size:.78rem;font-weight:500;cursor:pointer;transition:all var(--ease);border:1px solid transparent;background:none;width:100%;text-align:left}
+.nb:hover{background:var(--glass);color:var(--t1)}
+.nb.active{background:rgba(217,90,35,.1);color:var(--o300);border-color:rgba(217,90,35,.25)}
+.sb-foot{padding:10px;border-top:1px solid var(--b0)}
+.sf-email{font-size:.65rem;color:var(--t4);margin-bottom:7px}
+.logout-btn{width:100%;padding:6px;background:rgba(200,16,46,.07);border:1px solid rgba(200,16,46,.2);border-radius:var(--r-sm);color:#FF8F9C;font-size:.72rem;cursor:pointer}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{height:52px;border-bottom:1px solid var(--b0);background:rgba(10,20,40,.9);backdrop-filter:blur(20px);display:flex;align-items:center;padding:0 18px;gap:10px;flex-shrink:0}
+.tb-title{font-family:var(--fd);font-size:.9rem;color:var(--a300);flex:1}
+#content{flex:1;overflow-y:auto;padding:18px}
+.view{display:none}.view.active{display:block}
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.sc{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:14px;transition:all var(--ease)}
+.sc:hover{border-color:var(--ba)}
+.sc-lbl{font-size:.6rem;font-weight:600;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
+.sc-val{font-family:var(--fd);font-size:1.7rem;font-weight:700;color:var(--t1)}
+.sc-sub{font-size:.62rem;color:var(--o300);margin-top:3px}
+/* VISA RULES TABLE */
+.tbl-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);overflow:hidden;margin-bottom:16px}
+.tbl-head{padding:12px 16px;border-bottom:1px solid var(--b0);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tbl-title{font-size:.84rem;font-weight:600;color:var(--t1)}
+.act-btn{background:none;border:none;color:var(--t4);font-size:12px;padding:4px 6px;border-radius:var(--r-xs);cursor:pointer;transition:all var(--ease)}
+.act-btn:hover{background:var(--glass2);color:var(--t1)}
+.act-btn.danger:hover{background:rgba(200,16,46,.1);color:var(--r300)}
+/* STATUS BADGE */
+.st{font-size:.62rem;font-weight:600;padding:2px 8px;border-radius:var(--r-pill);white-space:nowrap}
+.st-visa_free{background:rgba(0,135,81,.12);color:var(--g300);border:1px solid rgba(0,135,81,.25)}
+.st-voa{background:rgba(245,158,11,.1);color:var(--a300);border:1px solid rgba(245,158,11,.25)}
+.st-evisa{background:rgba(59,130,246,.1);color:#93C5FD;border:1px solid rgba(59,130,246,.25)}
+.st-eta{background:rgba(139,92,246,.1);color:#C4B5FD;border:1px solid rgba(139,92,246,.25)}
+.st-visa_required{background:rgba(200,16,46,.08);color:#FF8F9C;border:1px solid rgba(200,16,46,.2)}
+.st-needs_verification{background:rgba(255,255,255,.05);color:var(--t4);border:1px solid var(--b1)}
+.confidence-badge{font-size:.58rem;padding:2px 7px;border-radius:var(--r-pill);border:1px solid var(--b1);color:var(--t4)}
+.conf-recently_reviewed{background:rgba(0,135,81,.08);color:var(--g300);border-color:rgba(0,135,81,.2)}
+.conf-needs_review{background:rgba(245,158,11,.08);color:var(--a300);border-color:rgba(245,158,11,.2)}
+.conf-unverified{background:rgba(200,16,46,.06);color:#FF8F9C;border-color:rgba(200,16,46,.15)}
+/* MODAL */
+.m-ov{position:fixed;inset:0;background:rgba(5,10,20,.88);display:none;align-items:center;justify-content:center;z-index:9000;padding:20px}
+.m-ov.open{display:flex}
+.m-box{background:var(--elev1);border:1px solid var(--b2);border-radius:var(--r-xl);width:100%;max-width:620px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:modalIn .22s ease}
+.m-head{padding:15px 20px;border-bottom:1px solid var(--b0);display:flex;align-items:center;justify-content:space-between}
+.m-title{font-family:var(--fd);font-size:.92rem;color:var(--a300)}
+.m-close{background:var(--glass);border:none;color:var(--t3);width:27px;height:27px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px}
+.m-body{padding:16px 20px}
+.m-foot{padding:11px 20px;border-top:1px solid var(--b0);display:flex;justify-content:flex-end;gap:7px}
+/* CONDITION BUILDER */
+.cond-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.cond-item{display:flex;gap:6px;align-items:center}
+.cond-item input{flex:1}
+.cond-del{background:rgba(200,16,46,.08);border:1px solid rgba(200,16,46,.2);border-radius:var(--r-xs);color:#FF8F9C;cursor:pointer;padding:5px 8px;font-size:11px}
+/* PAGINATION */
+.pg{display:flex;gap:5px;align-items:center;justify-content:center;margin-top:12px;font-size:.75rem;color:var(--t4)}
+.pgb{background:var(--glass);border:1px solid var(--b1);border-radius:var(--r-xs);padding:4px 10px;color:var(--t3);cursor:pointer;transition:all var(--ease)}
+.pgb:hover,.pgb.active{background:rgba(217,90,35,.1);border-color:rgba(217,90,35,.3);color:var(--o300)}
+/* PASSPORT DEST GRID */
+.pd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:16px}
+.pd-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:12px;transition:all var(--ease)}
+.pd-card:hover{border-color:var(--ba)}
+.pd-flag{font-size:1.4rem;margin-bottom:5px}
+.pd-name{font-size:.78rem;font-weight:600;color:var(--t1);margin-bottom:2px}
+.pd-code{font-size:.62rem;color:var(--t4)}
+.pd-actions{display:flex;gap:5px;margin-top:8px}
+/* CHART BARS */
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.73rem}
+.bar-label{color:var(--t3);width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-wrap{flex:1;height:5px;background:var(--glass2);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,#C14A1B,#E8742E);border-radius:3px}
+.bar-count{color:var(--t4);width:28px;text-align:right}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- RULE EDITOR MODAL -->
+<div class="m-ov" id="rule-modal" onclick="if(event.target===this)closeM('rule-modal')">
+<div class="m-box">
+  <div class="m-head"><div class="m-title" id="rule-modal-title">➕ Add Visa Rule</div><button class="m-close" onclick="closeM('rule-modal')">✕</button></div>
+  <div class="m-body">
+    <input type="hidden" id="rm-id"/>
+    <input type="hidden" id="rm-rule-id"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Passport Code *</label><input class="input" id="rm-passport" placeholder="NG" maxlength="2" style="text-transform:uppercase"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Destination Code *</label><input class="input" id="rm-dest" placeholder="GB" maxlength="2" style="text-transform:uppercase"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Purpose</label><select class="input" id="rm-purpose"><option>Tourism</option><option>Business</option><option>Study</option><option>Work</option><option>Family Visit</option><option>Transit</option></select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Visa Status *</label><select class="input" id="rm-status"><option value="visa_free">Visa-Free</option><option value="voa">Visa on Arrival</option><option value="evisa">eVisa</option><option value="eta">eTA</option><option value="visa_required">Visa Required</option><option value="needs_verification">Needs Verification</option></select></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Max Stay</label><input class="input" id="rm-maxstay" placeholder="e.g. 90 days"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Processing Time</label><input class="input" id="rm-processing" placeholder="e.g. 3-7 days"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fee</label><input class="input" id="rm-fee" placeholder="e.g. £115 or Free"/></div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px"><label class="form-label">Official URL</label><input class="input" id="rm-url" type="url" placeholder="https://..."/></div>
+    <div class="form-group" style="margin-bottom:12px"><label class="form-label">Source Authority</label><input class="input" id="rm-source" placeholder="e.g. UK UKVI, US Embassy Lagos"/></div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">Source Tier</label>
+      <select class="input" id="rm-tier">
+        <option value="1">1 — Official government source (highest trust)</option>
+        <option value="2">2 — Official embassy or consulate</option>
+        <option value="3">3 — Verified travel authority</option>
+        <option value="4">4 — Travel community / aggregator</option>
+      </select></div>
+    <div style="margin-bottom:8px"><label class="form-label">Requirements / Conditions</label><div class="cond-list" id="cond-list"></div><button onclick="addCond()" class="btn btn-ghost btn-sm" style="font-size:.72rem">+ Add Requirement</button></div>
+    <div class="form-group" style="margin-bottom:0"><label class="form-label">Change Reason (internal note)</label><input class="input" id="rm-reason" placeholder="e.g. Updated fee structure from UK Home Office July 2026"/></div>
+  </div>
+  <div class="m-foot"><button class="btn btn-ghost btn-sm" onclick="closeM('rule-modal')">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveRule()">💾 Save Rule</button></div>
+</div>
+</div>
+
+<!-- DESTINATION EDITOR -->
+<div class="m-ov" id="dest-modal" onclick="if(event.target===this)closeM('dest-modal')">
+<div class="m-box" style="max-width:500px">
+  <div class="m-head"><div class="m-title" id="dest-modal-title">➕ Add Destination</div><button class="m-close" onclick="closeM('dest-modal')">✕</button></div>
+  <div class="m-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Country Code (2-letter) *</label><input class="input" id="dm-code" placeholder="GB" maxlength="2" style="text-transform:uppercase"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Flag Emoji *</label><input class="input" id="dm-flag" placeholder="🇬🇧" maxlength="4"/></div>
+      <div class="form-group" style="margin-bottom:0;grid-column:1/-1"><label class="form-label">Country Name *</label><input class="input" id="dm-name" placeholder="United Kingdom"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Region</label><select class="input" id="dm-region"><option>Africa</option><option>Europe</option><option>Middle East</option><option>Asia</option><option>North America</option><option>South America</option><option>Caribbean</option><option>Oceania</option></select></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Capital City</label><input class="input" id="dm-capital" placeholder="London"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Currency</label><input class="input" id="dm-currency" placeholder="GBP"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Avg Daily Budget (USD)</label><input class="input" id="dm-budget" type="number" placeholder="180"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Best Travel Months</label><input class="input" id="dm-months" placeholder="May-Sep"/></div>
+    </div>
+  </div>
+  <div class="m-foot"><button class="btn btn-ghost btn-sm" onclick="closeM('dest-modal')">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveDest()">💾 Save Destination</button></div>
+</div>
+</div>
+
+<div id="app">
+<div id="sb">
+  <div class="sb-head">
+    <div class="sb-logo"><div class="sb-icon">✈</div><div class="sb-app" id="sb-app">Japa+</div></div>
+    <div class="sb-tag">Japa Editorial Console</div>
+  </div>
+  <div class="sb-nav">
+    <div class="nsc">Visa Intelligence</div>
+    <button class="nb active" id="nbtn-overview" onclick="sw('overview')">📊 Overview</button>
+    <button class="nb" id="nbtn-rules" onclick="sw('rules')">🗂️ Visa Rules</button>
+    <button class="nb" id="nbtn-passports" onclick="sw('passports')">📘 Passports</button>
+    <button class="nb" id="nbtn-destinations" onclick="sw('destinations')">🌍 Destinations</button>
+    <div class="nsc">Platform</div>
+    <button class="nb" id="nbtn-users" onclick="sw('users')">👥 Users</button>
+    <button class="nb" id="nbtn-convs" onclick="sw('convs')">💬 Conversations</button>
+    <button class="nb" id="nbtn-ai" onclick="sw('ai')">🤖 AI Engine</button>
+    <button class="nb" id="nbtn-plans" onclick="sw('plans')">💳 Plans</button>
+    <button class="nb" id="nbtn-general" onclick="sw('general')">⚙️ Settings</button>
+    <div class="nsc">Links</div>
+    <button class="nb" onclick="window.open('/dashboard','_blank')">👁️ View Dashboard</button>
+    <button class="nb" onclick="window.open('/admin','_blank')">⚙️ Main Admin</button>
+  </div>
+  <div class="sb-foot">
+    <div class="sf-email" id="sf-email">admin@jagaguru.ai</div>
+    <button class="logout-btn" onclick="doLogout()">↩ Sign Out</button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <div class="tb-title" id="tb-title">Visa Intelligence Overview</div>
+    <button class="btn btn-ghost btn-sm" id="demo-badge" style="font-size:.68rem;opacity:.7">LIVE</button>
+    <button class="btn btn-primary btn-sm" onclick="openRuleModal()">➕ Add Visa Rule</button>
+  </div>
+  <div id="content">
+
+  <!-- OVERVIEW -->
+  <div class="view active" id="view-overview">
+    <div class="stats-row" id="stats-row">
+      <div class="sc"><div class="sc-lbl">Total Users</div><div class="sc-val" id="st-users">—</div><div class="sc-sub" id="st-users-sub">loading…</div></div>
+      <div class="sc"><div class="sc-lbl">Visa Rules</div><div class="sc-val" id="st-rules">—</div><div class="sc-sub">in database</div></div>
+      <div class="sc"><div class="sc-lbl">Passports</div><div class="sc-val" id="st-passports">—</div><div class="sc-sub">covered</div></div>
+      <div class="sc"><div class="sc-lbl">Destinations</div><div class="sc-val" id="st-dests">—</div><div class="sc-sub">in database</div></div>
+      <div class="sc"><div class="sc-lbl">Total Conversations</div><div class="sc-val" id="st-convs">—</div><div class="sc-sub">all time</div></div>
+      <div class="sc"><div class="sc-lbl">Messages Today</div><div class="sc-val" id="st-msgs">—</div><div class="sc-sub">across all users</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="tbl-card"><div class="tbl-head"><div class="tbl-title">📈 Daily Signups (30d)</div></div><div style="padding:14px"><div id="signup-chart" style="display:flex;align-items:flex-end;gap:3px;height:60px"></div></div></div>
+      <div class="tbl-card"><div class="tbl-head"><div class="tbl-title">🤖 Top AI Models Used</div></div><div style="padding:14px" id="models-chart"></div></div>
+      <div class="tbl-card"><div class="tbl-head"><div class="tbl-title">🛂 Rules by Status</div></div><div style="padding:14px" id="status-chart"></div></div>
+      <div class="tbl-card"><div class="tbl-head"><div class="tbl-title">⚡ Quick Actions</div></div>
+        <div style="padding:14px;display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="openRuleModal()">➕ Add Visa Rule</button>
+          <button class="btn btn-ghost btn-sm" onclick="sw('rules')">🗂️ Manage All Rules</button>
+          <button class="btn btn-ghost btn-sm" onclick="sw('destinations')">🌍 Add Destination</button>
+          <button class="btn btn-ghost btn-sm" onclick="sw('ai')">🔑 Configure AI Keys</button>
+        </div></div>
+    </div>
+  </div>
+
+  <!-- VISA RULES -->
+  <div class="view" id="view-rules">
+    <div class="tbl-card">
+      <div class="tbl-head">
+        <div class="tbl-title">🗂️ Visa Rules Database</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+          <select class="input" id="rf-passport" onchange="loadRules(1)" style="width:120px"><option value="">All Passports</option></select>
+          <select class="input" id="rf-status" onchange="loadRules(1)" style="width:130px">
+            <option value="">All Statuses</option>
+            <option value="visa_free">Visa-Free</option>
+            <option value="voa">On Arrival</option>
+            <option value="evisa">eVisa</option>
+            <option value="visa_required">Visa Required</option>
+            <option value="needs_verification">Needs Check</option>
+          </select>
+          <input class="input" id="rf-search" placeholder="🔍 Search…" style="width:160px" oninput="loadRules(1)"/>
+          <button class="btn btn-primary btn-sm" onclick="openRuleModal()">➕ Add Rule</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Passport</th><th>Destination</th><th>Purpose</th><th>Status</th><th>Stay</th><th>Fee</th><th>Processing</th><th>Source Tier</th><th>Confidence</th><th>Actions</th></tr></thead>
+          <tbody id="rules-tbody"><tr><td colspan="10" style="text-align:center;padding:24px"><div class="spinner" style="margin:0 auto;border-top-color:var(--o400);border-color:var(--glass2)"></div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="pg" id="rules-pg"></div>
+    </div>
+  </div>
+
+  <!-- PASSPORTS -->
+  <div class="view" id="view-passports">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-family:var(--fd);font-size:1rem;color:var(--a300)">📘 African Passport Coverage</div>
+    </div>
+    <div class="pd-grid" id="passport-grid"><div style="color:var(--t4)">Loading…</div></div>
+    <div style="padding:14px;background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);font-size:.76rem;color:var(--t4);max-width:600px">
+      💡 To add a new passport, enter its 2-letter ISO code and add visa rules for it. Currently covering 9 African passports. Contact the data team to expand coverage.
+    </div>
+  </div>
+
+  <!-- DESTINATIONS -->
+  <div class="view" id="view-destinations">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="font-family:var(--fd);font-size:1rem;color:var(--a300)">🌍 Destinations Database</div>
+      <button class="btn btn-primary btn-sm" onclick="openDestModal()">➕ Add Destination</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px" id="dest-grid"><div style="color:var(--t4)">Loading…</div></div>
+  </div>
+
+  <!-- USERS (re-use main admin logic) -->
+  <div class="view" id="view-users">
+    <div class="tbl-card">
+      <div class="tbl-head"><div class="tbl-title">👥 Users</div><input class="input" id="user-q" placeholder="🔍 Search users…" style="width:200px" oninput="loadUsers()"/></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Name</th><th>Email</th><th>Country</th><th>Plan</th><th>Status</th><th>Joined</th></tr></thead>
+        <tbody id="users-tbody"><tr><td colspan="6" style="text-align:center;padding:20px"><div class="spinner" style="margin:0 auto;border-top-color:var(--o400);border-color:var(--glass2)"></div></td></tr></tbody></table>
+      </div>
+      <div class="pg" id="users-pg"></div>
+    </div>
+  </div>
+
+  <!-- CONVERSATIONS -->
+  <div class="view" id="view-convs">
+    <div class="tbl-card">
+      <div class="tbl-head"><div class="tbl-title">💬 Conversations</div><input class="input" id="conv-q" placeholder="🔍 Search…" style="width:200px" oninput="loadConvs()"/></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Title</th><th>User</th><th>Model</th><th>Messages</th><th>Updated</th></tr></thead>
+        <tbody id="convs-tbody"><tr><td colspan="5" style="text-align:center;padding:20px"><div class="spinner" style="margin:0 auto;border-top-color:var(--o400);border-color:var(--glass2)"></div></td></tr></tbody></table>
+      </div>
+      <div class="pg" id="convs-pg"></div>
+    </div>
+  </div>
+
+  <!-- AI ENGINE -->
+  <div class="view" id="view-ai">
+    <div style="max-width:700px">
+      <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:14px">🤖 AI Engine</div>
+      <div style="background:rgba(217,90,35,.07);border:1px solid rgba(217,90,35,.22);border-radius:var(--r-md);padding:12px 16px;margin-bottom:16px;font-size:.77rem;color:var(--t3)">
+        ⚡ Keys activate immediately on save. No test/live mode distinction.
+      </div>
+      <div id="ai-provider-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px"></div>
+      <div class="form-group"><label class="form-label">Default Model</label><select class="input" id="ai-default-model" style="max-width:300px"><option value="claude">✨ Claude Sonnet 4</option><option value="deepseek">🔍 DeepSeek R1 (Free)</option><option value="llama-groq">⚡ Llama 70B Groq (Free)</option><option value="gemini-flash">🔮 Gemini Flash (Free)</option><option value="qwen">🧠 Qwen 2.5 72B (Free)</option></select></div>
+      <div class="form-group"><label class="form-label">Max Response Tokens</label><input class="input" id="ai-max-tokens" type="number" style="max-width:200px" placeholder="1500"/></div>
+      <button class="btn btn-primary" onclick="saveAI()">💾 Save & Activate</button>
+    </div>
+  </div>
+
+  <!-- PLANS -->
+  <div class="view" id="view-plans">
+    <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:16px">💳 Subscription Plans</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px" id="plans-grid"></div>
+  </div>
+
+  <!-- GENERAL SETTINGS -->
+  <div class="view" id="view-general">
+    <div style="max-width:600px">
+      <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:16px">⚙️ System Settings</div>
+      <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:18px;margin-bottom:14px">
+        <div style="font-size:.84rem;font-weight:600;color:var(--t1);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--b0)">App Identity</div>
+        <div class="form-group"><label class="form-label">App Name</label><input class="input" id="g-name" placeholder="Japa+"/></div>
+        <div class="form-group"><label class="form-label">Tagline</label><input class="input" id="g-tagline"/></div>
+        <div class="form-group"><label class="form-label">Support Email</label><input class="input" id="g-email" type="email"/></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">App URL</label><input class="input" id="g-url"/></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveGeneral()">💾 Save Settings</button>
+    </div>
+  </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+const tok=localStorage.getItem('vg_token'),role=localStorage.getItem('vg_role');
+if(!tok||role!=='admin'){window.location.href='/admin-login';}
+let allPassports=[],allDests=[],allPlans=[],rulesPage=1,usersPage=1,convsPage=1,currentRules=[],currentPassport='';
+const STATUS_LBL={visa_free:'Visa-Free',voa:'On Arrival',evisa:'eVisa',eta:'eTA',visa_required:'Visa Required',needs_verification:'Needs Check'};
+const PROVIDERS=[
+  {key:'ai_anthropic_key',label:'✨ Anthropic (Claude)',ph:'sk-ant-api03-…',link:'console.anthropic.com/api-keys'},
+  {key:'ai_openrouter_key',label:'🔄 OpenRouter (Free models)',ph:'sk-or-v1-…',link:'openrouter.ai/keys'},
+  {key:'ai_groq_key',label:'⚡ Groq (Ultra-fast free)',ph:'gsk_…',link:'console.groq.com/keys'},
+  {key:'ai_gemini_key',label:'🔮 Google Gemini (Free)',ph:'AIza…',link:'aistudio.google.com/app/apikey'},
+  {key:'ai_together_key',label:'🤝 Together AI (Free)',ph:'…',link:'api.together.ai/settings/api-keys'},
+  {key:'ai_openai_key',label:'🧠 OpenAI (GPT-4o)',ph:'sk-proj-…',link:'platform.openai.com/api-keys'},
+  {key:'ai_huggingface_key',label:'🤗 HuggingFace (Free)',ph:'hf_…',link:'huggingface.co/settings/tokens'},
+  {key:'ai_deepseek_key',label:'🔍 DeepSeek (Direct)',ph:'sk-…',link:'platform.deepseek.com'},
+];
+
+async function api(path,opts={}){
+  const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok,...(opts.headers||{})}});
+  if(r.status===401){localStorage.clear();window.location.href='/admin-login';}
+  return r;
+}
+
+async function init(){
+  try{
+    const[appR,statsR,ppR,dpR,plR]=await Promise.all([fetch('/api/app-info'),api('/api/admin/stats'),api('/api/visa/passports'),api('/api/visa/all-destinations'),api('/api/user/plans')]);
+    const[appD,statsD,ppD,dpD,plD]=await Promise.all([appR.json(),statsR.json(),ppR.json(),dpR.json(),plR.json()]);
+    document.getElementById('sb-app').textContent=appD.name||'Japa+';
+    document.title='Japa Console — '+(appD.name||'Japa+');
+    const u=JSON.parse(localStorage.getItem('vg_user')||'{}');
+    document.getElementById('sf-email').textContent=u.email||'admin@jagaguru.ai';
+    allPassports=ppD.passports||[];allDests=dpD.destinations||[];allPlans=plD.plans||[];
+    renderStats(statsD);buildPassportFilters();
+    buildAIProviders();loadAISettings();
+  }catch(e){console.error('init:',e);}
+}
+
+function sw(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v)?.classList.add('active');
+  document.getElementById('nbtn-'+v)?.classList.add('active');
+  const T={overview:'Visa Intelligence Overview',rules:'Visa Rules Database',passports:'Passport Coverage',destinations:'Destinations Database',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans',general:'System Settings'};
+  document.getElementById('tb-title').textContent=T[v]||v;
+  if(v==='rules')loadRules(1);
+  if(v==='passports')renderPassports();
+  if(v==='destinations')renderDestinations();
+  if(v==='users')loadUsers();
+  if(v==='convs')loadConvs();
+  if(v==='plans')renderPlans();
+  if(v==='general')loadGeneral();
+}
+
+function renderStats(d){
+  document.getElementById('st-users').textContent=d.totalUsers||0;
+  document.getElementById('st-users-sub').textContent='+'+(d.today||0)+' today';
+  document.getElementById('st-rules').textContent=d.totalVisaRules||allDests.length+'×9';
+  document.getElementById('st-passports').textContent=allPassports.length||9;
+  document.getElementById('st-dests').textContent=allDests.length||24;
+  document.getElementById('st-convs').textContent=d.totalConvs||0;
+  document.getElementById('st-msgs').textContent=d.todayMsgs||0;
+  // Signup chart
+  const sc=document.getElementById('signup-chart');
+  const signups=d.dailySignups||[];const max=Math.max(...signups.map(s=>s.count),1);
+  sc.innerHTML=signups.length?signups.map(s=>`<div title="${s.date}: ${s.count}" style="flex:1;border-radius:3px 3px 0 0;background:rgba(217,90,35,${0.2+0.8*(s.count/max)});min-width:5px;height:${Math.max(4,Math.round((s.count/max)*55))}px;cursor:pointer;transition:background .2s" onmouseover="this.style.background='rgba(217,90,35,.8)'" onmouseout="this.style.background='rgba(217,90,35,${0.2+0.8*(s.count/max)})'"></div>`).join(''):'<div style="color:var(--t4);font-size:.74rem;padding:10px">No signups yet</div>';
+  // Models chart
+  const mc=document.getElementById('models-chart');const models=d.topModels||[];const mmax=Math.max(...models.map(m=>m.count),1);
+  mc.innerHTML=models.length?models.map(m=>`<div class="bar-row"><span class="bar-label">${m.model}</span><div class="bar-wrap"><div class="bar-fill" style="width:${Math.round((m.count/mmax)*100)}%"></div></div><span class="bar-count">${m.count}</span></div>`).join(''):'<div style="color:var(--t4);font-size:.74rem">No usage yet</div>';
+  // Status distribution (approximate from rules)
+  const sc2=document.getElementById('status-chart');
+  const statusGroups={visa_free:0,voa:0,evisa:0,eta:0,visa_required:0,needs_verification:0};
+  // Show plan distribution instead as proxy
+  const planDist=d.planDist||[];const pdMax=Math.max(...planDist.map(p=>p.count),1);
+  sc2.innerHTML=planDist.length?planDist.map(p=>`<div class="bar-row"><span class="bar-label">${p.name}</span><div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(((p.count||0)/pdMax)*100)}%"></div></div><span class="bar-count">${p.count||0}</span></div>`).join(''):'<div style="color:var(--t4);font-size:.74rem">No data</div>';
+}
+
+function buildPassportFilters(){
+  const sel=document.getElementById('rf-passport');
+  sel.innerHTML='<option value="">All Passports</option>'+allPassports.map(p=>`<option value="${p.code}">${p.flag} ${p.name}</option>`).join('');
+}
+
+// VISA RULES CRUD
+async function loadRules(page=1){
+  rulesPage=page;
+  const pp=document.getElementById('rf-passport').value;
+  const st=document.getElementById('rf-status').value;
+  const q=document.getElementById('rf-search').value;
+  const tbody=document.getElementById('rules-tbody');
+  tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:18px"><div class="spinner" style="margin:0 auto;border-top-color:var(--o400);border-color:var(--glass2)"></div></td></tr>';
+  const params=new URLSearchParams({page,limit:20});
+  if(pp)params.set('passport',pp);if(st)params.set('status',st);if(q)params.set('search',q);
+  if(pp){
+    const r=await api(`/api/visa/destinations?passport=${pp}&purpose=Tourism`);
+    const d=await r.json();
+    currentPassport=pp;
+    currentRules=(d.destinations||[]).filter(dest=>!st||dest.status===st).filter(dest=>!q||dest.name.toLowerCase().includes(q.toLowerCase())||dest.code.toLowerCase().includes(q.toLowerCase()));
+    tbody.innerHTML=currentRules.length?currentRules.map((dest,i)=>`<tr>
+      <td><span class="badge badge-gray">${pp}</span></td>
+      <td>${dest.flag} ${dest.name}</td>
+      <td style="font-size:.72rem;color:var(--t4)">Tourism</td>
+      <td><span class="st st-${dest.status||'needs_verification'}">${STATUS_LBL[dest.status]||dest.status}</span></td>
+      <td style="font-size:.73rem;color:var(--t3)">${dest.maxStay||'—'}</td>
+      <td style="font-size:.73rem;color:var(--t3)">${(dest.fees?.amount)||'—'}</td>
+      <td style="font-size:.73rem;color:var(--t3)">${dest.processingDays||'—'}</td>
+      <td style="font-size:.72rem;color:var(--t4)">—</td>
+      <td><span class="confidence-badge conf-${dest.confidence||'unverified'}">${dest.confidence||'unverified'}</span></td>
+      <td>
+        <button class="act-btn" title="Edit" onclick="openRuleModalEditByIndex(${i})">✏️</button>
+      </td>
+    </tr>`).join(''):'<tr><td colspan="10" style="text-align:center;color:var(--t4);padding:26px">No rules found for this filter.</td></tr>';
+  }else{
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--t4);padding:26px">Select a passport above to view its visa rules, or click ➕ Add Rule to add a new rule.</td></tr>';
+  }
+}
+
+function openRuleModal(){
+  document.getElementById('rule-modal-title').textContent='➕ Add Visa Rule';
+  document.getElementById('rm-id').value='';document.getElementById('rm-rule-id').value='';
+  document.getElementById('rm-passport').value='';document.getElementById('rm-dest').value='';
+  document.getElementById('rm-status').value='visa_required';document.getElementById('rm-maxstay').value='';
+  document.getElementById('rm-processing').value='';document.getElementById('rm-fee').value='';
+  document.getElementById('rm-url').value='';document.getElementById('rm-source').value='';
+  document.getElementById('rm-tier').value='1';document.getElementById('rm-reason').value='';
+  document.getElementById('cond-list').innerHTML='';
+  addCond();addCond();addCond();
+  openM('rule-modal');
+  setTimeout(()=>document.getElementById('rm-passport').focus(),80);
+}
+
+function openRuleModalEditByIndex(i){
+  const dest=currentRules[i];if(!dest)return;
+  openRuleModalEdit({
+    passport:currentPassport, code:dest.code, purpose:'Tourism',
+    status:dest.status, maxStay:dest.maxStay||'', processing:dest.processingDays||'',
+    fee:(dest.fees&&dest.fees.amount)||'', conditions:dest.conditions||[], url:'', tier:'1',
+  });
+}
+
+function openRuleModalEdit(rule){
+  document.getElementById('rule-modal-title').textContent='✏️ Edit Visa Rule — '+rule.passport+' → '+rule.code;
+  document.getElementById('rm-rule-id').value='';
+  document.getElementById('rm-passport').value=rule.passport;
+  document.getElementById('rm-dest').value=rule.code;
+  document.getElementById('rm-purpose').value=rule.purpose||'Tourism';
+  document.getElementById('rm-status').value=rule.status||'visa_required';
+  document.getElementById('rm-maxstay').value=rule.maxStay||'';
+  document.getElementById('rm-processing').value=rule.processing||'';
+  document.getElementById('rm-fee').value=rule.fee||'';
+  document.getElementById('rm-url').value=rule.url||'';
+  document.getElementById('rm-source').value='';
+  document.getElementById('rm-tier').value=rule.tier||'1';
+  document.getElementById('rm-reason').value='';
+  document.getElementById('cond-list').innerHTML='';
+  (Array.isArray(rule.conditions)?rule.conditions:[]).forEach(c=>addCond(c));
+  if(!rule.conditions||!rule.conditions.length){addCond();addCond();}
+  openM('rule-modal');
+}
+
+function addCond(value=''){
+  const div=document.createElement('div');div.className='cond-item';
+  div.innerHTML=`<input class="input" value="${esc(value)}" placeholder="e.g. Valid passport with 6+ months validity" style="font-size:.79rem"/><button class="cond-del" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('cond-list').appendChild(div);
+}
+
+async function saveRule(){
+  const passport=document.getElementById('rm-passport').value.trim().toUpperCase();
+  const dest=document.getElementById('rm-dest').value.trim().toUpperCase();
+  if(!passport||!dest){showToast('Passport and destination codes required','error');return;}
+  const conditions=[...document.getElementById('cond-list').querySelectorAll('input')].map(i=>i.value.trim()).filter(Boolean);
+  const data={passport_code:passport,destination_code:dest,purpose:document.getElementById('rm-purpose').value,status:document.getElementById('rm-status').value,max_stay:document.getElementById('rm-maxstay').value,processing_days:document.getElementById('rm-processing').value,fees:{amount:document.getElementById('rm-fee').value||'Varies'},official_url:document.getElementById('rm-url').value,source_authority:document.getElementById('rm-source').value||'Japa+ Editorial',source_tier:parseInt(document.getElementById('rm-tier').value)||1,conditions,change_reason:document.getElementById('rm-reason').value};
+  const r=await api('/api/admin/visa-rules',{method:'POST',body:JSON.stringify(data)});
+  const d=await r.json();
+  if(!r.ok)return showToast(d.error||'Save failed','error');
+  showToast('Rule saved ✅');
+  closeM('rule-modal');
+  loadRules(rulesPage);
+}
+
+// PASSPORTS
+function renderPassports(){
+  document.getElementById('passport-grid').innerHTML=allPassports.map(p=>`<div class="pd-card"><div class="pd-flag">${p.flag}</div><div class="pd-name">${p.name}</div><div class="pd-code">${p.code}</div><div class="pd-actions"><button class="act-btn" onclick="document.getElementById('rf-passport').value='${p.code}';sw('rules');loadRules(1);">🗂 Rules</button></div></div>`).join('');
+}
+
+// DESTINATIONS
+function renderDestinations(){
+  document.getElementById('dest-grid').innerHTML=allDests.map(d=>`<div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:13px;transition:all var(--ease)" onmouseover="this.style.borderColor='var(--ba)'" onmouseout="this.style.borderColor='var(--b1)'"><div style="font-size:1.4rem;margin-bottom:6px">${d.flag}</div><div style="font-size:.82rem;font-weight:600;color:var(--t1);margin-bottom:3px">${d.name}</div><div style="font-size:.64rem;color:var(--t4);margin-bottom:6px">${d.region||'—'} · ${d.capital||'—'}</div><div style="font-size:.65rem;color:var(--a300)">${d.avg_daily_budget_usd?'~$'+d.avg_daily_budget_usd+'/day':''}</div></div>`).join('')||'<div style="color:var(--t4)">No destinations loaded</div>';
+}
+
+function openDestModal(){
+  ['dm-code','dm-flag','dm-name','dm-capital','dm-currency','dm-budget','dm-months'].forEach(id=>document.getElementById(id).value='');
+  openM('dest-modal');setTimeout(()=>document.getElementById('dm-code').focus(),80);
+}
+async function saveDest(){
+  const code=document.getElementById('dm-code').value.trim().toUpperCase();
+  const name=document.getElementById('dm-name').value.trim();
+  if(!code||!name){showToast('Country code and name required','error');return;}
+  const body={code,name,flag:document.getElementById('dm-flag').value.trim()||'🌍',region:document.getElementById('dm-region').value,capital:document.getElementById('dm-capital').value,currency:document.getElementById('dm-currency').value,avg_daily_budget_usd:parseFloat(document.getElementById('dm-budget').value)||null,best_months:document.getElementById('dm-months').value};
+  const r=await api('/api/admin/destinations',{method:'POST',body:JSON.stringify(body)});
+  const d=await r.json();
+  if(!r.ok)return showToast(d.error||'Save failed','error');
+  showToast('Destination saved ✅');closeM('dest-modal');
+  const rr=await api('/api/visa/all-destinations');const dd=await rr.json();allDests=dd.destinations||[];renderDestinations();
+}
+
+// USERS
+async function loadUsers(page=1){
+  usersPage=page;const q=document.getElementById('user-q')?.value||'';
+  const r=await api(`/api/admin/users?page=${page}&limit=20&search=${encodeURIComponent(q)}`);const d=await r.json();
+  document.getElementById('users-tbody').innerHTML=(d.users||[]).length?(d.users||[]).map(u=>`<tr><td><div style="font-weight:500;color:var(--t1)">${esc(u.name)}</div></td><td style="font-size:.78rem;color:var(--t4)">${esc(u.email)}</td><td>${u.country_flag||''} ${esc(u.country||'—')}</td><td><span class="badge badge-gray">${u.plan_name||'Free'}</span></td><td><span class="badge ${u.status==='active'?'badge-green':'badge-red'}">${u.status}</span></td><td style="font-size:.71rem;color:var(--t4)">${new Date(u.created_at).toLocaleDateString()}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--t4);padding:24px">No users found</td></tr>';
+  renderPg('users-pg',d.pages||1,page,loadUsers);
+}
+
+// CONVERSATIONS
+async function loadConvs(page=1){
+  convsPage=page;const q=document.getElementById('conv-q')?.value||'';
+  const r=await api(`/api/admin/conversations?page=${page}&limit=20&search=${encodeURIComponent(q)}`);const d=await r.json();
+  document.getElementById('convs-tbody').innerHTML=(d.rows||[]).length?(d.rows||[]).map(c=>`<tr><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1)">${esc(c.title)}</td><td style="font-size:.77rem">${esc(c.user_name||'—')}</td><td style="font-size:.72rem;color:var(--t4)">${c.model||'—'}</td><td>${c.msg_count||0}</td><td style="font-size:.71rem;color:var(--t4)">${new Date(c.updated_at).toLocaleDateString()}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--t4);padding:24px">No conversations</td></tr>';
+  renderPg('convs-pg',d.pages||1,page,loadConvs);
+}
+
+// AI ENGINE
+function buildAIProviders(){
+  document.getElementById('ai-provider-grid').innerHTML=PROVIDERS.map(p=>`
+    <div style="background:var(--elev2);border:1px solid var(--b1);border-radius:var(--r-md);padding:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+        <span style="font-size:.78rem;font-weight:600;color:var(--t2)">${p.label}</span>
+        <a href="https://${p.link}" target="_blank" style="font-size:.62rem;color:var(--a400)">Get Key →</a>
+      </div>
+      <div style="position:relative">
+        <input class="input" id="${p.key}" type="password" placeholder="${p.ph}" style="font-family:var(--fm);font-size:.74rem;padding-right:52px"/>
+        <button onclick="toggleKey('${p.key}')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--glass2);border:none;color:var(--t4);font-size:.62rem;border-radius:var(--r-xs);padding:2px 6px;cursor:pointer">Show</button>
+      </div>
+    </div>`).join('');
+}
+async function loadAISettings(){
+  const r=await api('/api/admin/settings/ai');const d=await r.json();const s=d.settings||{};
+  PROVIDERS.forEach(p=>{const el=document.getElementById(p.key);if(el)el.value=s[p.key]||'';});
+  const dm=document.getElementById('ai-default-model');const mt=document.getElementById('ai-max-tokens');
+  if(dm&&s.ai_default_model)dm.value=s.ai_default_model;if(mt)mt.value=s.ai_max_tokens||'1500';
+}
+async function saveAI(){
+  const settings={ai_default_model:document.getElementById('ai-default-model').value,ai_max_tokens:document.getElementById('ai-max-tokens').value};
+  PROVIDERS.forEach(p=>{const v=document.getElementById(p.key)?.value;if(v&&!v.startsWith('••••'))settings[p.key]=v;});
+  const r=await api('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});
+  const d=await r.json();r.ok?showToast('AI settings saved & activated ✅'):showToast(d.error,'error');
+}
+function toggleKey(id){const el=document.getElementById(id);el.type=el.type==='password'?'text':'password';el.nextElementSibling.textContent=el.type==='password'?'Show':'Hide';}
+
+// PLANS
+function renderPlans(){
+  document.getElementById('plans-grid').innerHTML=allPlans.map(p=>`<div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px"><div style="font-size:.85rem;font-weight:600;color:var(--t1);margin-bottom:4px">${p.name}${p.badge?` <span style="font-size:.6rem;background:rgba(245,158,11,.1);color:var(--a300);border:1px solid rgba(245,158,11,.2);border-radius:var(--r-pill);padding:2px 6px">${p.badge}</span>`:''}</div><div style="font-family:var(--fd);font-size:1.3rem;color:var(--a300);margin-bottom:4px">${p.price===0?'Free':'$'+p.price}/mo</div><div style="font-size:.68rem;color:var(--t4);margin-bottom:8px">${p.daily_limit>=99999?'Unlimited':p.daily_limit} msgs/day</div><ul style="list-style:none;padding:0;margin:0;font-size:.72rem;color:var(--t3)">${(p.features||[]).map(f=>`<li style="padding:2px 0">✓ ${f}</li>`).join('')}</ul></div>`).join('');
+}
+
+// GENERAL SETTINGS
+async function loadGeneral(){const r=await api('/api/admin/settings/general');const d=await r.json();const s=d.settings||{};['app_name','app_tagline','support_email','app_url'].forEach((k,i)=>{const ids=['g-name','g-tagline','g-email','g-url'];const el=document.getElementById(ids[i]);if(el)el.value=s[k]||'';});}
+async function saveGeneral(){const fields=['app_name','app_tagline','support_email','app_url'];const ids=['g-name','g-tagline','g-email','g-url'];const settings={};fields.forEach((k,i)=>{const el=document.getElementById(ids[i]);if(el)settings[k]=el.value;});const r=await api('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});const d=await r.json();r.ok?showToast('Settings saved ✅'):showToast(d.error,'error');}
+
+function renderPg(elId,totalPages,current,fn){const el=document.getElementById(elId);if(!el||totalPages<=1){if(el)el.innerHTML='';return;}let h=`<span>Page ${current}/${totalPages}</span>`;if(current>1)h+=`<button class="pgb" onclick="${fn.name}(${current-1})">←</button>`;const s=Math.max(1,current-2),e=Math.min(totalPages,current+2);for(let i=s;i<=e;i++)h+=`<button class="pgb${i===current?' active':''}" onclick="${fn.name}(${i})">${i}</button>`;if(current<totalPages)h+=`<button class="pgb" onclick="${fn.name}(${current+1})">→</button>`;el.innerHTML=h;}
+function openM(id){document.getElementById(id).classList.add('open');}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.m-ov.open').forEach(m=>m.classList.remove('open'));});
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');t.style.borderColor=type==='error'?'rgba(200,16,46,.35)':'rgba(217,90,35,.35)';clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3000);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function doLogout(){localStorage.clear();window.location.href='/admin-login';}
+init();
+</script>
+</body>
+</html>

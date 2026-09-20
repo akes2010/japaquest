@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="theme-color" content="#0A1428"/>
+<title>Dashboard — Japa+</title>
+<link rel="stylesheet" href="/style.css"/>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="icon" href="/icons/icon.svg"/>
+<style>
+html,body{height:100%;overflow:hidden}
+#app{display:flex;height:100vh;overflow:hidden}
+#sb{width:260px;flex-shrink:0;background:var(--elev1);border-right:1px solid var(--b1);display:flex;flex-direction:column;overflow:hidden;z-index:100;transition:transform .3s}
+.sb-top{padding:14px 14px 0;border-bottom:1px solid var(--b0)}
+.sb-brand{display:flex;align-items:center;gap:9px;padding-bottom:12px}
+.sb-logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#C14A1B,#E8742E);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 4px 12px rgba(217,90,35,.4);flex-shrink:0;overflow:hidden}
+.sb-logo img{width:100%;height:100%;object-fit:contain}
+.sb-appname{font-family:var(--fd);font-size:.95rem;font-weight:700;color:var(--a300)}
+.new-chat-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:9px 12px;background:linear-gradient(135deg,rgba(217,90,35,.15),rgba(232,116,46,.06));border:1px solid rgba(217,90,35,.3);border-radius:var(--r-sm);color:var(--o300);font-size:.8rem;font-weight:600;margin-bottom:12px;transition:all var(--ease);cursor:pointer}
+.new-chat-btn:hover{background:linear-gradient(135deg,rgba(217,90,35,.25),rgba(232,116,46,.12))}
+.sb-nav{padding:6px 8px;display:flex;flex-direction:column;gap:1px}
+.nav-sec{font-size:.58rem;font-weight:600;color:var(--t4);letter-spacing:.1em;text-transform:uppercase;padding:8px 8px 4px}
+.sb-btn{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);color:var(--t3);font-size:.8rem;font-weight:500;transition:all var(--ease);border:1px solid transparent;width:100%;text-align:left;background:none;cursor:pointer;position:relative}
+.sb-btn:hover{background:var(--glass);color:var(--t1)}
+.sb-btn.active{background:rgba(217,90,35,.1);color:var(--o300);border-color:rgba(217,90,35,.25)}
+.sb-btn .ni{font-size:.95rem;width:20px;text-align:center;flex-shrink:0}
+.nb-badge{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--r500);color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:var(--r-pill);display:none}
+.sb-history{flex:1;overflow-y:auto;padding:4px 8px;border-top:1px solid var(--b0)}
+.sh-label{font-size:.58rem;font-weight:600;color:var(--t4);letter-spacing:.09em;text-transform:uppercase;padding:8px 4px 4px}
+.hi{padding:7px 9px;border-radius:var(--r-sm);cursor:pointer;transition:all var(--ease);border:1px solid transparent;margin-bottom:1px}
+.hi:hover{background:var(--glass);border-color:var(--b0)}
+.hi.active{background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.15)}
+.hi-t{font-size:.76rem;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hi-m{font-size:.62rem;color:var(--t4)}
+.sb-user{padding:10px;border-top:1px solid var(--b0);display:flex;align-items:center;gap:9px}
+.u-ava{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#152742,#C14A1B);display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;color:#fff;flex-shrink:0;cursor:pointer}
+.u-name{font-size:.78rem;font-weight:600;color:var(--t1)}
+.u-plan{font-size:.62rem;color:var(--t4)}
+.sb-logout{background:none;border:none;color:var(--t4);font-size:.78rem;padding:4px;margin-left:auto;cursor:pointer;border-radius:var(--r-xs)}
+.sb-logout:hover{color:var(--r300)}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{height:56px;border-bottom:1px solid var(--b0);background:rgba(10,20,40,.9);backdrop-filter:blur(20px);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;z-index:50}
+.menu-btn{display:none;align-items:center;justify-content:center;width:34px;height:34px;background:var(--glass);border:1px solid var(--b1);border-radius:var(--r-sm);color:var(--t2);font-size:18px;cursor:pointer}
+.tb-title{font-family:var(--fd);font-size:.95rem;color:var(--a300);flex:1}
+.model-pill{display:flex;align-items:center;gap:6px;background:var(--glass);border:1px solid var(--b1);border-radius:var(--r-md);padding:6px 12px;font-size:.75rem;color:var(--t3);cursor:pointer;position:relative;transition:all var(--ease)}
+.model-pill:hover{border-color:var(--ba)}
+.m-dot{width:7px;height:7px;border-radius:50%}
+.model-menu{position:absolute;top:calc(100%+8px);right:0;background:var(--elev2);border:1px solid var(--b2);border-radius:var(--r-md);min-width:230px;padding:6px;z-index:300;display:none;box-shadow:var(--shadow-lg)}
+.model-menu.open{display:block}
+.m-opt{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;font-size:.8rem;color:var(--t3);transition:all var(--ease)}
+.m-opt:hover{background:var(--glass2);color:var(--t1)}
+.m-opt.sel{background:rgba(217,90,35,.1);color:var(--o300)}
+.m-free{font-size:.56rem;background:rgba(217,90,35,.1);color:var(--o300);border:1px solid rgba(217,90,35,.22);border-radius:var(--r-pill);padding:1px 5px;margin-left:auto}
+.notif-btn{position:relative;background:var(--glass);border:1px solid var(--b1);border-radius:var(--r-sm);width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--t3);cursor:pointer;transition:all var(--ease)}
+.notif-btn:hover{border-color:var(--ba);color:var(--a400)}
+.n-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;background:var(--r500);border-radius:50%;border:1.5px solid var(--canvas);display:none}
+#content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.view{display:none;flex:1;flex-direction:column;overflow:hidden}
+.view.active{display:flex}
+.view-wrap{flex:1;overflow-y:auto;padding:20px}
+/* CHAT */
+#chat-msgs{flex:1;overflow-y:auto;padding:16px 16px 0;display:flex;flex-direction:column;gap:16px}
+.chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center}
+.ce-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(217,90,35,.1);border:1px solid rgba(217,90,35,.22);border-radius:var(--r-pill);padding:5px 14px;font-size:.68rem;color:var(--o300);font-weight:600;margin-bottom:14px}
+.ce-title{font-family:var(--fd);font-size:1.3rem;color:var(--a300);margin-bottom:8px}
+.ce-sub{font-size:.82rem;color:var(--t3);line-height:1.7;max-width:440px;margin:0 auto 22px}
+.quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;width:100%;max-width:580px}
+.qc{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:13px;cursor:pointer;text-align:left;transition:all var(--ease)}
+.qc:hover{border-color:var(--ba);transform:translateY(-2px)}
+.qc-f{font-size:1.1rem;margin-bottom:5px}
+.qc-l{font-size:.8rem;font-weight:600;color:var(--t1);margin-bottom:2px}
+.qc-d{font-size:.68rem;color:var(--t4)}
+.msg-row{display:flex;animation:fadeUp .25s ease both}
+.msg-row.user{justify-content:flex-end}
+.msg-ava{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;margin-right:9px;margin-top:2px}
+.msg-body{max-width:82%;display:flex;flex-direction:column;gap:3px}
+.msg-meta{font-size:.62rem;color:var(--t4);display:flex;align-items:center;gap:6px}
+.cp-btn{background:none;border:none;color:var(--t4);font-size:.62rem;padding:1px 5px;border-radius:var(--r-xs);cursor:pointer;opacity:0;transition:opacity var(--ease)}
+.msg-body:hover .cp-btn{opacity:1}
+.bubble{border-radius:4px 12px 12px 12px;padding:12px 14px;border:1px solid var(--b1);background:var(--elev1);font-size:.84rem;line-height:1.75;color:var(--t2)}
+.bubble.user{background:linear-gradient(135deg,#C14A1B,#E8742E);border:none;border-radius:12px 12px 4px 12px;color:#FFF3EB}
+.bubble strong{color:var(--a300)}
+.bubble .bl{padding-left:10px;border-left:2px solid rgba(217,90,35,.35);margin:3px 0;font-size:.81rem}
+.bubble .ck{display:flex;gap:7px;margin:2px 0;font-size:.81rem}
+.bubble .ibox{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);border-radius:var(--r-sm);padding:9px 12px;margin:6px 0;font-size:.8rem}
+.bubble .aff-card{background:rgba(217,90,35,.07);border:1px solid rgba(217,90,35,.22);border-radius:var(--r-sm);padding:10px 13px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.bubble .aff-card a{color:var(--o300);font-weight:600;font-size:.8rem;text-decoration:none}
+.bubble .aff-card a:hover{color:var(--a300)}
+.tdots{display:flex;gap:4px;padding:4px 0}
+.tdot{width:7px;height:7px;border-radius:50%;animation:pulse 1.3s infinite}
+.tdot:nth-child(2){animation-delay:.2s}.tdot:nth-child(3){animation-delay:.4s}
+.cur{display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:3px;vertical-align:middle;animation:pulse 1s infinite}
+/* INPUT */
+#ia{padding:10px 16px 14px;border-top:1px solid var(--b0);background:rgba(7,19,32,.95);flex-shrink:0}
+.chips{display:flex;gap:6px;margin-bottom:8px;overflow-x:auto;padding-bottom:2px}
+.chips::-webkit-scrollbar{height:0}
+.chip{background:rgba(217,90,35,.07);border:1px solid rgba(217,90,35,.2);border-radius:var(--r-pill);padding:5px 12px;color:var(--o300);font-size:.7rem;font-weight:500;white-space:nowrap;cursor:pointer;transition:all var(--ease);flex-shrink:0}
+.chip:hover{background:rgba(217,90,35,.15)}
+.input-box{display:flex;gap:8px;align-items:flex-end;background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:10px 12px;transition:all var(--ease)}
+.input-box:focus-within{border-color:rgba(217,90,35,.45);box-shadow:0 0 0 3px rgba(217,90,35,.09)}
+#msg-ta{flex:1;background:transparent;border:none;color:var(--t1);font-size:.87rem;line-height:1.55;min-height:22px;max-height:120px;overflow-y:auto;resize:none}
+#msg-ta::placeholder{color:var(--t4)}
+.send-btn{width:36px;height:36px;border-radius:var(--r-sm);background:linear-gradient(135deg,#C14A1B,#E8742E);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--ease);box-shadow:0 4px 12px rgba(217,90,35,.35);cursor:pointer;border:none}
+.send-btn:hover:not(:disabled){transform:translateY(-1px)}
+.send-btn:disabled{background:var(--elev2);color:var(--t4);box-shadow:none;cursor:not-allowed}
+.usage-row{display:flex;align-items:center;gap:8px;margin-top:7px}
+.usage-row .progress{flex:1}
+.usage-lbl{font-size:.62rem;color:var(--t4);white-space:nowrap}
+/* DESTINATIONS GRID */
+.dest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:4px}
+.dest-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:18px;transition:all var(--ease);cursor:pointer;position:relative;overflow:hidden}
+.dest-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;opacity:0;transition:opacity var(--ease)}
+.dest-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.dest-card:hover::before{opacity:1}
+.dest-card.free::before{background:linear-gradient(90deg,var(--g500),var(--g300))}
+.dest-card.easy::before{background:linear-gradient(90deg,var(--a600),var(--a400))}
+.dest-card.visa::before{background:linear-gradient(90deg,var(--r500),var(--o500))}
+.dc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.dc-flag{font-size:1.8rem}
+.dc-status{font-size:.62rem;font-weight:700;padding:3px 9px;border-radius:var(--r-pill)}
+.status-visa_free{background:rgba(0,135,81,.12);color:var(--g300);border:1px solid rgba(0,135,81,.25)}
+.status-voa{background:rgba(245,158,11,.1);color:var(--a300);border:1px solid rgba(245,158,11,.25)}
+.status-evisa{background:rgba(59,130,246,.1);color:#93C5FD;border:1px solid rgba(59,130,246,.25)}
+.status-eta{background:rgba(139,92,246,.1);color:#C4B5FD;border:1px solid rgba(139,92,246,.25)}
+.status-visa_required{background:rgba(200,16,46,.08);color:#FF8F9C;border:1px solid rgba(200,16,46,.2)}
+.status-needs_verification{background:rgba(255,255,255,.05);color:var(--t4);border:1px solid var(--b1)}
+.dc-name{font-size:.95rem;font-weight:600;color:var(--t1);margin-bottom:4px}
+.dc-meta{font-size:.72rem;color:var(--t4);line-height:1.7}
+.dc-budget{font-size:.7rem;color:var(--a300);margin-top:6px;font-weight:600}
+.dc-btns{display:flex;gap:6px;margin-top:12px}
+.dc-btn{flex:1;padding:6px;background:rgba(217,90,35,.08);border:1px solid rgba(217,90,35,.22);border-radius:var(--r-sm);color:var(--o300);font-size:.7rem;font-weight:600;cursor:pointer;transition:all var(--ease);text-align:center;text-decoration:none;display:block}
+.dc-btn:hover{background:rgba(217,90,35,.16);color:var(--o300)}
+.dc-btn.book{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.2);color:var(--a300)}
+.dc-btn.book:hover{background:rgba(245,158,11,.16)}
+/* FILTER BAR */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.f-chip{padding:6px 14px;border-radius:var(--r-pill);border:1px solid var(--b1);background:transparent;color:var(--t4);font-size:.74rem;cursor:pointer;transition:all var(--ease)}
+.f-chip.on{background:rgba(217,90,35,.1);border-color:rgba(217,90,35,.3);color:var(--o300)}
+/* BOOKING CARDS */
+.booking-section{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.book-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;transition:all var(--ease)}
+.book-card:hover{border-color:var(--ba);transform:translateY(-2px)}
+.book-icon{font-size:1.6rem;margin-bottom:10px}
+.book-title{font-size:.84rem;font-weight:600;color:var(--t1);margin-bottom:5px}
+.book-desc{font-size:.73rem;color:var(--t4);margin-bottom:12px;line-height:1.6}
+.book-links{display:flex;flex-direction:column;gap:6px}
+.book-link{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(217,90,35,.07);border:1px solid rgba(217,90,35,.2);border-radius:var(--r-sm);color:var(--o300);font-size:.75rem;font-weight:600;text-decoration:none;transition:all var(--ease)}
+.book-link:hover{background:rgba(217,90,35,.15);color:var(--o300)}
+.book-link .partner{font-size:.62rem;color:var(--t4)}
+/* TOOLS */
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:14px}
+.tc{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:18px;transition:all var(--ease);position:relative;overflow:hidden}
+.tc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#C14A1B,#E8742E);opacity:0;transition:opacity var(--ease)}
+.tc:hover{border-color:var(--ba);transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.tc:hover::before{opacity:1}
+.tc-icon{width:44px;height:44px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:12px;background:rgba(217,90,35,.1);border:1px solid rgba(217,90,35,.2)}
+.tc-name{font-size:.9rem;font-weight:600;color:var(--t1);margin-bottom:5px}
+.tc-desc{font-size:.76rem;color:var(--t3);line-height:1.65;margin-bottom:14px}
+.tc-btn{width:100%;padding:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:var(--r-sm);color:var(--a400);font-size:.76rem;font-weight:600;cursor:pointer;transition:all var(--ease)}
+.tc-btn:hover{background:rgba(245,158,11,.16)}
+/* PROFILE */
+.ps-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:20px;margin-bottom:14px}
+.ps-title{font-size:.85rem;font-weight:600;color:var(--t1);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--b0)}
+/* MODAL */
+.m-ov{position:fixed;inset:0;background:rgba(5,10,20,.88);display:none;align-items:center;justify-content:center;z-index:9000;padding:20px}
+.m-ov.open{display:flex}
+.m-box{background:var(--elev1);border:1px solid var(--b2);border-radius:var(--r-xl);width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:modalIn .22s ease}
+.m-head{padding:16px 20px;border-bottom:1px solid var(--b0);display:flex;align-items:center;justify-content:space-between}
+.m-title{font-family:var(--fd);font-size:.95rem;color:var(--a300)}
+.m-close{background:var(--glass);border:none;color:var(--t3);width:28px;height:28px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px}
+.m-close:hover{background:rgba(200,16,46,.15);color:var(--r300)}
+.m-body{padding:18px 20px}
+.m-foot{padding:12px 20px;border-top:1px solid var(--b0);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+/* EXPORT */
+.ex-bar{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
+.ex-btn{padding:6px 13px;border-radius:var(--r-sm);font-size:.74rem;font-weight:600;cursor:pointer;transition:all var(--ease);border:none}
+.ex-pdf{background:rgba(200,16,46,.1);border:1px solid rgba(200,16,46,.25);color:#FF8F9C}
+.ex-doc{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);color:#93C5FD}
+.ex-save{background:rgba(217,90,35,.1);border:1px solid rgba(217,90,35,.25);color:var(--o300)}
+.tool-out{background:var(--elev2);border:1px solid var(--b1);border-radius:var(--r-md);padding:16px;margin-top:14px;display:none;max-height:360px;overflow-y:auto;font-size:.8rem;color:var(--t2);line-height:1.7;white-space:pre-wrap}
+/* SIDEBAR OVERLAY */
+#sb-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
+.sb-open #sb-ov{display:block}
+.sb-open #sb{transform:translateX(0)!important}
+/* NOTIFICATIONS */
+.notif-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:14px;display:flex;gap:11px;cursor:pointer;transition:all var(--ease);margin-bottom:8px}
+.notif-card.unread{border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.04)}
+.nc-icon{width:34px;height:34px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.nc-title{font-size:.82rem;font-weight:600;color:var(--t1);margin-bottom:3px}
+.notif-card.unread .nc-title::before{content:'● ';color:var(--a400);font-size:.55rem;vertical-align:middle}
+.nc-msg{font-size:.75rem;color:var(--t3);line-height:1.6}
+.nc-time{font-size:.63rem;color:var(--t4);margin-top:4px}
+/* SAVED */
+.sr-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:14px;margin-bottom:8px;transition:all var(--ease)}
+.sr-card:hover{border-color:var(--ba)}
+.sr-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.sr-title{font-size:.84rem;font-weight:600;color:var(--t1)}
+.sr-type{font-size:.62rem;background:rgba(217,90,35,.1);color:var(--o300);border:1px solid rgba(217,90,35,.2);border-radius:var(--r-pill);padding:2px 7px}
+.sr-preview{font-size:.75rem;color:var(--t3);line-height:1.5;max-height:50px;overflow:hidden}
+.sr-actions{display:flex;gap:6px;margin-top:9px}
+/* PLANS */
+.plan-card{background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:20px;transition:all var(--ease)}
+.plan-card.curr{border-color:rgba(217,90,35,.4);background:rgba(217,90,35,.06)}
+.pc-name{font-size:.85rem;font-weight:600;color:var(--t1);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}
+.pc-price{font-family:var(--fd);font-size:1.6rem;color:var(--a300);margin-bottom:4px}
+.pc-limit{font-size:.68rem;color:var(--t4);margin-bottom:12px}
+.pc-btn{width:100%;padding:8px;border-radius:var(--r-sm);font-size:.76rem;font-weight:600;cursor:pointer;transition:all var(--ease);border:1px solid var(--ba);color:var(--a400);background:transparent}
+.pc-btn:hover{background:rgba(245,158,11,.1)}
+.pc-btn.curr{border-color:rgba(217,90,35,.35);color:var(--o300);background:rgba(217,90,35,.07);cursor:default}
+/* RESPONSIVE */
+@media(max-width:768px){
+  #sb{position:fixed;left:0;top:0;height:100%;transform:translateX(-100%);z-index:200}
+  .menu-btn{display:flex!important}
+  .quick-grid{grid-template-columns:1fr}
+  .dest-grid{grid-template-columns:1fr}
+  .tools-grid{grid-template-columns:1fr}
+  .booking-section{grid-template-columns:1fr}
+  .view-wrap{padding:14px}
+}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="sb-ov" onclick="document.body.classList.remove('sb-open')"></div>
+
+<!-- VISA CHECK MODAL -->
+<div class="m-ov" id="visa-modal" onclick="if(event.target===this)closeM('visa-modal')">
+<div class="m-box">
+  <div class="m-head"><div class="m-title">🛂 Visa Requirements Check</div><button class="m-close" onclick="closeM('visa-modal')">✕</button></div>
+  <div class="m-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Your Passport</label>
+        <select class="input" id="vm-passport"><option value="NG">🇳🇬 Nigeria</option><option value="GH">🇬🇭 Ghana</option><option value="KE">🇰🇪 Kenya</option><option value="ZA">🇿🇦 South Africa</option><option value="ET">🇪🇹 Ethiopia</option><option value="CM">🇨🇲 Cameroon</option><option value="TZ">🇹🇿 Tanzania</option><option value="UG">🇺🇬 Uganda</option><option value="SN">🇸🇳 Senegal</option></select></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Destination</label>
+        <select class="input" id="vm-dest"><option value="GB">🇬🇧 United Kingdom</option><option value="FR">🇫🇷 France (Schengen)</option><option value="DE">🇩🇪 Germany (Schengen)</option><option value="US">🇺🇸 United States</option><option value="CA">🇨🇦 Canada</option><option value="AE">🇦🇪 UAE / Dubai</option><option value="QA">🇶🇦 Qatar</option><option value="TR">🇹🇷 Türkiye</option><option value="EG">🇪🇬 Egypt</option><option value="MA">🇲🇦 Morocco</option><option value="KE">🇰🇪 Kenya</option><option value="RW">🇷🇼 Rwanda</option><option value="TZ">🇹🇿 Tanzania</option><option value="SC">🇸🇨 Seychelles</option><option value="BB">🇧🇧 Barbados</option><option value="SG">🇸🇬 Singapore</option><option value="TH">🇹🇭 Thailand</option></select></div>
+    </div>
+    <div class="form-group" style="margin-top:10px;margin-bottom:0"><label class="form-label">Purpose</label>
+      <select class="input" id="vm-purpose"><option value="Tourism">Tourism / Holiday</option><option value="Business">Business</option><option value="Study">Study</option><option value="Work">Work</option><option value="Family Visit">Family Visit</option></select></div>
+    <div id="visa-result" style="display:none;margin-top:14px"></div>
+  </div>
+  <div class="m-foot"><button class="btn btn-ghost btn-sm" onclick="closeM('visa-modal')">Close</button><button class="btn btn-primary btn-sm" onclick="checkVisa()">Check Requirements →</button></div>
+</div>
+</div>
+
+<!-- COVER LETTER MODAL -->
+<div class="m-ov" id="cv-modal" onclick="if(event.target===this)closeM('cv-modal')">
+<div class="m-box">
+  <div class="m-head"><div class="m-title">✉️ Document Writer</div><button class="m-close" onclick="closeM('cv-modal')">✕</button></div>
+  <div class="m-body">
+    <div class="form-group"><label class="form-label">Document Type</label>
+      <select class="input" id="doc-type">
+        <option value="visa_cover">Visa Cover Letter</option>
+        <option value="sponsor">Sponsorship Letter</option>
+        <option value="employment">Employment Confirmation Letter</option>
+        <option value="financial">Financial Sponsorship Statement</option>
+        <option value="intent">Study Intent Letter</option>
+        <option value="ties">Home Ties Statement</option>
+        <option value="invitation">Invitation Letter (from host)</option>
+        <option value="business">Business Invitation Letter</option>
+      </select></div>
+    <div class="form-group"><label class="form-label">Destination / Embassy</label>
+      <input class="input" id="doc-dest" placeholder="e.g. UK Visa & Immigration, London" tabindex="1"/></div>
+    <div class="form-group"><label class="form-label">Your Full Name (as on passport)</label>
+      <input class="input" id="doc-name" placeholder="e.g. Akinwale Babatunde" tabindex="2"/></div>
+    <div class="form-group"><label class="form-label">Occupation / Role</label>
+      <input class="input" id="doc-job" placeholder="e.g. Senior Software Engineer at Flutterwave" tabindex="3"/></div>
+    <div class="form-group"><label class="form-label">Purpose of Travel</label>
+      <input class="input" id="doc-purpose" placeholder="e.g. 10-day tourism trip, visiting London & Edinburgh" tabindex="4"/></div>
+    <div class="form-group" style="margin-bottom:0"><label class="form-label">Travel Dates</label>
+      <input class="input" id="doc-dates" placeholder="e.g. 15 August – 25 August 2026" tabindex="5"/></div>
+    <div id="doc-result" class="tool-out"></div>
+    <div class="ex-bar" id="doc-exports" style="display:none">
+      <button class="ex-btn ex-save" onclick="saveDoc()">💾 Save</button>
+      <button class="ex-btn ex-pdf" onclick="printDoc()">📄 PDF</button>
+      <button class="ex-btn ex-doc" onclick="downloadDoc()">📝 DOCX</button>
+    </div>
+  </div>
+  <div class="m-foot"><button class="btn btn-ghost btn-sm" onclick="closeM('cv-modal')">Close</button><button class="btn btn-primary btn-sm" onclick="generateDoc()">Generate Document →</button></div>
+</div>
+</div>
+
+<!-- BUDGET MODAL -->
+<div class="m-ov" id="budget-modal" onclick="if(event.target===this)closeM('budget-modal')">
+<div class="m-box">
+  <div class="m-head"><div class="m-title">💰 Trip Budget Calculator</div><button class="m-close" onclick="closeM('budget-modal')">✕</button></div>
+  <div class="m-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Destination</label>
+        <select class="input" id="bud-dest" onchange="calcBudget()">
+          <option value="AE">UAE / Dubai</option><option value="GB">United Kingdom</option>
+          <option value="TR">Türkiye</option><option value="EG">Egypt</option>
+          <option value="TH">Thailand</option><option value="MA">Morocco</option>
+          <option value="KE">Kenya</option><option value="RW">Rwanda</option>
+          <option value="SC">Seychelles</option><option value="SG">Singapore</option>
+        </select></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Duration (days)</label>
+        <input class="input" id="bud-days" type="number" value="7" min="1" max="365" oninput="calcBudget()"/></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Travel Style</label>
+        <select class="input" id="bud-style" onchange="calcBudget()">
+          <option value="backpacker">🎒 Backpacker</option>
+          <option value="budget">💸 Budget</option>
+          <option value="midrange" selected>💰 Mid-range</option>
+          <option value="comfort">🌟 Comfort</option>
+          <option value="luxury">💎 Luxury</option>
+        </select></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Travellers</label>
+        <input class="input" id="bud-pax" type="number" value="1" min="1" max="20" oninput="calcBudget()"/></div>
+    </div>
+    <div id="budget-result" style="margin-top:16px;display:none">
+      <div style="background:var(--elev2);border:1px solid var(--b1);border-radius:var(--r-md);padding:16px">
+        <div style="font-family:var(--fd);font-size:1.4rem;color:var(--a300);margin-bottom:14px" id="bud-total">Total: —</div>
+        <div id="bud-breakdown"></div>
+        <div style="margin-top:12px;font-size:.7rem;color:var(--t4)">💡 Excludes international flights and visa fees. Always budget 15% extra for unexpected costs.</div>
+      </div>
+    </div>
+  </div>
+  <div class="m-foot"><button class="btn btn-ghost btn-sm" onclick="closeM('budget-modal')">Close</button><button class="btn btn-primary btn-sm" onclick="askChat('Help me plan a detailed budget for my '+document.getElementById(\'bud-days\').value+\'-day trip to \'+document.getElementById(\'bud-dest\').options[document.getElementById(\'bud-dest\').selectedIndex].text+\' in \'+document.getElementById(\'bud-style\').value+\' style for \'+document.getElementById(\'bud-pax\').value+\' traveller(s). Include flight estimates from Nigeria, visa fees, accommodation, food, transport and activities.');closeM('budget-modal')">Get AI Plan →</button></div>
+</div>
+</div>
+
+<div id="app">
+<!-- SIDEBAR -->
+<div id="sb">
+  <div class="sb-top">
+    <div class="sb-brand">
+      <div class="sb-logo" id="sb-logo">✈</div>
+      <div class="sb-appname" id="sb-appname">Japa+</div>
+    </div>
+    <button class="new-chat-btn" onclick="startNewChat()">✏️ New Chat</button>
+  </div>
+  <div class="sb-nav">
+    <button class="sb-btn active" id="nbtn-chat" onclick="sw('chat')"><span class="ni">💬</span>AI Travel Chat</button>
+    <button class="sb-btn" id="nbtn-explore" onclick="sw('explore')"><span class="ni">🌍</span>Explore Destinations</button>
+    <button class="sb-btn" id="nbtn-book" onclick="sw('book')"><span class="ni">✈️</span>Book Travel</button>
+    <button class="sb-btn" id="nbtn-tools" onclick="sw('tools')"><span class="ni">🛠️</span>Visa Tools</button>
+    <button class="sb-btn" id="nbtn-saved" onclick="sw('saved')"><span class="ni">📁</span>Saved Documents</button>
+    <div class="nav-sec">Account</div>
+    <button class="sb-btn" id="nbtn-history" onclick="sw('history')"><span class="ni">📂</span>Chat History</button>
+    <button class="sb-btn" id="nbtn-notif" onclick="sw('notif')"><span class="ni">🔔</span>Notifications<span class="nb-badge" id="notif-badge">0</span></button>
+    <button class="sb-btn" id="nbtn-sub" onclick="sw('sub')"><span class="ni">💳</span>Subscription</button>
+    <button class="sb-btn" id="nbtn-profile" onclick="sw('profile')"><span class="ni">👤</span>Profile</button>
+  </div>
+  <div class="sb-history">
+    <div class="sh-label">Recent Chats</div>
+    <div id="sb-hist"></div>
+  </div>
+  <div class="sb-user">
+    <div class="u-ava" id="u-ava" onclick="sw('profile')">U</div>
+    <div><div class="u-name" id="u-name">Loading…</div><div class="u-plan" id="u-plan">Free Plan</div></div>
+    <button class="sb-logout" onclick="doLogout()" title="Sign out">↩</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <button class="menu-btn btn" onclick="document.body.classList.toggle('sb-open')">☰</button>
+    <div class="tb-title" id="tb-title">AI Travel Chat</div>
+    <div class="model-pill" onclick="toggleMM()">
+      <div class="m-dot" id="m-dot"></div>
+      <span id="m-name">Loading…</span>&nbsp;▾
+      <div class="model-menu" id="model-menu"></div>
+    </div>
+    <button class="notif-btn" onclick="sw('notif')">🔔<div class="n-dot" id="tb-ndot"></div></button>
+  </div>
+
+  <div id="content">
+    <!-- CHAT -->
+    <div class="view active" id="view-chat" style="display:flex;flex-direction:column">
+      <div id="chat-msgs"></div>
+      <div id="ia">
+        <div class="chips">
+          <button class="chip" onclick="ask('UK visitor visa complete guide for Nigerian — documents, bank balance, cover letter tips')">🇬🇧 UK Visa</button>
+          <button class="chip" onclick="ask('Dubai UAE visa for Nigerian — cheapest way, requirements, processing time')">🇦🇪 Dubai</button>
+          <button class="chip" onclick="ask('I want to study abroad — guide me on universities, scholarships, and student visa process for Africans')">📚 Study Abroad</button>
+          <button class="chip" onclick="ask('Schengen visa guide — which country embassy to apply at, insurance, bank statements, cover letter')">🇪🇺 Schengen</button>
+          <button class="chip" onclick="ask('Where can I travel visa-free or on arrival with a Nigerian passport? Give me strategic tips.')">🛂 Visa-Free</button>
+          <button class="chip" onclick="ask('Help me plan a 10-day trip budget to Turkey — flights from Lagos, hotels, food, activities')">💰 Plan Budget</button>
+        </div>
+        <div class="input-box">
+          <textarea id="msg-ta" placeholder="Ask about visas, flights, hotels, study abroad, or any travel question…" rows="1"></textarea>
+          <button class="send-btn" id="send-btn" onclick="sendMsg()">↑</button>
+        </div>
+        <div class="usage-row">
+          <div class="progress"><div class="progress-fill" id="u-fill" style="width:0%"></div></div>
+          <span class="usage-lbl" id="u-lbl">0/10 today</span>
+        </div>
+        <div style="text-align:center;font-size:.62rem;color:var(--t4);margin-top:4px">Japa+ · Verify visa requirements with official embassy sources before applying</div>
+      </div>
+    </div>
+
+    <!-- EXPLORE DESTINATIONS -->
+    <div class="view" id="view-explore">
+      <div class="view-wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div><div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300)">🌍 Explore Destinations</div>
+          <div style="font-size:.78rem;color:var(--t4);margin-top:3px">Real visa requirements from our verified database</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select class="input" id="exp-passport" onchange="loadDestinations()" style="width:150px">
+              <option value="NG">🇳🇬 Nigerian</option><option value="GH">🇬🇭 Ghanaian</option>
+              <option value="KE">🇰🇪 Kenyan</option><option value="ZA">🇿🇦 South African</option>
+            </select>
+            <select class="input" id="exp-purpose" onchange="loadDestinations()" style="width:130px">
+              <option>Tourism</option><option>Business</option><option>Study</option><option>Work</option>
+            </select>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <button class="f-chip on" id="fc-all" onclick="filterDest('all')">All</button>
+          <button class="f-chip" id="fc-visa_free" onclick="filterDest('visa_free')">🟢 Visa-Free</button>
+          <button class="f-chip" id="fc-voa" onclick="filterDest('voa')">🟡 On Arrival</button>
+          <button class="f-chip" id="fc-evisa" onclick="filterDest('evisa')">🔵 eVisa</button>
+          <button class="f-chip" id="fc-eta" onclick="filterDest('eta')">🟣 eTA</button>
+          <button class="f-chip" id="fc-visa_required" onclick="filterDest('visa_required')">🔴 Visa Required</button>
+          <button class="f-chip" id="fc-Africa" onclick="filterDest('Africa')">🌍 Africa</button>
+          <button class="f-chip" id="fc-Europe" onclick="filterDest('Europe')">🏛️ Europe</button>
+          <button class="f-chip" id="fc-Middle_East" onclick="filterDest('Middle East')">🕌 Middle East</button>
+        </div>
+        <div class="dest-grid" id="dest-grid"><div style="color:var(--t4);text-align:center;padding:40px"><div class="spinner" style="margin:0 auto 10px;border-top-color:var(--o400);border-color:var(--glass2)"></div>Loading visa database…</div></div>
+      </div>
+    </div>
+
+    <!-- BOOK TRAVEL -->
+    <div class="view" id="view-book">
+      <div class="view-wrap">
+        <div style="margin-bottom:20px">
+          <div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300);margin-bottom:5px">✈️ Book Your Travel</div>
+          <div style="font-size:.78rem;color:var(--t4)">Compare and book via our trusted partners. Prices stay the same — we earn a small commission that helps keep Japa+ free.</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+          <input class="input" id="bk-dest" placeholder="Destination (e.g. London)"/>
+          <input class="input" id="bk-checkin" type="date"/>
+          <input class="input" id="bk-checkout" type="date"/>
+        </div>
+        <button class="btn btn-primary" onclick="loadBookingLinks()" style="margin-bottom:24px">🔍 Find Options</button>
+        <div id="booking-links-wrap">
+          <div class="booking-section">
+            <div class="book-card"><div class="book-icon">✈️</div><div class="book-title">Flights</div><div class="book-desc">Compare all airlines from African cities. Set price alerts and find the cheapest routing.</div>
+              <div class="book-links">
+                <a class="book-link" href="https://www.skyscanner.net" target="_blank" onclick="logClick('skyscanner','flight','general',this.href)"><span>🔍 Skyscanner</span><span class="partner">All airlines · Price alerts</span></a>
+                <a class="book-link" href="https://www.google.com/flights" target="_blank" onclick="logClick('google-flights','flight','general',this.href)"><span>🔮 Google Flights</span><span class="partner">Best for flexible dates</span></a>
+                <a class="book-link" href="https://www.kiwi.com" target="_blank" onclick="logClick('kiwi','flight','general',this.href)"><span>🥝 Kiwi.com</span><span class="partner">Unique routes · Stopovers</span></a>
+              </div></div>
+            <div class="book-card"><div class="book-icon">🏨</div><div class="book-title">Hotels & Stays</div><div class="book-desc">Compare millions of hotels, apartments and hostels. Free cancellation on most bookings.</div>
+              <div class="book-links">
+                <a class="book-link" href="https://www.booking.com" target="_blank" onclick="logClick('booking','hotel','general',this.href)"><span>🏨 Booking.com</span><span class="partner">Free cancellation · Best prices</span></a>
+                <a class="book-link" href="https://www.hostelworld.com" target="_blank" onclick="logClick('hostelworld','hotel','general',this.href)"><span>🎒 Hostelworld</span><span class="partner">Budget & social travel</span></a>
+                <a class="book-link" href="https://www.agoda.com" target="_blank" onclick="logClick('agoda','hotel','general',this.href)"><span>🌏 Agoda</span><span class="partner">Best for Asia · Great deals</span></a>
+              </div></div>
+            <div class="book-card"><div class="book-icon">🚗</div><div class="book-title">Car Rentals</div><div class="book-desc">Rent a car at your destination. Compare all major providers in one search.</div>
+              <div class="book-links">
+                <a class="book-link" href="https://www.rentalcars.com" target="_blank" onclick="logClick('rentalcars','car','general',this.href)"><span>🚗 RentalCars</span><span class="partner">Compare all providers</span></a>
+                <a class="book-link" href="https://www.discovercars.com" target="_blank" onclick="logClick('discovercars','car','general',this.href)"><span>🔍 DiscoverCars</span><span class="partner">No hidden fees guarantee</span></a>
+              </div></div>
+            <div class="book-card"><div class="book-icon">🎟️</div><div class="book-title">Tours & Activities</div><div class="book-desc">Book guided tours, museum tickets, day trips and experiences at your destination.</div>
+              <div class="book-links">
+                <a class="book-link" href="https://www.viator.com" target="_blank" onclick="logClick('viator','activity','general',this.href)"><span>🎟️ Viator</span><span class="partner">Powered by TripAdvisor</span></a>
+                <a class="book-link" href="https://www.getyourguide.com" target="_blank" onclick="logClick('getyourguide','activity','general',this.href)"><span>🗺️ GetYourGuide</span><span class="partner">Local expert guides</span></a>
+              </div></div>
+            <div class="book-card"><div class="book-icon">🛡️</div><div class="book-title">Travel Insurance</div><div class="book-desc">Essential for Schengen (mandatory). Also protects flights, luggage and medical emergencies.</div>
+              <div class="book-links">
+                <a class="book-link" href="https://www.worldnomads.com" target="_blank" onclick="logClick('worldnomads','insurance','general',this.href)"><span>🛡️ World Nomads</span><span class="partner">Built for adventurers</span></a>
+                <a class="book-link" href="https://www.comparethemarket.com/travel-insurance/" target="_blank" onclick="logClick('comparemarket','insurance','general',this.href)"><span>📊 Compare the Market</span><span class="partner">Compare all providers</span></a>
+              </div></div>
+            <div class="book-card"><div class="book-icon">💳</div><div class="book-title">Travel Cards & Money</div><div class="book-desc">Save on foreign exchange fees. Best cards for spending abroad without extra charges.</div>
+              <div class="book-links">
+                <a class="book-link" href="https://wise.com" target="_blank" onclick="logClick('wise','money','general',this.href)"><span>💸 Wise</span><span class="partner">Real exchange rate</span></a>
+                <a class="book-link" href="https://www.revolut.com" target="_blank" onclick="logClick('revolut','money','general',this.href)"><span>🔵 Revolut</span><span class="partner">Free weekend transfers</span></a>
+              </div></div>
+            <div id="tp-partners" class="booking-section" style="margin-top:14px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOOLS -->
+    <div class="view" id="view-tools">
+      <div class="view-wrap">
+        <div style="margin-bottom:20px"><div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300)">🛠️ Visa & Travel Tools</div><div style="font-size:.78rem;color:var(--t4)">Generate, save, and export professional travel documents</div></div>
+        <div class="tools-grid">
+          <div class="tc"><div class="tc-icon">🛂</div><div class="tc-name">Visa Requirements Check</div><p class="tc-desc">Instant visa status from our verified database — 40+ destinations, 9 African passports.</p><button class="tc-btn" onclick="openM('visa-modal')">Check Visa Status →</button></div>
+          <div class="tc"><div class="tc-icon">✉️</div><div class="tc-name">Document Writer</div><p class="tc-desc">Visa cover letters, sponsorship letters, study intent, employment confirmation — AI-generated, embassy-ready.</p><button class="tc-btn" onclick="openM('cv-modal')">Write Document →</button></div>
+          <div class="tc"><div class="tc-icon">💰</div><div class="tc-name">Budget Calculator</div><p class="tc-desc">Full trip cost breakdown: accommodation, food, transport, activities — by destination and travel style.</p><button class="tc-btn" onclick="openM('budget-modal');calcBudget()">Calculate Budget →</button></div>
+          <div class="tc"><div class="tc-icon">📋</div><div class="tc-name">Document Checklist</div><p class="tc-desc">Personalised visa document checklist for UK, US, Schengen, Canada, UAE, Australia and more.</p><button class="tc-btn" onclick="ask('Give me a complete visa document checklist for a '+user.country+' passport holder applying for a UK visitor visa, including specific requirements for each document.')">Get Checklist →</button></div>
+          <div class="tc"><div class="tc-icon">📚</div><div class="tc-name">Study Abroad Guide</div><p class="tc-desc">Universities, scholarships, student visa requirements, accommodation, and cost of living by country.</p><button class="tc-btn" onclick="ask('I want to study abroad. Guide me on the best universities for African students, available scholarships, student visa requirements, and how to apply.')">Study Abroad Guide →</button></div>
+          <div class="tc"><div class="tc-icon">💼</div><div class="tc-name">Work Abroad Guide</div><p class="tc-desc">Work visas, in-demand jobs for Africans, how to get your qualifications recognised, remote work options.</p><button class="tc-btn" onclick="ask('Help me understand how to work abroad as a Nigerian. What are the easiest work visa options, most in-demand jobs, and how do I get my qualifications recognised internationally?')">Work Abroad Guide →</button></div>
+          <div class="tc"><div class="tc-icon">🏦</div><div class="tc-name">Financial Proof Guide</div><p class="tc-desc">Exactly what bank statements embassies want — balance requirements, duration, what red flags to avoid.</p><button class="tc-btn" onclick="ask('Complete guide on preparing bank statements for visa applications — minimum balances per country, the 6-month rule, what counts as suspicious, and how to present funds correctly.')">Finance Guide →</button></div>
+          <div class="tc"><div class="tc-icon">🎯</div><div class="tc-name">Visa Success Score</div><p class="tc-desc">Rate your application profile 0–100 with AI. Get a specific improvement plan before you apply.</p><button class="tc-btn" onclick="ask('Please rate my visa profile for a UK visa application and give me a score out of 100. Ask me questions about my employment, finances, travel history and family ties to make the assessment.')">Get My Score →</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SAVED DOCUMENTS -->
+    <div class="view" id="view-saved">
+      <div class="view-wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+          <div><div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300)">📁 Saved Documents</div></div>
+          <div style="display:flex;gap:6px">
+            <button class="f-chip on" id="sf-all" onclick="filterSaved('')">All</button>
+            <button class="f-chip" onclick="filterSaved('visa_cover')">✉️ Letters</button>
+            <button class="f-chip" onclick="filterSaved('checklist')">📋 Checklists</button>
+          </div>
+        </div>
+        <div id="saved-list"><div style="color:var(--t4);text-align:center;padding:40px"><div class="spinner" style="margin:0 auto 10px;border-top-color:var(--o400);border-color:var(--glass2)"></div>Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="view" id="view-history">
+      <div class="view-wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+          <div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300)">📂 Chat History</div>
+          <input class="input" id="hist-q" placeholder="🔍 Search…" style="width:200px" oninput="filterHist(this.value)"/>
+        </div>
+        <div id="hist-list"><div style="color:var(--t4);text-align:center;padding:30px">Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div class="view" id="view-notif">
+      <div class="view-wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300)">🔔 Notifications</div>
+          <button class="btn btn-ghost btn-sm" onclick="markAllRead()">Mark all read</button>
+        </div>
+        <div id="notif-list"><div style="color:var(--t4);text-align:center;padding:30px">Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- SUBSCRIPTION -->
+    <div class="view" id="view-sub">
+      <div class="view-wrap">
+        <div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300);margin-bottom:18px">💳 Subscription</div>
+        <div style="background:linear-gradient(135deg,rgba(14,27,51,.55),rgba(217,90,35,.08));border:1px solid rgba(217,90,35,.3);border-radius:var(--r-xl);padding:22px;margin-bottom:20px">
+          <div style="font-family:var(--fd);font-size:1.4rem;color:var(--o300)" id="sc-plan">Free Plan</div>
+          <div style="font-size:.8rem;color:var(--t4);margin-bottom:12px" id="sc-desc"></div>
+          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--t4);margin-bottom:5px"><span>Today's usage</span><span id="sc-usage">0/10</span></div>
+          <div class="progress"><div class="progress-fill" id="sc-fill" style="width:0%"></div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px" id="plan-grid"></div>
+        <div style="padding:14px;background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);font-size:.76rem;color:var(--t4)">
+          💡 Contact <span id="support-email">support@japaplus.app</span> to upgrade your plan.
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="view" id="view-profile">
+      <div class="view-wrap">
+        <div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300);margin-bottom:18px">👤 My Profile</div>
+        <div class="ps-card"><div class="ps-title">Personal Information</div>
+          <div class="form-group"><label class="form-label">Full Name</label><input class="input" id="p-name" tabindex="1"/></div>
+          <div class="form-group"><label class="form-label">Email</label><input class="input" id="p-email" disabled style="opacity:.5"/></div>
+          <div class="form-group" style="margin-bottom:16px"><label class="form-label">Passport Country</label>
+            <select class="input" id="p-country">
+              <option value="Nigeria" data-flag="🇳🇬" data-code="NG">🇳🇬 Nigeria</option>
+              <option value="Ghana" data-flag="🇬🇭" data-code="GH">🇬🇭 Ghana</option>
+              <option value="Kenya" data-flag="🇰🇪" data-code="KE">🇰🇪 Kenya</option>
+              <option value="South Africa" data-flag="🇿🇦" data-code="ZA">🇿🇦 South Africa</option>
+              <option value="Ethiopia" data-flag="🇪🇹" data-code="ET">🇪🇹 Ethiopia</option>
+              <option value="Cameroon" data-flag="🇨🇲" data-code="CM">🇨🇲 Cameroon</option>
+              <option value="Tanzania" data-flag="🇹🇿" data-code="TZ">🇹🇿 Tanzania</option>
+              <option value="Uganda" data-flag="🇺🇬" data-code="UG">🇺🇬 Uganda</option>
+              <option value="Other Africa" data-flag="🌍" data-code="NG">🌍 Other Africa</option>
+            </select></div>
+          <button class="btn btn-primary btn-sm" onclick="saveProfile()">Save Changes</button>
+        </div>
+        <div class="ps-card"><div class="ps-title">✈️ Travel Profile</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Budget Min (USD/trip)</label><input class="input" id="tp-min" type="number" placeholder="500"/></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Budget Max (USD/trip)</label><input class="input" id="tp-max" type="number" placeholder="2000"/></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Travel Style</label>
+              <select class="input" id="tp-style">
+                <option value="backpacker">🎒 Backpacker</option><option value="budget">💸 Budget</option>
+                <option value="midrange">💰 Mid-range</option><option value="comfort">🌟 Comfort</option><option value="luxury">💎 Luxury</option>
+              </select></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Primary Purpose</label>
+              <select class="input" id="tp-purpose">
+                <option>Tourism</option><option>Business</option><option>Study</option><option>Work</option></select></div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="saveTravelProfile()">Save Travel Profile</button>
+        </div>
+        <div class="ps-card"><div class="ps-title">🔒 Change Password</div>
+          <div class="form-group"><label class="form-label">Current Password</label><input class="input" id="p-curr-pw" type="password"/></div>
+          <div class="form-group" style="margin-bottom:16px"><label class="form-label">New Password</label><input class="input" id="p-new-pw" type="password"/></div>
+          <button class="btn btn-primary btn-sm" onclick="changePassword()">Update Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const tok=localStorage.getItem('vg_token');
+if(!tok){window.location.href='/';}
+let user=null,allModels=[],selModel='claude',curConvUUID=null,curMsgs=[],loading=false,usageToday=0,dailyLimit=10,allConvs=[],allDests=[],destFilter='all',savedFilter='';
+const MC={claude:'#F59E0B',deepseek:'#818CF8',qwen:'#38BDF8',llama:'#A78BFA',gemma:'#F472B6',mistral:'#F59E0B','llama-groq':'#00C478','gemini-flash':'#60A5FA','gemini-pro':'#3B82F6','llama-together':'#FB923C',mistral7b:'#E879F9',zephyr:'#C084FC'};
+const MI={claude:'✨',deepseek:'🔍',qwen:'🧠',llama:'🦙',gemma:'💎',mistral:'🌪️','llama-groq':'⚡','gemini-flash':'🔮','gemini-pro':'🔮','llama-together':'🤝',mistral7b:'🤗',zephyr:'🤗',openai:'🧠'};
+const STATUS_LBL={visa_free:'Visa-Free',voa:'On Arrival',evisa:'eVisa',eta:'eTA',visa_required:'Visa Required',needs_verification:'Check Embassy'};
+
+async function api(path,opts={}){
+  const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok,...(opts.headers||{})}});
+  if(r.status===401){localStorage.clear();window.location.href='/';}
+  return r;
+}
+
+async function init(){
+  try{
+    const[meR,aiR,appR]=await Promise.all([api('/api/auth/me'),api('/api/ai/models'),fetch('/api/app-info')]);
+    const[meD,aiD,appD]=await Promise.all([meR.json(),aiR.json(),appR.json()]);
+    user=meD.user;allModels=aiD.models||[];selModel=aiD.default||'claude';
+    usageToday=meD.todayUsage;dailyLimit=user.plan?.daily_limit||10;
+    const lEl=document.getElementById('sb-logo');
+    if(appD.logoUrl)lEl.innerHTML=`<img src="${appD.logoUrl}" alt="logo"/>`;
+    else lEl.textContent=appD.logo||'✈';
+    document.getElementById('sb-appname').textContent=appD.name||'Japa+';
+    document.title='Dashboard — '+(appD.name||'Japa+');
+    document.getElementById('support-email').textContent=appD.supportEmail||'support@japaplus.app';
+    const ini=user.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+    document.getElementById('u-ava').textContent=ini;
+    document.getElementById('u-name').textContent=user.name;
+    document.getElementById('u-plan').textContent=(user.plan?.name||'Free')+' Plan';
+    document.getElementById('p-name').value=user.name;
+    document.getElementById('p-email').value=user.email;
+    for(const o of document.getElementById('p-country').options)if(o.textContent.includes(user.country||'Nigeria')){o.selected=true;break;}
+    document.getElementById('sc-plan').textContent=(user.plan?.name||'Free')+' Plan';
+    document.getElementById('sc-desc').textContent=(user.plan?.daily_limit>=99999?'Unlimited':user.plan?.daily_limit||10)+' messages/day';
+    setUsage(usageToday,dailyLimit);
+    if(meD.unread>0)setNotifBadge(meD.unread);
+    buildMM();showEmpty();loadConvs();loadNotifs();loadPlans();loadTravelProfile();loadTpPartners();
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  }catch(e){console.error('init:',e);}
+}
+
+function buildMM(){
+  const mn=document.getElementById('model-menu');
+  mn.innerHTML=allModels.map(m=>`<div class="m-opt${m.id===selModel?' sel':''}" onclick="pickModel('${m.id}','${m.name}')" id="mopt-${m.id}"><div style="width:7px;height:7px;border-radius:50%;background:${MC[m.id]||'#aaa'};flex-shrink:0"></div><span>${MI[m.id]||'🤖'}</span> ${m.name}${m.free?'<span class="m-free">FREE</span>':''}</div>`).join('');
+  const cur=allModels.find(m=>m.id===selModel)||allModels[0];
+  if(cur){document.getElementById('m-name').textContent=cur.name;document.getElementById('m-dot').style.background=MC[cur.id]||'#aaa';}
+}
+function pickModel(id,name){selModel=id;document.getElementById('m-name').textContent=name;document.getElementById('m-dot').style.background=MC[id]||'#aaa';document.querySelectorAll('.m-opt').forEach(o=>o.classList.toggle('sel',o.id==='mopt-'+id));document.getElementById('model-menu').classList.remove('open');showToast('Switched to '+name);}
+function toggleMM(){document.getElementById('model-menu').classList.toggle('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.model-pill'))document.getElementById('model-menu').classList.remove('open');});
+
+function sw(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.sb-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v)?.classList.add('active');
+  document.getElementById('nbtn-'+v)?.classList.add('active');
+  const T={chat:'AI Travel Chat',explore:'Explore Destinations',book:'Book Travel',tools:'Visa Tools',saved:'Saved Documents',history:'Chat History',notif:'Notifications',sub:'Subscription',profile:'My Profile'};
+  document.getElementById('tb-title').textContent=T[v]||v;
+  if(v==='notif'){loadNotifs();markAllRead();}
+  if(v==='history')loadAllConvs();
+  if(v==='explore')loadDestinations();
+  if(v==='saved')loadSaved();
+  if(v==='sub')loadPlans();
+  if(v==='chat')document.getElementById('msg-ta').focus();
+  document.body.classList.remove('sb-open');
+}
+
+function setUsage(used,limit){
+  const pct=Math.min(100,limit>=99999?0:Math.round((used/limit)*100));
+  const f=document.getElementById('u-fill');f.style.width=pct+'%';
+  f.className='progress-fill'+(pct>85?' danger':pct>60?' warn':'');
+  document.getElementById('u-lbl').textContent=used+'/'+(limit>=99999?'∞':limit)+' today';
+  document.getElementById('sc-usage').textContent=used+'/'+(limit>=99999?'∞':limit);
+  document.getElementById('sc-fill').style.width=pct+'%';
+}
+
+async function loadConvs(){const r=await api('/api/user/conversations?limit=15');const d=await r.json();allConvs=d.rows||[];renderSbHist(allConvs);}
+function renderSbHist(convs){document.getElementById('sb-hist').innerHTML=convs.length?convs.map(c=>`<div class="hi${curConvUUID===c.uuid?' active':''}" onclick="loadConv('${c.uuid}')"><div class="hi-t">${esc(c.title)}</div><div class="hi-m">${c.msg_count} msgs · ${relTime(c.updated_at)}</div></div>`).join(''):'<div style="font-size:.73rem;color:var(--t4);padding:6px 4px">No chats yet</div>';}
+async function loadAllConvs(){document.getElementById('hist-list').innerHTML='<div style="color:var(--t4);text-align:center;padding:30px"><div class="spinner" style="margin:0 auto 8px;border-top-color:var(--o400);border-color:var(--glass2)"></div>Loading…</div>';const r=await api('/api/user/conversations?limit=50');const d=await r.json();allConvs=d.rows||[];filterHist('');}
+function filterHist(q){document.getElementById('hist-list').innerHTML=(q?allConvs.filter(c=>c.title.toLowerCase().includes(q.toLowerCase())):allConvs).map(c=>`<div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:13px;display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer;transition:all var(--ease)" onmouseover="this.style.borderColor='var(--b2)'" onmouseout="this.style.borderColor='var(--b1)'" onclick="sw('chat');loadConv('${c.uuid}')"><div style="font-size:1.2rem">💬</div><div style="flex:1;min-width:0"><div style="font-size:.84rem;font-weight:500;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.title)}</div><div style="font-size:.67rem;color:var(--t4)">${c.msg_count} msgs · ${c.model} · ${relTime(c.updated_at)}</div></div><button onclick="event.stopPropagation();delConv('${c.uuid}')" style="background:none;border:none;color:var(--t4);cursor:pointer;padding:4px;border-radius:4px;opacity:0;transition:opacity .2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">🗑</button></div>`).join('')||'<div style="color:var(--t4);text-align:center;padding:40px">No conversations</div>';}
+async function loadConv(uuid){if(curConvUUID===uuid){sw('chat');return;}const r=await api('/api/user/conversations/'+uuid);const d=await r.json();curConvUUID=uuid;curMsgs=(d.messages||[]).map(m=>({role:m.role,content:m.content}));document.getElementById('tb-title').textContent=d.conversation?.title||'Chat';document.getElementById('chat-msgs').innerHTML='';curMsgs.forEach(m=>appendBubble(m.role,m.content,d.conversation?.model||selModel));document.getElementById('chat-msgs').scrollTop=99999;renderSbHist(allConvs);}
+async function startNewChat(){curConvUUID=null;curMsgs=[];document.getElementById('tb-title').textContent='AI Travel Chat';document.getElementById('chat-msgs').innerHTML='';showEmpty();sw('chat');}
+async function delConv(uuid){if(!confirm('Delete?'))return;await api('/api/user/conversations/'+uuid,{method:'DELETE'});if(curConvUUID===uuid)startNewChat();allConvs=allConvs.filter(c=>c.uuid!==uuid);renderSbHist(allConvs);filterHist(document.getElementById('hist-q')?.value||'');}
+
+function showEmpty(){
+  const country=user?.country||'Nigeria';
+  document.getElementById('chat-msgs').innerHTML=`<div class="chat-empty" id="chat-empty"><div class="ce-badge">🌍 AI Travel Expert · ${country} Passport</div><div class="ce-title">Where do you want to go?</div><p class="ce-sub">Ask about visas, flights, hotels, study abroad, work permits, budget planning — your personal travel intelligence assistant.</p><div class="quick-grid"><button class="qc" onclick="ask('UK visitor visa complete guide for ${country} — documents, bank balance, cover letter tips, top rejection reasons')"><div class="qc-f">🇬🇧</div><div class="qc-l">UK Visitor Visa</div><div class="qc-d">Documents & strategy</div></button><button class="qc" onclick="ask('I want to study abroad in Europe or Canada as an African student. What are the best universities, scholarships available, and what are the student visa requirements?')"><div class="qc-f">📚</div><div class="qc-l">Study Abroad</div><div class="qc-d">Universities & scholarships</div></button><button class="qc" onclick="ask('Plan a 10-day trip to Dubai from ${country} — visa, flights, hotels for different budgets, activities, best time to go, money saving tips')"><div class="qc-f">🇦🇪</div><div class="qc-l">Plan Dubai Trip</div><div class="qc-d">Full travel plan</div></button><button class="qc" onclick="ask('Where can I travel visa-free or on arrival with my ${country} passport? Give me a strategic list from easiest to build travel history.')"><div class="qc-f">🛂</div><div class="qc-l">Visa-Free Travel</div><div class="qc-d">No-visa destinations</div></button></div></div>`;
+}
+
+async function ask(text){sw('chat');await sendMsg(text);}
+async function sendMsg(override){
+  const ta=document.getElementById('msg-ta');const text=override||ta.value.trim();
+  if(!text||loading)return;if(!override){ta.value='';ta.style.height='auto';}
+  document.getElementById('chat-empty')?.remove();sw('chat');
+  if(!curConvUUID){const r=await api('/api/user/conversations',{method:'POST',body:JSON.stringify({model:selModel})});const d=await r.json();curConvUUID=d.conversation.uuid;allConvs.unshift(d.conversation);renderSbHist(allConvs);}
+  curMsgs.push({role:'user',content:text});appendBubble('user',text,selModel);setLoading(true);
+  const streamEl=addStreamBubble();
+  try{
+    const res=await fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({messages:curMsgs,model:selModel,conversation_uuid:curConvUUID})});
+    if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||'Error '+res.status);}
+    let reply='';const ct=res.headers.get('content-type')||'';
+    if(ct.includes('text/event-stream')){
+      const reader=res.body.getReader();const dec=new TextDecoder();let buf='';
+      while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value);const lines=buf.split('\n');buf=lines.pop()||'';for(const line of lines){if(!line.startsWith('data: '))continue;try{const dd=JSON.parse(line.slice(6));if(dd.token){reply+=dd.token;updateStream(streamEl,reply);}}catch{}}}
+    }else{const dd=await res.json();reply=dd.text||'';updateStream(streamEl,reply);}
+    streamEl.querySelector('.cur')?.remove();curMsgs.push({role:'assistant',content:reply});
+    if(curMsgs.length===2)document.getElementById('tb-title').textContent=text.slice(0,45)+(text.length>45?'…':'');
+    usageToday++;setUsage(usageToday,dailyLimit);loadConvs();
+  }catch(e){streamEl.remove();appendErr(e.message);}
+  setLoading(false);
+}
+function appendBubble(role,text,model){
+  const msgs=document.getElementById('chat-msgs');const div=document.createElement('div');div.className='msg-row'+(role==='user'?' user':'');
+  const bid='b'+Date.now();
+  if(role==='user'){div.innerHTML=`<div class="msg-body" style="align-items:flex-end"><div class="bubble user">${esc(text).replace(/\n/g,'<br>')}</div></div>`;}
+  else{const col=MC[model]||'#aaa';div.innerHTML=`<div class="msg-ava" style="background:linear-gradient(135deg,${col}44,${col}22);border:1px solid ${col}44">${MI[model]||'🤖'}</div><div class="msg-body"><div class="msg-meta">${getMN(model)}<button class="cp-btn" onclick="copyTxt('${bid}')">📋</button></div><div class="bubble" id="${bid}"><div>${fmt(text)}</div></div></div>`;}
+  msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;
+}
+function addStreamBubble(){
+  const msgs=document.getElementById('chat-msgs');const div=document.createElement('div');div.className='msg-row';const bid='sb'+Date.now();const col=MC[selModel]||'#aaa';
+  div.innerHTML=`<div class="msg-ava" style="background:linear-gradient(135deg,${col}44,${col}22);border:1px solid ${col}44">${MI[selModel]||'🤖'}</div><div class="msg-body"><div class="msg-meta">${getMN(selModel)} · generating…</div><div class="bubble" id="${bid}"><div class="tdots"><div class="tdot" style="background:${col}"></div><div class="tdot" style="background:${col}"></div><div class="tdot" style="background:${col}"></div></div></div></div>`;
+  msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;div._bid=bid;return div;
+}
+function updateStream(el,text){const b=document.getElementById(el._bid);if(b){b.innerHTML=`<div>${fmt(text)}</div><span class="cur" style="background:${MC[selModel]||'#aaa'}"></span>`;document.getElementById('chat-msgs').scrollTop=99999;}}
+function appendErr(msg){const msgs=document.getElementById('chat-msgs');const d=document.createElement('div');d.style.cssText='background:rgba(200,16,46,.08);border:1px solid rgba(200,16,46,.25);border-radius:9px;padding:11px;font-size:.8rem;color:#FF8F9C;margin-top:4px';d.textContent='⚠️ '+msg;msgs.appendChild(d);}
+function setLoading(v){loading=v;const b=document.getElementById('send-btn');b.disabled=v;b.innerHTML=v?'<div class="spinner" style="border-top-color:#fff;border-color:rgba(255,255,255,.2)"></div>':'↑';}
+function getMN(id){return allModels.find(m=>m.id===id)?.name||id;}
+
+// DESTINATIONS
+async function loadDestinations(){
+  const pp=document.getElementById('exp-passport').value;
+  const pu=document.getElementById('exp-purpose').value;
+  document.getElementById('dest-grid').innerHTML='<div style="color:var(--t4);text-align:center;padding:40px"><div class="spinner" style="margin:0 auto 10px;border-top-color:var(--o400);border-color:var(--glass2)"></div>Loading…</div>';
+  const r=await api(`/api/travel/destinations?passport=${pp}&purpose=${pu}`);
+  const d=await r.json();
+  allDests=d.destinations||[];
+  renderDests(allDests);
+}
+function renderDests(dests){
+  const filtered=destFilter==='all'?dests:dests.filter(d=>destFilter==='Africa'||destFilter==='Europe'||destFilter==='Middle East'?d.region===destFilter:d.visaStatus===destFilter);
+  document.getElementById('dest-grid').innerHTML=filtered.length?filtered.map(d=>{
+    const cls=d.visaStatus==='visa_free'||d.visaStatus==='voa'?'free':d.visaStatus==='evisa'||d.visaStatus==='eta'?'easy':'visa';
+    return `<div class="dest-card ${cls}">
+      <div class="dc-head"><span class="dc-flag">${d.flag}</span><span class="dc-status status-${d.visaStatus||'needs_verification'}">${STATUS_LBL[d.visaStatus]||'Check Embassy'}</span></div>
+      <div class="dc-name">${d.name}</div>
+      <div class="dc-meta">${d.region}${d.processingDays?` · ${d.processingDays}`:''}</div>
+      ${d.avgDailyBudget?`<div class="dc-budget">~$${d.avgDailyBudget}/day</div>`:''}
+      <div class="dc-btns">
+        <button class="dc-btn" onclick="ask('Complete travel guide for ${d.name} (${d.code}) — visa requirements, best time to visit, cost of living, must-see places, flights from Nigeria, budget breakdown')">✈ Plan Trip</button>
+        <a class="dc-btn book" href="${d.links?.flights?.skyscanner||'https://www.skyscanner.net'}" target="_blank" onclick="logClick('skyscanner','flight','${d.name}',this.href)">🔍 Find Flights</a>
+      </div>
+    </div>`;
+  }).join(''):'<div style="color:var(--t4);text-align:center;padding:40px;grid-column:1/-1">No destinations in this filter</div>';
+}
+function filterDest(f){destFilter=f;document.querySelectorAll('.f-chip').forEach(c=>c.classList.remove('on'));const id='fc-'+f.replace(' ','_');if(document.getElementById(id))document.getElementById(id).classList.add('on');renderDests(allDests);}
+
+// BOOKING
+function loadBookingLinks(){
+  const dest=document.getElementById('bk-dest').value||'London';
+  const ci=document.getElementById('bk-checkin').value;
+  const co=document.getElementById('bk-checkout').value;
+  showToast('Opening booking partner links…');
+  window.open(`https://www.skyscanner.net/flights/${dest.toLowerCase().replace(/\s+/g,'-')}/?adultsv2=1`,'_blank');
+}
+async function logClick(partner,type,dest,url){
+  await api('/api/travel/affiliate-click',{method:'POST',body:JSON.stringify({partner,linkType:type,destination:dest,url})}).catch(()=>{});
+}
+function logAffClick(partner,url){logClick(partner,'chat','chat',url);}
+
+// ONE-PLACE TRAVEL PARTNERS (Travelpayouts) — loaded from /api/chat/partners
+async function loadTpPartners(){
+  try{
+    const r=await fetch('/api/chat/partners');const d=await r.json();
+    const byCat={};(d.partners||[]).forEach(p=>{(byCat[p.tag]=byCat[p.tag]||[]).push(p)});
+    document.getElementById('tp-partners').innerHTML=Object.entries(byCat).map(([cat,list])=>`<div class="book-card"><div class="book-icon">${list[0].icon}</div><div class="book-title">${cat}</div><div class="book-links">${list.map(p=>`<a class="book-link" href="${p.url}" target="_blank" rel="noopener nofollow sponsored" onclick="logClick('${p.key}','${p.type}','general',this.href)"><span>${p.icon} ${p.name}</span><span class="partner">${p.blurb}</span></a>`).join('')}</div></div>`).join('');
+  }catch{}
+}
+
+// VISA CHECK
+async function checkVisa(){
+  const passport=document.getElementById('vm-passport').value;
+  const dest=document.getElementById('vm-dest').value;
+  const purpose=document.getElementById('vm-purpose').value;
+  const res=document.getElementById('visa-result');
+  res.style.display='block';res.innerHTML='<div style="color:var(--t4);font-size:.8rem">Checking database…</div>';
+  const r=await api(`/api/visa/check?passport=${passport}&destination=${dest}&purpose=${purpose}`);
+  const d=await r.json();
+  const col=d.status==='visa_free'?'var(--g500)':d.status==='voa'?'var(--a500)':d.status?.includes('visa')&&!d.status.includes('free')?'var(--r400)':'var(--t3)';
+  res.innerHTML=`<div style="background:var(--elev2);border:1px solid var(--b1);border-radius:var(--r-md);padding:16px">
+    <div style="font-size:1rem;font-weight:700;color:${col};margin-bottom:10px">${STATUS_LBL[d.status]||d.status}</div>
+    ${d.maxStay?`<div style="font-size:.78rem;color:var(--t3);margin-bottom:6px">⏱ Max stay: ${d.maxStay}</div>`:''}
+    ${(d.conditions||[]).length?`<div style="font-size:.76rem;color:var(--t2);margin-bottom:8px"><strong>Requirements:</strong><br/>${d.conditions.map(c=>`• ${c}`).join('<br/>')}</div>`:''}
+    ${d.fees?.amount?`<div style="font-size:.76rem;color:var(--a300);margin-bottom:6px">💰 Fee: ${d.fees.amount}</div>`:''}
+    ${d.processingDays?`<div style="font-size:.76rem;color:var(--t4);margin-bottom:8px">📅 Processing: ${d.processingDays}</div>`:''}
+    <div style="font-size:.66rem;color:var(--t4)">Source: ${d.source?.authority||'Japa+ Database'} · Last verified: ${d.lastVerified||'—'}</div>
+    <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="ask('Give me a complete guide on getting a ${purpose.toLowerCase()} visa for ${dest} with a ${passport} passport — step by step, all documents, fees, and tips to maximise approval');closeM('visa-modal')">Get Full Guide →</button>
+  </div>`;
+}
+
+// DOCUMENT WRITER
+let lastDocText='';
+async function generateDoc(){
+  const type=document.getElementById('doc-type').value;
+  const dest=document.getElementById('doc-dest').value||'Embassy';
+  const name=document.getElementById('doc-name').value||'[Your Name]';
+  const job=document.getElementById('doc-job').value||'[Occupation]';
+  const purpose=document.getElementById('doc-purpose').value||'Tourism';
+  const dates=document.getElementById('doc-dates').value||'[Dates]';
+  const typeLabels={visa_cover:'Visa Cover Letter',sponsor:'Sponsorship Letter',employment:'Employment Confirmation Letter',financial:'Financial Sponsorship Statement',intent:'Study Intent Letter',ties:'Home Ties Statement',invitation:'Invitation Letter',business:'Business Invitation Letter'};
+  const prompts={
+    visa_cover:`Write a professional visa cover letter to ${dest} for ${name}, a ${job} from ${user?.country||'Nigeria'}. Purpose: ${purpose}. Travel dates: ${dates}. 380-430 words. Include specific daily itinerary, home ties, financial capacity statement. Use [FILL IN] for personal details. Embassy-ready format.`,
+    sponsor:`Write a formal sponsorship letter from [Sponsor Name, Relationship] supporting ${name}'s visit to [Country] from ${dates}. Include: sponsor's details, financial commitment, relationship to applicant, accommodation provision. 300-350 words.`,
+    employment:`Write an employment confirmation letter for ${name}, ${job}, confirming employment, annual salary, approved leave for ${purpose} from ${dates}. Include: company letterhead details, HR signatory, return date confirmation. 250-300 words.`,
+    financial:`Write a financial sponsorship statement for ${name}'s ${purpose} trip to ${dest} (${dates}). Include: sponsor's financial capacity, commitment to cover all costs, relationship statement. 250-300 words.`,
+    intent:`Write a study intent letter for ${name} applying to study at [University] in [Country]. Explain why this institution, career goals, ties to home country ${user?.country||'Nigeria'}, financial support. 400-450 words. Compelling and authentic tone.`,
+    ties:`Write a home ties statement for ${name}, ${job}, to demonstrate strong ties to ${user?.country||'Nigeria'} when applying to ${dest}. Include: property, family, employment, financial investments. 300-350 words.`,
+    invitation:`Write an invitation letter from [Host Name] in [Country] inviting ${name} for ${purpose} from ${dates}. Include: host's details, purpose of visit, accommodation, financial responsibility statement. 300-350 words.`,
+    business:`Write a business invitation letter from [Company] in [Country] inviting ${name} (${job}) for a business meeting/conference from ${dates}. Include: company details, purpose, itinerary, cost responsibility. 300-350 words.`,
+  };
+  const out=document.getElementById('doc-result');out.style.display='block';out.textContent='Generating your document…';
+  closeM('cv-modal');sw('chat');
+  await ask(prompts[type]||prompts.visa_cover);
+  const reply=[...curMsgs].reverse().find(m=>m.role==='assistant');
+  lastDocText=reply?reply.content:'';   // capture the generated letter for save/print/download
+  document.getElementById('doc-exports').style.display='flex';
+}
+function saveDoc(){
+  const text=lastDocText;
+  if(!text)return showToast('Generate a document first');
+  const type=document.getElementById('doc-type')?.value||'visa_cover';
+  const dest=document.getElementById('doc-dest')?.value||'Document';
+  api('/api/user/tools',{method:'POST',body:JSON.stringify({tool_type:type,title:`${type.replace('_',' ')} — ${dest}`,result_text:text})}).then(()=>showToast('Saved ✅'));
+}
+function printDoc(){
+  const text=lastDocText;
+  if(!text)return showToast('Generate a document first');
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Document</title><style>body{font-family:Arial,sans-serif;max-width:750px;margin:40px auto;line-height:1.8;font-size:11pt;color:#111}h1{color:#0E1B33;border-bottom:2px solid #D95A23;padding-bottom:8px}.footer{margin-top:32px;font-size:8pt;color:#999;border-top:1px solid #ddd;padding-top:10px}@media print{.no-print{display:none}}</style></head><body><div style="white-space:pre-wrap">${text.replace(/</g,'&lt;')}</div><div class="footer">Generated by Japa+ · Verify all details before submission</div><div class="no-print" style="margin-top:20px"><button onclick="window.print()" style="padding:10px 24px;background:#0E1B33;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨 Print / Save PDF</button></div></body></html>`);
+  w.document.close();setTimeout(()=>w.print(),500);
+}
+function downloadDoc(){
+  const text=lastDocText;
+  if(!text)return showToast('Generate a document first');
+  const rtf=`{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Arial;}}\\f0\\fs22\n${text.replace(/[{}\\]/g,'').split('\n').map(l=>l+'\\par').join('\n')}}`;
+  const blob=new Blob([rtf],{type:'application/rtf'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='document.rtf';document.body.appendChild(a);a.click();document.body.removeChild(a);
+  showToast('Downloaded ✅ — opens in Microsoft Word');
+}
+
+// BUDGET CALCULATOR
+async function calcBudget(){
+  const dest=document.getElementById('bud-dest').value;
+  const days=document.getElementById('bud-days').value||7;
+  const style=document.getElementById('bud-style').value;
+  const pax=document.getElementById('bud-pax').value||1;
+  const r=await api(`/api/travel/budget?destination=${dest}&days=${days}&style=${style}`);
+  const d=await r.json();
+  if(!r.ok)return;
+  const b=d.breakdown;const total=b.total*parseInt(pax);
+  document.getElementById('bud-total').textContent=`Total: ~$${total.toLocaleString()} USD`;
+  document.getElementById('bud-breakdown').innerHTML=[
+    ['🏨 Accommodation','accommodation'],['🍽️ Food & Drinks','food'],
+    ['🚌 Local Transport','transport'],['🎟️ Activities','activities'],['🛍️ Misc','misc'],
+  ].map(([label,key])=>`<div style="display:flex;justify-content:space-between;font-size:.79rem;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--t3)">${label}</span><span style="color:var(--t1);font-weight:500">$${(b[key]*parseInt(pax)).toLocaleString()}</span></div>`).join('');
+  document.getElementById('budget-result').style.display='block';
+}
+
+// NOTIFICATIONS
+async function loadNotifs(){const r=await api('/api/user/notifications');const d=await r.json();setNotifBadge(d.unread);const el=document.getElementById('notif-list');const ti={info:'ℹ️',success:'✅',warning:'⚠️',error:'❌'};const tc={info:'rgba(59,130,246,.12)',success:'rgba(0,135,81,.12)',warning:'rgba(245,158,11,.12)',error:'rgba(200,16,46,.1)'};el.innerHTML=(d.notifications||[]).length?(d.notifications||[]).map(n=>`<div class="notif-card${n.read?'':' unread'}" onclick="markOneRead(${n.id},this)"><div class="nc-icon" style="background:${tc[n.type]||tc.info}">${ti[n.type]||'ℹ️'}</div><div><div class="nc-title">${esc(n.title)}</div><div class="nc-msg">${esc(n.message)}</div><div class="nc-time">${relTime(n.created_at)}</div></div></div>`).join(''):'<div style="color:var(--t4);text-align:center;padding:40px">No notifications yet</div>';}
+function setNotifBadge(c){const b=document.getElementById('notif-badge');const d=document.getElementById('tb-ndot');if(c>0){b.textContent=c>9?'9+':c;b.style.display='block';d.style.display='block';}else{b.style.display='none';d.style.display='none';}}
+async function markOneRead(id,el){el.classList.remove('unread');await api('/api/user/notifications/'+id+'/read',{method:'PUT'});}
+async function markAllRead(){await api('/api/user/notifications/read-all',{method:'PUT'});setNotifBadge(0);document.querySelectorAll('.notif-card.unread').forEach(el=>el.classList.remove('unread'));}
+
+// PLANS
+async function loadPlans(){const r=await fetch('/api/user/plans');const d=await r.json();document.getElementById('plan-grid').innerHTML=(d.plans||[]).map(p=>`<div class="plan-card${p.id===user.plan_id?' curr':''}"><div class="pc-name">${p.name}</div><div class="pc-price">${p.price===0?'Free':'$'+p.price}<span style="font-size:.75rem;color:var(--t4)">${p.price===0?'':'/mo'}</span></div><div class="pc-limit">${p.daily_limit>=99999?'Unlimited':p.daily_limit} msgs/day</div><ul style="list-style:none;padding:0;margin:0 0 12px;font-size:.72rem;color:var(--t3)">${(p.features||[]).map(f=>`<li style="padding:3px 0">✓ ${f}</li>`).join('')}</ul><button class="pc-btn${p.id===user.plan_id?' curr':''}" ${p.id===user.plan_id?'disabled':''} onclick="upgradeClick(this)" data-plan="${p.name}">${p.id===user.plan_id?'✅ Current Plan':'Upgrade'}</button></div>`).join('');}
+function upgradeClick(btn){const n=btn?.dataset?.plan||'';const e=document.getElementById('support-email').textContent;window.location.href='mailto:'+e+'?subject=Upgrade to '+n;}
+
+// SAVED RESULTS
+async function loadSaved(){const url='/api/user/tools'+(savedFilter?'?type='+savedFilter:'');const r=await api(url);const d=await r.json();const icons={visa_cover:'✉️',sponsor:'📜',employment:'🏢',financial:'🏦',intent:'📚',ties:'🏠',invitation:'📬',business:'💼',checklist:'📋',score:'🎯'};document.getElementById('saved-list').innerHTML=(d.results||[]).length?(d.results||[]).map(r=>`<div class="sr-card"><div class="sr-head"><div class="sr-title">${icons[r.tool_type]||'📄'} ${esc(r.title)}</div><span class="sr-type">${r.tool_type}</span></div><div style="font-size:.67rem;color:var(--t4);margin-bottom:5px">${new Date(r.created_at).toLocaleString()}</div><div class="sr-preview">${esc((r.result_text||'').slice(0,120))}…</div><div class="sr-actions"><button class="ex-btn ex-pdf" style="font-size:.7rem" onclick="viewSaved(${r.id},this.dataset.t)" data-t="${esc(r.title)}">👁 View</button><button class="ex-btn ex-pdf" onclick="exportSavedPDF(${r.id})">📄 PDF</button><button class="ex-btn ex-doc" onclick="exportSavedDoc(${r.id})">📝 DOCX</button><button class="ex-btn" style="background:rgba(200,16,46,.08);border:1px solid rgba(200,16,46,.2);color:#FF8F9C;font-size:.7rem" onclick="delSaved(${r.id},this)">🗑</button></div></div>`).join(''):'<div style="color:var(--t4);text-align:center;padding:40px">No saved documents yet.<br/>Generate a visa letter or checklist from Visa Tools and save it.</div>';}
+function filterSaved(type){savedFilter=type;loadSaved();}
+async function viewSaved(id,title){const r=await api('/api/user/tools/'+id);const d=await r.json();if(!r.ok)return showToast('Not found');const w=window.open('','_blank');w.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>body{font-family:Arial,sans-serif;max-width:750px;margin:40px auto;line-height:1.8;font-size:11pt}</style></head><body><h2>${title}</h2><div style="white-space:pre-wrap">${esc(d.result?.result_text||'')}</div></body></html>`);w.document.close();}
+async function exportSavedPDF(id){const r=await api('/api/user/tools/'+id);const d=await r.json();if(!r.ok)return;const w=window.open('','_blank');w.document.write(`<!DOCTYPE html><html><head><title>Document</title><style>body{font-family:Arial,sans-serif;max-width:750px;margin:40px auto;line-height:1.8;font-size:11pt}@media print{.np{display:none}}</style></head><body><div style="white-space:pre-wrap">${esc(d.result?.result_text||'')}</div><div class="np" style="margin-top:20px"><button onclick="window.print()" style="padding:10px 24px;background:#0E1B33;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨 Print PDF</button></div></body></html>`);w.document.close();setTimeout(()=>w.print(),500);}
+async function exportSavedDoc(id){const r=await api('/api/user/tools/'+id);const d=await r.json();if(!r.ok)return;const text=d.result?.result_text||'';const rtf=`{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Arial;}}\\f0\\fs22\n${text.replace(/[{}\\]/g,'').split('\n').map(l=>l+'\\par').join('\n')}}`;const blob=new Blob([rtf],{type:'application/rtf'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='document.rtf';document.body.appendChild(a);a.click();document.body.removeChild(a);}
+async function delSaved(id,btn){if(!confirm('Delete?'))return;await api('/api/user/tools/'+id,{method:'DELETE'});btn.closest('.sr-card').remove();}
+
+// PROFILE & TRAVEL PROFILE
+async function saveProfile(){const name=document.getElementById('p-name').value.trim();const sel=document.getElementById('p-country');const country=sel.value;const flag=sel.options[sel.selectedIndex]?.dataset?.flag||'🌍';const code=sel.options[sel.selectedIndex]?.dataset?.code||'NG';if(!name)return showToast('Name required');const r=await api('/api/auth/profile',{method:'PUT',body:JSON.stringify({name,country,country_flag:flag,passport_code:code})});const d=await r.json();if(!r.ok)return showToast(d.error||'Failed');user=d.user;document.getElementById('u-name').textContent=user.name;document.getElementById('u-ava').textContent=user.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);showToast('Profile saved ✅');}
+async function saveTravelProfile(){const data={budget_min:parseFloat(document.getElementById('tp-min').value)||500,budget_max:parseFloat(document.getElementById('tp-max').value)||2000,budget_label:document.getElementById('tp-style').value,travel_style:document.getElementById('tp-style').value,purposes:[document.getElementById('tp-purpose').value]};const r=await api('/api/travel/profile',{method:'PUT',body:JSON.stringify(data)});if(r.ok)showToast('Travel profile saved ✅');}
+async function loadTravelProfile(){const r=await api('/api/travel/profile');const d=await r.json();if(d.profile){const p=d.profile;document.getElementById('tp-min').value=p.budget_min_usd||500;document.getElementById('tp-max').value=p.budget_max_usd||2000;for(const o of document.getElementById('tp-style').options)if(o.value===p.travel_style){o.selected=true;break;}}}
+async function changePassword(){const curr=document.getElementById('p-curr-pw').value;const newP=document.getElementById('p-new-pw').value;if(!curr||!newP)return showToast('Both required');const r=await api('/api/auth/password',{method:'PUT',body:JSON.stringify({current_password:curr,new_password:newP})});const d=await r.json();if(!r.ok)return showToast(d.error||'Failed');document.getElementById('p-curr-pw').value='';document.getElementById('p-new-pw').value='';showToast('Password updated ✅');}
+function doLogout(){localStorage.clear();window.location.href='/';}
+
+function openM(id){document.getElementById(id).classList.add('open');setTimeout(()=>{const first=document.querySelector('#'+id+' input:not([disabled])');if(first)first.focus();},80);}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.m-ov.open').forEach(m=>m.classList.remove('open'));});
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');t.style.borderColor=type==='error'?'rgba(200,16,46,.35)':'rgba(217,90,35,.35)';clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function copyTxt(id){const el=document.getElementById(id);if(el)navigator.clipboard.writeText(el.innerText).then(()=>showToast('Copied ✅'));}
+function relTime(d){if(!d)return'';const diff=Math.floor((Date.now()-new Date(d))/1000);if(diff<60)return'just now';if(diff<3600)return Math.floor(diff/60)+'m ago';if(diff<86400)return Math.floor(diff/3600)+'h ago';return Math.floor(diff/86400)+'d ago';}
+function fmt(t){if(!t)return'';const mkLink=(m,txt,u)=>{txt=String(txt).replace(/[<>"'\\]/g,'');return '<a href="'+u+'" target="_blank" rel="noopener nofollow sponsored" style="color:var(--a300);text-decoration:underline" onclick="logAffClick(\''+txt+'\',\''+u+'\')">'+txt+'</a>';};return t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,mkLink).replace(/(^|\s)(https?:\/\/[^\s<]+)/g,(m,pre,u)=>pre+'<a href="'+u+'" target="_blank" rel="noopener nofollow sponsored" style="color:var(--a300);text-decoration:underline" onclick="logAffClick(\''+u.replace(/^https?:\/\//,'').split('/')[0]+'\',\''+u+'\')">'+u+'</a>').replace(/^###\s(.+)$/gm,'<div style="font-family:var(--fd);color:var(--a300);font-size:.92rem;margin:10px 0 4px;font-weight:600">$1</div>').replace(/^##\s(.+)$/gm,'<div style="font-family:var(--fd);color:var(--a300);font-size:.96rem;margin:12px 0 5px;font-weight:700">$1</div>').replace(/🔗\s\*\*([^*]+)\*\*:\s*([^\n]+)/g,'<div class="aff-card"><div><strong style="color:var(--o300)">🔗 $1</strong><br/><span style="font-size:.75rem;color:var(--t3)">$2</span></div></div>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code style="font-family:monospace;font-size:.79rem;background:rgba(217,90,35,.12);padding:1px 5px;border-radius:4px;color:var(--o300)">$1</code>').replace(/^✅\s(.+)$/gm,'<div class="ck"><span>✅</span><span>$1</span></div>').replace(/^⚠️\s(.+)$/gm,'<div class="ck"><span>⚠️</span><span>$1</span></div>').replace(/^❌\s(.+)$/gm,'<div class="ck"><span>❌</span><span>$1</span></div>').replace(/^[-•]\s(.+)$/gm,'<div class="bl">• $1</div>').replace(/^(\d+)\.\s(.+)$/gm,'<div class="bl"><strong>$1.</strong> $2</div>').replace(/^💡\s(.+)$/gm,'<div class="ibox">💡 $1</div>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');}
+document.getElementById('msg-ta').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}});
+document.getElementById('msg-ta').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
+init();
+</script>
+</body>
+</html>
