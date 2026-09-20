@@ -123,3 +123,17 @@ async function start() {
 }
 
 start().catch(e => { console.error('Startup failed:', e); process.exit(1); });
+
+// Friendly guidance when the port is taken (e.g. a previous instance is
+// still running) instead of an unhandled 'error' event stack trace.
+process.on('uncaughtException', (e) => {
+  if (e && e.code === 'EADDRINUSE') {
+    const port = (e.port || e.address || '').toString().replace('::', '') || '4000';
+    console.error(`\n❌ Port ${port} is already in use — another server instance is probably still running.`);
+    console.error(`   Fix:   lsof -ti tcp:${port} | xargs kill`);
+    console.error(`   Or:    PORT=4001 npm start\n`);
+    process.exit(1);
+  }
+  console.error('\n❌ Unexpected error:', e && e.stack || e);
+  process.exit(1);
+});
