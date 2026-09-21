@@ -706,6 +706,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
       <button class="f-chip" id="afc-approved" onclick="loadAffiliates('approved')">Approved</button>
       <button class="f-chip" id="afc-rejected" onclick="loadAffiliates('rejected')">Rejected</button>
     </div>
+    <div id="aff-analytics" class="s-card" style="margin-bottom:14px"><div style="color:var(--t4);font-size:.8rem">Loading analytics…</div></div>
     <div id="affiliates-list"><div style="color:var(--t4);font-size:.8rem">Loading…</div></div>
   </div>
 
@@ -1621,9 +1622,10 @@ async function loadAffiliates(status){
     const t=d.totals||{};
     const tot=document.getElementById('aff-totals');
     if(tot)tot.innerHTML=`${t.count||0} affiliate(s) · ${t.pending||0} pending · <strong>$${(t.owed||0).toFixed(2)}</strong> owed`;
+    loadAffAnalytics();
     const rows=(d.affiliates||[]).map(a=>`
       <tr>
-        <td style="padding:8px 6px"><strong>${esc(a.name)}</strong>${a.org?`<br><span style="opacity:.6;font-size:.7rem">🏢 ${esc(a.org)}</span>`:''}<br><span style="opacity:.6;font-size:.7rem">${esc(a.email)}</span></td>
+        <td style="padding:8px 6px"><strong>${esc(a.name)}</strong>${a.org?`<br><span style="opacity:.6;font-size:.7rem">🏢 ${esc(a.org)}</span>`:''}<br><span style="opacity:.6;font-size:.7rem">${esc(a.email)}</span>${a.selfBlocked?`<br><span title="${esc(a.note)}" style="font-size:.66rem;color:#e0a45e">⚠️ self-referral flagged</span>`:''}</td>
         <td><code style="background:rgba(255,255,255,.06);padding:2px 8px;border-radius:6px;font-size:.75rem">${a.code}</code></td>
         <td style="text-align:center">${a.clicks||0} / <strong>${a.signups||0}</strong> / <strong>${a.conversions||0}</strong></td>
         <td><strong>$${(a.earned||0).toFixed(2)}</strong></td>
@@ -1633,6 +1635,7 @@ async function loadAffiliates(status){
         <td style="white-space:nowrap">
           ${a.status==='pending'?`<button class="btn btn-primary btn-sm" onclick="afStatus(${a.id},'approved')">Approve</button> <button class="btn btn-ghost btn-sm" onclick="afStatus(${a.id},'rejected')">Reject</button>`:''}
           ${a.status==='approved'&&a.balance>0?`<button class="btn btn-primary btn-sm" onclick="afPay(${a.id})">Pay $${a.balance.toFixed(2)}</button>`:''}
+          <button class="btn btn-ghost btn-sm" onclick="afDetail(${a.id},'${a.code}')" title="30-day trend, sources, funnel">📊</button>
         </td>
       </tr>`).join('');
     document.getElementById('affiliates-list').innerHTML=rows?`
@@ -1641,6 +1644,53 @@ async function loadAffiliates(status){
       ${rows}</table></div>`
       :`<div style="opacity:.5;padding:18px;font-size:.8rem">No affiliates ${status?'with this status':'yet'}.</div>`;
   }catch(e){showToast('Could not load affiliates: '+e.message,'error');}
+}
+// ── Affiliate program analytics (strip + per-affiliate drill-down) ──────────
+async function loadAffAnalytics(){
+  try{
+    const el=document.getElementById('aff-analytics');if(!el)return;
+    const r=await apiFetch('/api/admin/affiliates/analytics');const d=await r.json();
+    if(!r.ok){el.innerHTML='';return;}
+    const p=d.program||{};
+    const maxC=Math.max(1,...(d.trend||[]).map(x=>x.clicks));
+    const bars=(d.trend||[]).slice(-30).map(x=>`<div title="${x.day}: ${x.clicks} clicks" style="flex:1;height:${Math.max(3,Math.round(x.clicks/maxC*42))}px;background:var(--o400);border-radius:3px 3px 0 0;opacity:.85"></div>`).join('');
+    const srcTot=(d.sources||[]).reduce((s,x)=>s+x.clicks,0)||1;
+    const srcs=(d.sources||[]).slice(0,5).map(s=>`<span class="pill" style="font-size:.66rem;padding:3px 10px;border-radius:99px;background:rgba(232,97,60,.12);color:var(--o300);margin:0 6px 6px 0">${esc(s.source)} ${Math.round(s.clicks/srcTot*100)}%</span>`).join('')||'<span style="opacity:.5;font-size:.72rem">no clicks yet</span>';
+    const flags=(d.flagged||[]).length?`<div style="margin-top:10px;font-size:.72rem;color:#e0a45e">⚠️ ${(d.flagged||[]).length} flagged: ${(d.flagged||[]).map(f=>esc(f.code)).join(', ')} — commissions from these are blocked.</div>`:'';
+    el.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px">
+        <div><div style="font-family:var(--fd);font-size:1.25rem;color:var(--a300)">${p.affiliates||0}</div><div style="font-size:.64rem;color:var(--t4)">Affiliates</div></div>
+        <div><div style="font-family:var(--fd);font-size:1.25rem;color:var(--t2)">${p.clicks||0}</div><div style="font-size:.64rem;color:var(--t4)">Total clicks</div></div>
+        <div><div style="font-family:var(--fd);font-size:1.25rem;color:var(--t2)">${p.conversions||0}</div><div style="font-size:.64rem;color:var(--t4)">Paid conversions</div></div>
+        <div><div style="font-family:var(--fd);font-size:1.25rem;color:var(--o300)">${p.convRate||0}%</div><div style="font-size:.64rem;color:var(--t4)">Click → paid rate</div></div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:2px;height:46px;margin-bottom:10px">${bars||'<span style="opacity:.5;font-size:.72rem">No clicks in the last 30 days</span>'}</div>
+      <div style="font-size:.68rem;color:var(--t4);margin-bottom:2px">Top sources (30d)</div>${srcs}${flags}`;
+  }catch(e){/* non-fatal */}
+}
+async function afDetail(id,code){
+  openM('af-detail-modal');
+  document.getElementById('afd-body').innerHTML='<div style="opacity:.5;font-size:.8rem">Loading…</div>';
+  document.getElementById('afd-title').textContent='📊 '+code+' — 30-day performance';
+  try{
+    const r=await apiFetch('/api/admin/affiliates/'+id+'/analytics');const d=await r.json();
+    if(!r.ok){document.getElementById('afd-body').innerHTML='<span style="color:#e0a45e">'+esc(d.error||'Failed')+'</span>';return;}
+    const f=d.funnel||{};
+    const maxC=Math.max(1,...(d.trend||[]).map(x=>x.clicks));
+    const bars=(d.trend||[]).map(x=>`<div title="${x.day}: ${x.clicks}" style="flex:1;height:${Math.max(3,Math.round(x.clicks/maxC*60))}px;background:var(--o400);border-radius:3px 3px 0 0"></div>`).join('')||'<span style="opacity:.5;font-size:.75rem">No clicks recorded yet</span>';
+    const srcTot=(d.sources||[]).reduce((s,x)=>s+x.clicks,0)||1;
+    const srcs=(d.sources||[]).map(s=>`<span class="pill" style="font-size:.68rem;padding:3px 10px;border-radius:99px;background:rgba(232,97,60,.12);color:var(--o300);margin:0 6px 6px 0">${esc(s.source)} · ${s.clicks} (${Math.round(s.clicks/srcTot*100)}%)</span>`).join('')||'<span style="opacity:.5;font-size:.75rem">None yet</span>';
+    document.getElementById('afd-body').innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px">
+        <div><div style="font-family:var(--fd);font-size:1.2rem;color:var(--t2)">${f.clicks||0}</div><div style="font-size:.62rem;color:var(--t4)">Clicks</div></div>
+        <div><div style="font-family:var(--fd);font-size:1.2rem;color:var(--t2)">${f.signups||0}</div><div style="font-size:.62rem;color:var(--t4)">Signups</div></div>
+        <div><div style="font-family:var(--fd);font-size:1.2rem;color:var(--o300)">${f.conversions||0}</div><div style="font-size:.62rem;color:var(--t4)">Paid</div></div>
+        <div><div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300)">${f.convRate||0}%</div><div style="font-size:.62rem;color:var(--t4)">Click→paid</div></div>
+        <div><div style="font-family:var(--fd);font-size:1.2rem;color:#0E7B4F">$${(f.earned||0).toFixed(2)}</div><div style="font-size:.62rem;color:var(--t4)">Earned</div></div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:2px;height:64px;margin-bottom:14px">${bars}</div>
+      <div style="font-size:.68rem;color:var(--t4);margin-bottom:4px">Traffic sources (30d)</div>${srcs}`;
+  }catch(e){document.getElementById('afd-body').textContent=e.message;}
 }
 async function afStatus(id,status){
   const r=await apiFetch('/api/admin/affiliates/'+id+'/status',{method:'POST',body:JSON.stringify({status})});
@@ -1656,5 +1706,15 @@ async function afPay(id){
 }
 
 </script>
+  <!-- AFFILIATE DETAIL MODAL -->
+  <div class="m-ov" id="af-detail-modal">
+    <div class="m-box" style="max-width:560px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div id="afd-title" style="font-family:var(--fd);font-size:1rem;color:var(--a300)">Performance</div>
+        <button class="btn-ghost" style="padding:4px 10px" onclick="closeM('af-detail-modal')">✕</button>
+      </div>
+      <div id="afd-body"></div>
+    </div>
+  </div>
 </body>
 </html>

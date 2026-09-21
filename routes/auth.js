@@ -45,12 +45,23 @@ router.post('/register', async (req, res) => {
 
     // Affiliate attribution: ?ref=CODE or refcookie (set by /r/:code) — bumps
     // the affiliate's signup counter; commission happens only on paid plans.
+    // Fraud guardrails: (1) an affiliate signing up through their own link
+    // gets NO attribution (flagged on their record); (2) a user already
+    // attributed to another affiliate is never re-attributed.
     const affCode = String(req.body.aff_ref || req.query.ref || req.cookies?.refcookie || '').toUpperCase().slice(0, 24);
     if (affCode) {
       const aff = Q.getAffiliateByCode(affCode);
       if (aff && aff.status === 'approved') {
-        Q.bumpAffiliate(aff.id, 'signups');
-        try { Q.execRaw('UPDATE users SET referred_by=? WHERE id=?', [aff.code, userId]); } catch {}
+        const email = String(req.body.email || '').toLowerCase();
+        const emailMatch = email && email === String(aff.email).toLowerCase();
+        const userMatch = aff.user_id && aff.user_id === userId;
+        if (emailMatch || userMatch) {
+          // Self-referral — silently skip attribution, flag for admin review.
+          Q.markSelfBlocked(aff.id, `Self-referral attempt: ${email || 'own account'} (${new Date().toISOString().slice(0, 10)})`);
+        } else {
+          Q.bumpAffiliate(aff.id, 'signups');
+          try { Q.execRaw('UPDATE users SET referred_by=? WHERE id=?', [aff.code, userId]); } catch {}
+        }
       }
     }
 

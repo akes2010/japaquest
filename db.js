@@ -97,6 +97,14 @@ const SCHEMA = [
     meta_json TEXT DEFAULT '{}',
     created_at TEXT DEFAULT(datetime('now')),
     paid_at TEXT)`,
+  `CREATE TABLE IF NOT EXISTS affiliate_clicks(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    affiliate_id INTEGER NOT NULL REFERENCES affiliates(id) ON DELETE CASCADE,
+    day TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'direct',
+    ip_hash TEXT DEFAULT '',
+    created_at TEXT DEFAULT(datetime('now')))`,
+  `CREATE INDEX IF NOT EXISTS idx_aff_clicks_aff_day ON affiliate_clicks(affiliate_id, day)`,
   `CREATE TABLE IF NOT EXISTS tool_results(
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
     tool_type TEXT NOT NULL, title TEXT DEFAULT '',
@@ -570,6 +578,8 @@ function migrateJourneyOS() {
     ['users', "ALTER TABLE users ADD COLUMN geo_currency TEXT"],
     ['users', "ALTER TABLE users ADD COLUMN geo_lang TEXT"],
     ['users', "ALTER TABLE users ADD COLUMN referred_by TEXT DEFAULT ''"],
+    ['affiliates', "ALTER TABLE affiliates ADD COLUMN self_blocked INTEGER DEFAULT 0"],
+    ['affiliates', "ALTER TABLE affiliates ADD COLUMN note TEXT DEFAULT ''"],
     ['concierge_tickets', "ALTER TABLE concierge_tickets ADD COLUMN priority TEXT DEFAULT 'normal'"],
     ['concierge_tickets', "ALTER TABLE concierge_tickets ADD COLUMN first_response_at TEXT"],
     ['concierge_replies', "ALTER TABLE concierge_replies ADD COLUMN file_name TEXT DEFAULT ''"],
@@ -979,6 +989,39 @@ const Q = {
     if (!col) return;
     exec(`UPDATE affiliates SET ${field}=${field}+1, updated_at=datetime('now') WHERE id=?`,[id]);
   },
+  // ── Affiliate analytics: per-click source rows + 30-day trend ────────────
+  recordAffiliateClick: (affiliateId, source, ipHash) => {
+    const day = new Date().toISOString().slice(0, 10);
+    exec('INSERT INTO affiliate_clicks(affiliate_id,day,source,ip_hash) VALUES(?,?,?,?)',
+      [affiliateId, day, String(source || 'direct').slice(0, 24), String(ipHash || '').slice(0, 32)]);
+    exec('UPDATE affiliates SET clicks=clicks+1, updated_at=datetime(\'now\') WHERE id=?',[affiliateId]);
+  },
+  getAffiliateClickTrend: (affiliateId, days = 30) => queryAll(
+    `SELECT day, COUNT(*) AS clicks FROM affiliate_clicks
+     WHERE affiliate_id=? AND day >= date('now', ?)
+     GROUP BY day ORDER BY day`,[affiliateId, `-${days - 1} days`]),
+  getAffiliateClickSources: (affiliateId, days = 30) => queryAll(
+    `SELECT source, COUNT(*) AS clicks FROM affiliate_clicks
+     WHERE affiliate_id=? AND day >= date('now', ?)
+     GROUP BY source ORDER BY clicks DESC`,[affiliateId, `-${days - 1} days`]),
+  getAffiliateFunnel: (affiliateId) => {
+    const a = queryOne('SELECT clicks, signups, conversions, earned_minor FROM affiliates WHERE id=?',[affiliateId]);
+    return a ? { clicks: a.clicks, signups: a.signups, conversions: a.conversions,
+      convRate: a.clicks ? Math.round(a.conversions / a.clicks * 1000) / 10 : 0,
+      earned: a.earned_minor / 100 } : null;
+  },
+  getAffiliateSourceTotals: (days = 30) => queryAll(
+    `SELECT source, COUNT(*) AS clicks FROM affiliate_clicks
+     WHERE day >= date('now', ?) GROUP BY source ORDER BY clicks DESC`,[`-${days - 1} days`]),
+  getAffiliateTopMovers: (days = 7) => queryAll(
+    `SELECT a.id, a.name, a.code, a.status, a.conversions, a.earned_minor,
+            (SELECT COUNT(*) FROM affiliate_clicks c WHERE c.affiliate_id=a.id AND c.day >= date('now', ?)) AS recentClicks
+     FROM affiliates a ORDER BY recentClicks DESC, a.conversions DESC LIMIT 5`,[`-${days - 1} days`]),
+  // Fraud: has this user already been attributed to a DIFFERENT affiliate?
+  userReferredByOther: (userId, code) => queryOne(
+    'SELECT id FROM users WHERE id=? AND referred_by IS NOT NULL AND referred_by != ?',[parseInt(userId, 10) || 0, String(code || '')]),
+  markSelfBlocked: (affiliateId, note) => exec(
+    'UPDATE affiliates SET self_blocked=1, note=?, updated_at=datetime(\'now\') WHERE id=?',[String(note || '').slice(0, 300), affiliateId]),
   getAffiliates: (status) => status
     ? queryAll('SELECT * FROM affiliates WHERE status=? ORDER BY id DESC',[status])
     : queryAll('SELECT * FROM affiliates ORDER BY id DESC',[]),

@@ -37,10 +37,21 @@ function settlePayment(payment) {
   if (payment.plan_id && payment.user_id) {
     try { Q.execRaw('UPDATE users SET plan_id=?,updated_at=datetime(\'now\') WHERE id=?', [payment.plan_id, payment.user_id]); } catch (e) { console.error('[payments] plan upgrade failed:', e.message); }
   }
-  // Affiliate commission — only for approved marketers with a stored code.
+  // Affiliate commission — only for approved marketers with a stored code,
+  // and only when the buyer is genuinely attributed (never self-referrals,
+  // never accounts already attributed to a different affiliate).
   if (payment.affiliate_code) {
     const aff = Q.getAffiliateByCode(payment.affiliate_code);
-    if (aff && aff.status === 'approved') {
+    let emailSelf = false, buyerOther = false;
+    if (aff) {
+      const buyer = Q.getUserById(payment.user_id);
+      emailSelf = !!(buyer && String(buyer.email).toLowerCase() === String(aff.email).toLowerCase());
+      buyerOther = !!Q.userReferredByOther(payment.user_id, aff.code);
+      if ((emailSelf || buyerOther) && aff.status === 'approved') {
+        Q.markSelfBlocked(aff.id, `Commission blocked: ${emailSelf ? 'self-purchase' : 'buyer attributed to another affiliate'} (payment ${payment.reference})`);
+      }
+    }
+    if (aff && aff.status === 'approved' && !emailSelf && !buyerOther) {
       const commission = Math.round(payment.amount_usd * commissionRate() * 100) / 100;
       if (commission > 0) {
         Q.addAffiliateCredit(aff.id, payment.user_id, payment.id, payment.amount_usd, commission, `Plan payment ${payment.reference}`);

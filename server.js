@@ -1,6 +1,7 @@
 'use strict';
 require('dotenv').config();
 const express  = require('express');
+const crypto   = require('crypto');
 const path     = require('path');
 const cors     = require('cors');
 const helmet   = require('helmet');
@@ -33,16 +34,31 @@ app.get('/r/:code', (req, res) => {
   const code = String(req.params.code || '').toUpperCase().slice(0, 24);
   if (/^JQ[0-9A-Z]{4,12}$/.test(code)) {
     res.cookie('refcookie', code, { maxAge: 30 * 24 * 3600 * 1000, sameSite: 'lax', path: '/' });
-    try { require('./db').Q.getAffiliateByCode(code) && require('./db').Q.bumpAffiliate(require('./db').Q.getAffiliateByCode(code).id, 'clicks'); } catch {}
-    return res.redirect('/?ref=' + encodeURIComponent(code));
+    try {
+      const a = require('./db').Q.getAffiliateByCode(code);
+      if (a) {
+        const src = String(req.query.s || req.query.utm_source || 'direct').slice(0, 24);
+        const iph = crypto.createHash('sha256').update((req.ip || '') + 'affclick').digest('hex').slice(0, 16);
+        require('./db').Q.recordAffiliateClick(a.id, src, iph);
+      }
+    } catch {}
+    // _r=1 marks our own redirect so the ?ref= middleware never double-counts.
+    return res.redirect('/?ref=' + encodeURIComponent(code) + '&_r=1');
   }
   res.redirect('/');
 });
 app.use((req, res, next) => {
   const ref = String(req.query.ref || '').toUpperCase().slice(0, 24);
-  if (/^JQ[0-9A-Z]{4,12}$/.test(ref) && !req.cookies?.refcookie) {
+  if (/^JQ[0-9A-Z]{4,12}$/.test(ref) && req.query._r !== '1' && !req.cookies?.refcookie) {
     res.cookie('refcookie', ref, { maxAge: 30 * 24 * 3600 * 1000, sameSite: 'lax', path: '/' });
-    try { const a = require('./db').Q.getAffiliateByCode(ref); if (a) require('./db').Q.bumpAffiliate(a.id, 'clicks'); } catch {}
+    try {
+      const a = require('./db').Q.getAffiliateByCode(ref);
+      if (a) {
+        const src = String(req.query.s || req.query.utm_source || 'direct').slice(0, 24);
+        const iph = crypto.createHash('sha256').update((req.ip || '') + 'affclick').digest('hex').slice(0, 16);
+        require('./db').Q.recordAffiliateClick(a.id, src, iph);
+      }
+    } catch {}
   }
   next();
 });

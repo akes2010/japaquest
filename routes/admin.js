@@ -571,11 +571,49 @@ router.get('/affiliates', requireAdmin, (req, res) => {
     earned: a.earned_minor / 100, paid: a.paid_minor / 100,
     balance: Q.affiliateBalanceMinor(a.id) / 100,
     payoutMethod: a.payout_method, payoutAccount: a.payout_account,
+    selfBlocked: !!a.self_blocked, note: a.note || '',
     createdAt: a.created_at,
   }));
   res.json({ affiliates: list,
     totals: { count: list.length, pending: list.filter(a=>a.status==='pending').length,
       owed: Math.round(list.reduce((s,a)=>s+a.balance,0)*100)/100 } });
+});
+
+// Program-wide analytics: 30-day click trend, source mix, top movers, fraud flags.
+router.get('/affiliates/analytics', requireAdmin, (_req, res) => {
+  const trend = Q.queryAllSafe(
+    `SELECT day, SUM(clicks) AS clicks FROM (
+       SELECT day, COUNT(*) AS clicks FROM affiliate_clicks WHERE day >= date('now','-29 days') GROUP BY day
+     ) GROUP BY day ORDER BY day`);
+  const sources = Q.getAffiliateSourceTotals(30);
+  const movers = Q.getAffiliateTopMovers(7);
+  const flagged = Q.getAffiliates().filter(a => a.self_blocked).map(a => ({
+    id: a.id, name: a.name, code: a.code, email: a.email, note: a.note || '' }));
+  const tot = Q.getAffiliates().reduce((s, a) => s + (a.clicks || 0), 0);
+  const conv = Q.getAffiliates().reduce((s, a) => s + (a.conversions || 0), 0);
+  res.json({
+    trend, sources, movers, flagged,
+    program: {
+      affiliates: Q.getAffiliates().length,
+      clicks: tot,
+      conversions: conv,
+      convRate: tot ? Math.round(conv / tot * 1000) / 10 : 0,
+    },
+  });
+});
+
+// Per-affiliate drill-down (30-day trend, sources, funnel).
+router.get('/affiliates/:id/analytics', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const aff = Q.getAffiliateById(id);
+  if (!aff) return res.status(404).json({ error: 'Affiliate not found' });
+  res.json({
+    trend: Q.getAffiliateClickTrend(id, 30),
+    sources: Q.getAffiliateClickSources(id, 30),
+    funnel: Q.getAffiliateFunnel(id),
+    self_blocked: !!aff.self_blocked,
+    note: aff.note || '',
+  });
 });
 
 router.post('/affiliates/:id/status', requireAdmin, (req, res) => {

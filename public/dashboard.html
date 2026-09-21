@@ -1717,6 +1717,22 @@ async function loadEarnings(){
         </div>
         <div style="font-size:.72rem;color:var(--t4);margin-top:8px">Payouts are sent manually to the account above once your balance is due.</div>
       </div>
+      <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:16px;margin-bottom:16px">
+        <div style="font-family:var(--fd);font-size:.95rem;color:var(--t2);margin-bottom:8px">📈 Last 30 days</div>
+        <div id="ea-trend" style="display:flex;align-items:flex-end;gap:2px;height:56px;margin-bottom:10px"><span style="opacity:.5;font-size:.72rem">Loading…</span></div>
+        <div id="ea-sources" style="font-size:.72rem;color:var(--t4)"></div>
+      </div>
+      <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:16px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+          <div style="font-family:var(--fd);font-size:.95rem;color:var(--t2)">🖼 Promotional posters</div>
+          <div style="display:flex;gap:8px">
+            <a class="btn btn-sm btn-ghost" style="text-decoration:none" href="/api/affiliate/poster?kind=a4" target="_blank" rel="noopener">🖨 A4 poster</a>
+            <a class="btn btn-sm btn-ghost" style="text-decoration:none" href="/api/affiliate/poster" target="_blank" rel="noopener">📱 Social card</a>
+            <a class="btn btn-sm btn-ghost" style="text-decoration:none" href="/api/affiliate/qr" download="my-qr.png">⬇ QR (PNG)</a>
+          </div>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4)">Print the A4 poster for campuses, churches and community boards; share the square card on WhatsApp status or Instagram. Both carry your QR + tracking code — scans are attributed to you automatically.</div>
+      </div>
       <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:16px">
         <div style="font-family:var(--fd);font-size:.95rem;color:var(--t2);margin-bottom:8px">Commission history</div>
         ${(d.credits||[]).length?`<table style="width:100%;font-size:.78rem;border-collapse:collapse">
@@ -1724,6 +1740,18 @@ async function loadEarnings(){
           ${(d.credits||[]).map(c=>`<tr style="border-top:1px solid var(--b1)"><td style="padding:6px 4px">${String(c.at||'').slice(0,10)}</td><td>$${Number(c.amount||0).toFixed(2)}</td><td style="color:#7fbf95">+$${Number(c.commission||0).toFixed(2)}</td><td>${c.status==='paid'?'✅ paid':'⏳ pending'}</td></tr>`).join('')}
         </table>`:'<div style="font-size:.78rem;color:var(--t4)">No commissions yet — share your links to start earning.</div>'}
       </div>`;
+    // analytics (non-fatal)
+    try{
+      const ar=await fetch('/api/affiliate/analytics',{headers:{Authorization:'Bearer '+(localStorage.getItem('vg_token')||'')}});
+      const ad=await ar.json();
+      if(ar.ok){
+        const tr=ad.trend||[];
+        const maxC=Math.max(1,...tr.map(x=>x.clicks));
+        document.getElementById('ea-trend').innerHTML=tr.length?tr.map(x=>`<div title="${x.day}: ${x.clicks} clicks" style="flex:1;height:${Math.max(3,Math.round(x.clicks/maxC*52))}px;background:var(--o400);border-radius:3px 3px 0 0;opacity:.9"></div>`).join(''):'<span style="opacity:.5;font-size:.72rem">No clicks in the last 30 days yet — share your links!</span>';
+        const st=(ad.sources||[]).reduce((s,x)=>s+x.clicks,0)||1;
+        document.getElementById('ea-sources').innerHTML=(ad.sources||[]).length?'Top sources: '+(ad.sources||[]).slice(0,4).map(s=>`<strong style="color:var(--o300)">${esc(s.source)}</strong> ${s.clicks} (${Math.round(s.clicks/st*100)}%)`).join(' · '):'Source tracking begins with your first shared link.';
+      }
+    }catch{}
   }catch(e){body.textContent='Could not load earnings: '+e.message;}
 }
 async function applyAffiliate(){

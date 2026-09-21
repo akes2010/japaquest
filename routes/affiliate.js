@@ -84,4 +84,87 @@ router.get('/ref-code', requireAuth, (req, res) => {
   res.json({ code: row ? row.code : null, status: row ? row.status : null });
 });
 
+// ── Analytics: 30-day trend, sources, funnel (own data only) ────────────────
+router.get('/analytics', requireAuth, (req, res) => {
+  const row = Q.getAffiliateByUserId(req.user.id) || (req.user.email ? Q.getAffiliateByEmail(req.user.email) : null);
+  if (!row || (row.user_id && row.user_id !== req.user.id)) return res.status(404).json({ error: 'No affiliate application on file' });
+  res.json({
+    trend: Q.getAffiliateClickTrend(row.id, 30),
+    sources: Q.getAffiliateClickSources(row.id, 30),
+    funnel: Q.getAffiliateFunnel(row.id),
+    self_blocked: !!row.self_blocked,
+    note: row.note || '',
+  });
+});
+
+// ── Posters: print-ready A4 + square social card, QR embedded server-side ───
+const QR = require('qrcode');
+const escH = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+async function posterHtml(row, appUrl, kind) {
+  const link = `${appUrl}/r/${row.code}`;
+  const qr = await QR.toDataURL(link, { width: kind === 'a4' ? 640 : 420, margin: 1, color: { dark: '#0A1428', light: '#F7F3EA' } });
+  const rate = Math.round((parseFloat(Q.getSetting('affiliate_commission_rate')) || 0.30) * 100);
+  const appName = Q.getSetting('app_name') || 'JapaQuest';
+  const isA4 = kind === 'a4';
+  const tagline = isA4 ? 'Visa answers · embassy-ready letters · honest budgets' : 'Your Journey. Our Intelligence.';
+  const steps = isA4
+    ? `<div class="steps"><span>1 · Scan</span><span>2 · Create account</span><span>3 · Plan your journey</span></div>`
+    : '';
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${escH(appName)} — ${row.code}</title>
+<style>
+@page{size:${isA4 ? 'A4' : 'auto'};margin:${isA4 ? '0' : '0'}}
+*{margin:0;box-sizing:border-box}
+body{background:#F7F3EA;color:#0A1428;font-family:'Outfit',Segoe UI,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.poster{background:#F7F3EA;border:2px solid #0A1428;border-radius:24px;padding:${isA4 ? '54px 48px' : '34px'};text-align:center;max-width:${isA4 ? '760px' : '480px'};width:94%}
+.kick{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#E8613C;border:1.5px solid #0A1428;border-radius:99px;padding:6px 16px;margin-bottom:${isA4 ? '26px' : '16px'};background:#fff}
+h1{font-family:Georgia,serif;font-size:${isA4 ? '3rem' : '2rem'};line-height:1.1}
+h1 em{font-style:italic;color:#E8613C}
+.sub{font-size:${isA4 ? '1rem' : '.85rem'};color:rgba(10,20,40,.62);margin:12px auto ${isA4 ? '26px' : '18px'};max-width:520px;line-height:1.6}
+.qr{background:#fff;border:2px solid #0A1428;border-radius:18px;padding:14px;display:inline-block}
+.qr img{display:block;width:${isA4 ? '300px' : '200px'};height:${isA4 ? '300px' : '200px'}}
+.code{font-family:Georgia,serif;font-size:${isA4 ? '1.5rem' : '1.15rem'};letter-spacing:.08em;margin:14px 0 4px}
+.url{font-size:${isA4 ? '.85rem' : '.72rem'};color:rgba(10,20,40,.62);word-break:break-all}
+.rate{margin-top:${isA4 ? '22px' : '14px'};font-size:${isA4 ? '.95rem' : '.8rem'};font-weight:600}
+.steps{display:flex;gap:14px;justify-content:center;margin-top:${isA4 ? '20px' : '0'};font-size:.78rem;color:rgba(10,20,40,.62);flex-wrap:wrap}
+.ft{margin-top:${isA4 ? '30px' : '18px'};font-size:.68rem;color:rgba(10,20,40,.5)}
+@media print{body{background:#fff}.poster{border-width:2px}}
+</style></head><body>
+<div class="poster">
+  <div class="kick">🤝 Partner: ${escH(row.org || row.name)}</div>
+  <h1>Your journey abroad, <em>sorted.</em></h1>
+  <p class="sub">${escH(tagline)} — start free with AI that knows your passport.</p>
+  <div class="qr"><img src="${qr}" alt="QR code"/></div>
+  <div class="code">${escH(row.code)}</div>
+  <div class="url">${escH(link)}</div>
+  ${steps}
+  <div class="rate">Scan · Sign up · Plan — <strong>free to start</strong></div>
+  <div class="ft">${escH(appName)}${isA4 ? ` · ${rate}% partner program` : ''} · ${escH(appUrl.replace(/^https?:\/\//, ''))}</div>
+</div>
+<script>if(new URLSearchParams(location.search).get('print')==='1')window.addEventListener('load',()=>window.print());</script>
+</body></html>`;
+}
+
+router.get('/poster', requireAuth, async (req, res) => {
+  try {
+    const row = Q.getAffiliateByUserId(req.user.id) || (req.user.email ? Q.getAffiliateByEmail(req.user.email) : null);
+    if (!row) return res.status(404).json({ error: 'No affiliate application on file' });
+    const appUrl = (Q.getSetting('app_url') || process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+    const html = await posterHtml(row, appUrl, req.query.kind === 'a4' ? 'a4' : 'square');
+    res.type('html').send(html);
+  } catch (e) {
+    console.error('[affiliate] poster failed:', e.message);
+    res.status(500).json({ error: 'Could not build poster' });
+  }
+});
+
+// Raw QR as PNG (for reuse in chat shares, emails, etc.)
+router.get('/qr', requireAuth, async (req, res) => {
+  const row = Q.getAffiliateByUserId(req.user.id) || (req.user.email ? Q.getAffiliateByEmail(req.user.email) : null);
+  if (!row) return res.status(404).json({ error: 'No affiliate application on file' });
+  const appUrl = (Q.getSetting('app_url') || process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+  const buf = await QR.toBuffer(`${appUrl}/r/${row.code}`, { width: 512, margin: 2, color: { dark: '#0A1428', light: '#F7F3EA' } });
+  res.type('image/png').set('Cache-Control', 'public, max-age=3600').send(buf);
+});
+
 module.exports = router;
