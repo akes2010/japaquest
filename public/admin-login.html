@@ -120,7 +120,7 @@ function go(){
       }else{showErr(d.error||'Invalid email or password.');setBtn(false);}
     }catch(e){showErr('Server error: '+(e.message||'Unknown'));setBtn(false);}
   };
-  xhr.onerror=function(){showErr('Cannot connect to server. Is it running on port 4000?');setBtn(false);};
+  xhr.onerror=function(){showErr('Cannot connect to server. Is it running on port 4001?');setBtn(false);};
   xhr.send(JSON.stringify({email:email,password:pass}));
 }
 

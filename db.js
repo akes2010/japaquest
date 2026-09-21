@@ -252,7 +252,7 @@ function seedDefaults() {
     ['app_name','Japa+','general'],['app_tagline','Travel smart. Land ready.','general'],
     ['app_logo','✈','general'],['app_logo_url','','general'],
     ['support_email','support@japaplus.app','general'],
-    ['app_url','http://localhost:4000','general'],
+    ['app_url','http://localhost:4001','general'],
     ['maintenance_mode','0','general'],['registration_open','1','general'],
     ['ai_default_model','claude','ai'],['ai_stream','1','ai'],
     ['ai_max_tokens','1500','ai'],['ai_system_prompt_addon','','ai'],
@@ -277,6 +277,17 @@ function seedDefaults() {
     ['notif_system_alerts','1','notifications'],
   ];
   DEFAULTS.forEach(([k,v,g]) => exec(`INSERT OR IGNORE INTO settings(key,value,grp) VALUES(?,?,?)`, [k,v,g]));
+
+  // Migrate stale localhost URLs (e.g. app moved off port 4000) to the current port.
+  // Only rewrites http://localhost:<port> — real (non-localhost) URLs are left alone.
+  try {
+    const curUrl = queryOne(`SELECT value FROM settings WHERE key='app_url'`);
+    const curPort = parseInt(process.env.PORT) || 4001;
+    if (curUrl && curUrl.value && /^http:\/\/localhost:\d+/.test(curUrl.value) && !curUrl.value.includes(`:${curPort}`)) {
+      exec(`UPDATE settings SET value=? WHERE key='app_url'`,
+        [curUrl.value.replace(/^http:\/\/localhost:\d+(?=\/|$)/, `http://localhost:${curPort}`)]);
+    }
+  } catch {}
 
   // Admin user
   if (!queryScalar(`SELECT COUNT(*) FROM users WHERE role='admin'`)) {

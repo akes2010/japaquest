@@ -31,6 +31,6 @@ async function main() {
   db.close();
   console.log(`\n  Email:    ${NEW_EMAIL}`);
   console.log(`  Password: ${NEW_PASS}`);
-  console.log(`\n  Go to: http://localhost:${process.env.PORT||4000}/admin-login\n`);
+  console.log(`\n  Go to: http://localhost:${process.env.PORT||4001}/admin-login\n`);
 }
 main().catch(e => { console.error('Error:', e.message); process.exit(1); });

@@ -2,12 +2,12 @@
 # Auto-clean start: kills any stale instance of THIS project's server on the
 # port, then starts a fresh one. Never touches unrelated processes.
 #
-#   npm run start:clean            (port from .env / PORT / default 4000)
-#   PORT=4001 npm run start:clean
+#   npm run start:clean            (port from .env / PORT / default 4001)
+#   PORT=4002 npm run start:clean
 set -u
 
 PORT="${PORT:-$([ -f .env ] && grep -E '^PORT=' .env | cut -d= -f2 | tr -d '[:space:]')}"
-PORT="${PORT:-4000}"
+PORT="${PORT:-4001}"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Only kill a process if it is actually this project's server.js — never a

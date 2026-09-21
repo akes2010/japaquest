@@ -163,7 +163,7 @@ router.post('/forgot-password', async (req, res) => {
     const token = crypto.randomBytes(32).toString('hex');
     Q.createResetToken(user.id, token, 1); // expires in 1 hour
 
-    const appUrl  = Q.getSetting('app_url') || 'http://localhost:4000';
+    const appUrl  = Q.getSetting('app_url') || 'http://localhost:4001';
     const resetUrl = `${appUrl}/reset-password.html?token=${token}`;
 
     // Dev convenience: without SMTP configured, print the link so the flow is testable locally.

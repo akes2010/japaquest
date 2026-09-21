@@ -103,7 +103,7 @@ async function start() {
   await initDB();
   console.log('✅ Database ready\n');
 
-  const PORT = parseInt(process.env.PORT)||4000;
+  const PORT = parseInt(process.env.PORT)||4001;
   require('./worker/social-scheduler').startSocialScheduler();
   app.listen(PORT, () => {
     const name = Q.getSetting('app_name')||'Japa+';
@@ -128,10 +128,10 @@ start().catch(e => { console.error('Startup failed:', e); process.exit(1); });
 // still running) instead of an unhandled 'error' event stack trace.
 process.on('uncaughtException', (e) => {
   if (e && e.code === 'EADDRINUSE') {
-    const port = (e.port || e.address || '').toString().replace('::', '') || '4000';
+    const port = (e.port || e.address || '').toString().replace('::', '') || '4001';
     console.error(`\n❌ Port ${port} is already in use — another server instance is probably still running.`);
     console.error(`   Fix:   lsof -ti tcp:${port} | xargs kill`);
-    console.error(`   Or:    PORT=4001 npm start\n`);
+    console.error(`   Or:    PORT=4002 npm start\n`);
     process.exit(1);
   }
   console.error('\n❌ Unexpected error:', e && e.stack || e);
