@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<meta name="theme-color" content="#0A1428"/>
+<meta name="theme-color" content="#F7F3EA"/>
 <title>Japa Editorial Console — Japa+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/style.css"/>
 <link rel="icon" href="/icons/icon.svg"/>
 <style>
@@ -86,6 +89,130 @@ html,body{height:100%;overflow:hidden}
 .bar-wrap{flex:1;height:5px;background:var(--glass2);border-radius:3px;overflow:hidden}
 .bar-fill{height:100%;background:linear-gradient(90deg,#C14A1B,#E8742E);border-radius:3px}
 .bar-count{color:var(--t4);width:28px;text-align:right}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LANDING THEME OVERRIDE — light paper + ink editorial theme from index.html
+   (colors: #F7F3EA paper / #0A1428 ink / #E8613C accent; fonts: Fraunces +
+   Outfit; springy 2D animations). Loaded after style.css so it wins.
+   ═════════════════════════════════════════════════════════════════════════ */
+:root{
+  --canvas:#F7F3EA; --surface:#F7F3EA; --elev1:#FFFFFF; --elev2:#EFE8D8; --elev3:#E7DFCC;
+  --t1:#0A1428; --t2:#3A4460; --t3:rgba(10,20,40,.62); --t4:rgba(10,20,40,.44);
+  --b0:rgba(10,20,40,.07); --b1:rgba(10,20,40,.12); --b2:rgba(10,20,40,.22);
+  --glass:rgba(10,20,40,.05); --glass2:rgba(10,20,40,.08);
+  --bg:rgba(232,97,60,.40); --ba:rgba(217,164,65,.45);
+  --shadow-sm:0 2px 8px rgba(10,20,40,.06);
+  --shadow-md:0 10px 30px -10px rgba(10,20,40,.22);
+  --shadow-lg:0 30px 70px -30px rgba(10,20,40,.35);
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+body{color:var(--t1)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+#app{position:relative;z-index:1}
+a{color:#E8613C}
+a:hover{color:#C94E30}
+::-webkit-scrollbar-track{background:#EFE8D8}
+::-webkit-scrollbar-thumb{background:rgba(10,20,40,.22);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(232,97,60,.55)}
+/* Buttons — landing pill style */
+.btn{border-radius:99px;transition:transform .3s var(--ease),box-shadow .3s var(--ease),background .3s var(--ease);position:relative;overflow:hidden}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:#0A1428;color:#F7F3EA;box-shadow:0 10px 24px -10px rgba(10,20,40,.45)}
+.btn-primary::after{content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.25),transparent);transform:skewX(-20deg);transition:left .6s var(--ease)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 32px -12px rgba(10,20,40,.5)}
+.btn-primary:hover::after{left:130%}
+.btn-ghost{background:rgba(10,20,40,.05);border:1px solid var(--b1);color:var(--t3)}
+.btn-ghost:hover{background:rgba(10,20,40,.09);color:var(--t1)}
+/* Inputs */
+.input,textarea.input{background:#fff;border:1.5px solid var(--b2);color:var(--t1);border-radius:14px}
+.input:focus{border-color:#E8613C;box-shadow:0 0 0 4px rgba(232,97,60,.12)}
+select.input option{background:#fff;color:var(--t1)}
+.form-label{color:var(--t3)}
+/* Sidebar */
+#sb{background:rgba(247,243,234,.92);backdrop-filter:blur(14px);border-right:1px solid var(--b1)}
+.sb-head,.sb-foot{border-color:var(--b0)}
+.sb-icon{background:#0A1428;box-shadow:0 6px 16px -6px rgba(10,20,40,.4);position:relative}
+.sb-icon::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 25%,rgba(232,97,60,.55),transparent 55%);pointer-events:none}
+.sb-app{color:var(--t1)!important}
+.sb-tag{background:rgba(59,91,219,.08);color:#4A66D8;border:1px solid rgba(59,91,219,.25)}
+.nb{color:var(--t3);border-radius:12px}
+.nb:hover{background:rgba(10,20,40,.06);color:var(--t1)}
+.nb.active{background:rgba(232,97,60,.1);color:#E8613C;border-color:rgba(232,97,60,.25)}
+.nsc{color:var(--t4)!important}
+.logout-btn{background:rgba(200,45,45,.06);border:1px solid rgba(200,45,45,.22);color:#B3282D;border-radius:12px}
+.logout-btn:hover{background:rgba(200,45,45,.12)}
+.sf-email{color:var(--t4)}
+/* Topbar */
+#topbar{background:rgba(247,243,234,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--b1)}
+.tb-title{color:var(--t1)!important}
+/* Stats / cards */
+.sc,.tbl-card,.pd-card{background:#fff;border:1px solid var(--b1);border-radius:18px;transition:transform .3s var(--ease),box-shadow .3s var(--ease),border-color .3s var(--ease)}
+.sc:hover,.pd-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:rgba(232,97,60,.3)}
+.sc-lbl{color:var(--t4)}
+.sc-val{color:var(--t1)}
+.sc-sub{color:#0E7B4F}
+.tbl-head{border-color:var(--b0)}
+.tbl-title{color:var(--t1)}
+th{color:var(--t3);border-color:var(--b1)}
+td{color:var(--t3);border-color:var(--b0)}
+tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
+.act-btn{color:var(--t4)}
+.act-btn:hover{background:rgba(10,20,40,.07);color:var(--t1)}
+.act-btn.danger:hover{background:rgba(200,45,45,.1);color:#B3282D}
+/* Status badges for light bg */
+.st-visa_free{background:rgba(14,123,79,.1);color:#0E7B4F;border:1px solid rgba(14,123,79,.25)}
+.st-voa{background:rgba(217,164,65,.14);color:#8A6420;border:1px solid rgba(217,164,65,.3)}
+.st-evisa{background:rgba(232,97,60,.08);color:#E8613C;border:1px solid rgba(232,97,60,.25)}
+.st-eta{background:rgba(59,91,219,.08);color:#4A66D8;border:1px solid rgba(59,91,219,.25)}
+.st-visa_required{background:rgba(10,20,40,.06);color:var(--t3);border:1px solid var(--b1)}
+.st-needs_verification{background:rgba(10,20,40,.04);color:var(--t4);border:1px solid var(--b0)}
+.confidence-badge{background:#fff;color:var(--t4)}
+.conf-recently_reviewed{background:rgba(14,123,79,.08);color:#0E7B4F;border-color:rgba(14,123,79,.2)}
+.conf-needs_review{background:rgba(217,164,65,.12);color:#8A6420;border-color:rgba(217,164,65,.3)}
+.conf-unverified{background:rgba(200,45,45,.06);color:#B3282D;border-color:rgba(200,45,45,.15)}
+/* Modals */
+.m-ov{background:rgba(10,20,40,.55);backdrop-filter:blur(7px)}
+.m-box{background:#fff;border:1px solid var(--b1);border-radius:22px;box-shadow:var(--shadow-lg);animation:modalIn .3s var(--ease)}
+.m-head{border-color:var(--b0)}
+.m-title{color:var(--t1)}
+.m-close{background:rgba(10,20,40,.06);color:var(--t3)}
+.m-close:hover{background:rgba(232,97,60,.12);color:#E8613C}
+.m-foot{border-color:var(--b0)}
+.cond-del{background:rgba(200,45,45,.06);border:1px solid rgba(200,45,45,.22);color:#B3282D}
+/* Pagination */
+.pg{color:var(--t4)}
+.pgb{background:#fff;border:1px solid var(--b1);color:var(--t3);border-radius:10px}
+.pgb:hover,.pgb.active{background:rgba(232,97,60,.08);border-color:rgba(232,97,60,.3);color:#E8613C}
+/* Charts */
+.bar-wrap{background:rgba(10,20,40,.08)}
+.bar-fill{background:linear-gradient(90deg,#E8613C,#F07B4F)}
+/* Toast */
+#toast{background:#0A1428;color:#F7F3EA;border:none;border-radius:99px;box-shadow:0 16px 40px -12px rgba(10,20,40,.5)}
+/* ── 2D animated entrance + micro-interactions ─────────────────────────── */
+#content>*{animation:fadeUp .45s var(--ease) both}
+.nb,.sc,.tbl-card,.pd-card{transition:transform .3s var(--ease),box-shadow .3s var(--ease),background .3s var(--ease),border-color .3s var(--ease)}
+.nb:active{transform:scale(.98)}
+.pgb:active{transform:scale(.95)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.view{animation:fadeIn .3s var(--ease)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ── Visual tuning: inline dark-styled elements in the body ─────────────── */
+#content div[style*="var(--elev1)"]{background:#fff;border-color:var(--b1)}
+#content div[style*="var(--elev2)"]{background:#FFFDF8!important}
+#content div[style*="color:var(--a300)"]{color:var(--t1)!important}
+#content div[style*="color:var(--a300)"] div[style*="color:var(--a300)"]{color:#E8613C!important}
+#content span[style*="color:var(--a300)"][style*="background:rgba(245,158,11"]{color:#8A6420!important;background:rgba(217,164,65,.12)!important;border-color:rgba(217,164,65,.3)!important}
+#content a[style*="color:var(--a400)"]{color:#8A6420!important}
+#content span[style*="color:var(--o300)"]{color:#C94E30!important}
+#content span[style*="color:var(--o300)"][style*="background:rgba(245,158,11"]{color:#8A6420!important;background:rgba(217,164,65,.12)!important;border-color:rgba(217,164,65,.3)!important}
+
+/* Focus visibility + reduced motion */
+.input:focus-visible,.btn:focus-visible,.nb:focus-visible{outline:2px solid rgba(232,97,60,.45);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
 </style>
 </head>
 <body>

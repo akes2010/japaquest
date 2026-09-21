@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<meta name="theme-color" content="#0A1428"/>
+<meta name="theme-color" content="#F7F3EA"/>
 <title>Dashboard — Japa+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/style.css"/>
 <link rel="manifest" href="/manifest.json"/>
 <link rel="icon" href="/icons/icon.svg"/>
@@ -216,6 +219,208 @@ html,body{height:100%;overflow:hidden}
   .tools-grid{grid-template-columns:1fr}
   .booking-section{grid-template-columns:1fr}
   .view-wrap{padding:14px}
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LANDING THEME OVERRIDE — light paper + ink editorial theme from index.html
+   (colors: #F7F3EA paper / #0A1428 ink / #E8613C accent; fonts: Fraunces +
+   Outfit; springy 2D animations). Loaded after style.css so it wins.
+   ═════════════════════════════════════════════════════════════════════════ */
+:root{
+  --canvas:#F7F3EA; --surface:#F7F3EA; --elev1:#FFFFFF; --elev2:#EFE8D8; --elev3:#E7DFCC;
+  --t1:#0A1428; --t2:#3A4460; --t3:rgba(10,20,40,.62); --t4:rgba(10,20,40,.44);
+  --b0:rgba(10,20,40,.07); --b1:rgba(10,20,40,.12); --b2:rgba(10,20,40,.22);
+  --glass:rgba(10,20,40,.05); --glass2:rgba(10,20,40,.08);
+  --bg:rgba(232,97,60,.40); --ba:rgba(217,164,65,.45);
+  --shadow-sm:0 2px 8px rgba(10,20,40,.06);
+  --shadow-md:0 10px 30px -10px rgba(10,20,40,.22);
+  --shadow-lg:0 30px 70px -30px rgba(10,20,40,.35);
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+body{color:var(--t1)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+#app{position:relative;z-index:1}
+a{color:#E8613C}
+a:hover{color:#C94E30}
+::-webkit-scrollbar-track{background:#EFE8D8}
+::-webkit-scrollbar-thumb{background:rgba(10,20,40,.22);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(232,97,60,.55)}
+/* Buttons — landing pill style with shimmer + lift */
+.btn{border-radius:99px;transition:transform .3s var(--ease),box-shadow .3s var(--ease),background .3s var(--ease);position:relative;overflow:hidden}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:#0A1428;color:#F7F3EA;box-shadow:0 10px 24px -10px rgba(10,20,40,.45)}
+.btn-primary::after{content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.25),transparent);transform:skewX(-20deg);transition:left .6s var(--ease)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 32px -12px rgba(10,20,40,.5)}
+.btn-primary:hover::after{left:130%}
+.btn-gold,.btn-danger{border-radius:99px}
+.btn-outline{border:1.5px solid var(--b2);color:var(--t1);background:transparent}
+.btn-outline:hover{border-color:var(--t1);background:rgba(10,20,40,.04);color:var(--t1)}
+.btn-ghost{background:rgba(10,20,40,.05);border:1px solid var(--b1);color:var(--t3)}
+.btn-ghost:hover{background:rgba(10,20,40,.09);color:var(--t1)}
+/* Cards — white with ink borders and hover lift */
+.card,.ps-card,.sr-card,.notif-card,.book-card,.tc,.dest-card,.plan-card,.m-box{background:#fff;border:1px solid var(--b1)}
+.card:hover,.ps-card:hover,.book-card:hover,.tc:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.dest-card,.tc,.book-card,.qc,.plan-card{border-radius:18px}
+.dest-card{background:#fff}
+/* Inputs — white with warm focus ring */
+.input,textarea.input{background:#fff;border:1.5px solid var(--b2);color:var(--t1);border-radius:14px}
+.input:focus{border-color:#E8613C;box-shadow:0 0 0 4px rgba(232,97,60,.12)}
+.input::placeholder{color:rgba(10,20,40,.32)}
+select.input option{background:#fff;color:var(--t1)}
+.form-label{color:var(--t3)}
+/* Sidebar — paper panel */
+#sb{background:rgba(247,243,234,.92);backdrop-filter:blur(14px);border-right:1px solid var(--b1)}
+.sb-top,.sb-history,.sb-user{border-color:var(--b0)}
+.sb-logo{background:#0A1428;box-shadow:0 6px 16px -6px rgba(10,20,40,.4);position:relative}
+.sb-logo::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 25%,rgba(232,97,60,.55),transparent 55%);pointer-events:none}
+.sb-appname{color:var(--t1)!important}
+.sb-btn{color:var(--t3);border-radius:12px}
+.sb-btn:hover{background:rgba(10,20,40,.06);color:var(--t1)}
+.sb-btn.active{background:rgba(232,97,60,.1);color:#E8613C;border-color:rgba(232,97,60,.25)}
+.new-chat-btn{background:#0A1428;border-color:#0A1428;color:#F7F3EA;border-radius:99px}
+.new-chat-btn:hover{background:#16233F;transform:translateY(-1px);box-shadow:0 10px 22px -10px rgba(10,20,40,.5)}
+.u-ava{background:#0A1428;color:#F7F3EA}
+.nav-sec,.sh-label{color:var(--t4)!important}
+.hi:hover{background:rgba(10,20,40,.05);border-color:var(--b0)}
+.hi.active{background:rgba(232,97,60,.07);border-color:rgba(232,97,60,.2)}
+.hi-t{color:var(--t2)}
+/* Topbar — translucent paper */
+#topbar{background:rgba(247,243,234,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--b1)}
+.tb-title{color:var(--t1)!important}
+.model-pill{background:#fff;border:1px solid var(--b1);color:var(--t3);border-radius:99px}
+.model-pill:hover{border-color:rgba(232,97,60,.45)}
+.model-menu{background:#fff;border:1px solid var(--b1);box-shadow:var(--shadow-md);border-radius:16px}
+.m-opt{color:var(--t3)}
+.m-opt:hover{background:rgba(10,20,40,.05);color:var(--t1)}
+.m-opt.sel{background:rgba(232,97,60,.08);color:#E8613C}
+.m-free{background:rgba(232,97,60,.08);color:#E8613C;border-color:rgba(232,97,60,.22)}
+.notif-btn{background:#fff;border:1px solid var(--b1);border-radius:12px}
+.notif-btn:hover{border-color:rgba(232,97,60,.45);color:#E8613C}
+.n-dot{border-color:#F7F3EA}
+.menu-btn{background:#fff;border:1px solid var(--b1);border-radius:12px;color:var(--t2)}
+/* Chat — ink bubbles on paper */
+.ce-badge{background:rgba(232,97,60,.08);border:1px solid rgba(232,97,60,.22);color:#E8613C}
+.ce-title{color:var(--t1)}
+.ce-sub{color:var(--t3)}
+.qc{background:#fff}
+.qc:hover{border-color:rgba(232,97,60,.45);transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+.qc-l{color:var(--t1)}
+.bubble{background:#fff;border:1px solid var(--b1);color:var(--t2);border-radius:4px 14px 14px 14px}
+.bubble strong{color:var(--t1)}
+.bubble.user{background:#0A1428;color:#F7F3EA;border-radius:14px 14px 4px 14px}
+.bubble.user strong{color:#F0C878}
+.bubble .aff-card{background:rgba(232,97,60,.06);border:1px solid rgba(232,97,60,.22)}
+.bubble .aff-card a{color:#E8613C}
+.bubble .ibox{background:rgba(217,164,65,.08);border:1px solid rgba(217,164,65,.25)}
+.send-btn{background:#0A1428;box-shadow:0 6px 16px -6px rgba(10,20,40,.45)}
+.send-btn:hover:not(:disabled){background:#16233F;transform:translateY(-1px)}
+.send-btn:disabled{background:var(--glass2);color:var(--t4)}
+.chip{background:rgba(232,97,60,.07);border:1px solid rgba(232,97,60,.2);color:#E8613C;border-radius:99px}
+.chip:hover{background:rgba(232,97,60,.14);transform:translateY(-1px)}
+#ia{background:rgba(247,243,234,.95);border-top:1px solid var(--b1);backdrop-filter:blur(14px)}
+.input-box{background:#fff;border:1px solid var(--b1);border-radius:16px}
+.input-box:focus-within{border-color:rgba(232,97,60,.5);box-shadow:0 0 0 4px rgba(232,97,60,.1)}
+#msg-ta{color:var(--t1)}
+.msg-meta{color:var(--t4)}
+.cp-btn{color:var(--t4)}
+.usage-lbl{color:var(--t4)}
+/* Status pill colors for light bg */
+.status-visa_free{background:rgba(14,123,79,.1);color:#0E7B4F;border:1px solid rgba(14,123,79,.25)}
+.status-voa{background:rgba(217,164,65,.14);color:#8A6420;border:1px solid rgba(217,164,65,.3)}
+.status-evisa{background:rgba(232,97,60,.08);color:#E8613C;border:1px solid rgba(232,97,60,.25)}
+.status-eta{background:rgba(59,91,219,.08);color:#4A66D8;border:1px solid rgba(59,91,219,.25)}
+.status-visa_required{background:rgba(10,20,40,.06);color:var(--t3);border:1px solid var(--b1)}
+.status-needs_verification{background:rgba(10,20,40,.04);color:var(--t4);border:1px solid var(--b0)}
+.dc-status{border:1px solid transparent}
+.dc-name{color:var(--t1)}
+.dc-meta{color:var(--t4)}
+.dc-budget{color:#0E7B4F}
+.dc-btn{background:rgba(232,97,60,.07);border:1px solid rgba(232,97,60,.22);color:#E8613C;border-radius:99px}
+.dc-btn:hover{background:rgba(232,97,60,.14)}
+.dc-btn.book{background:rgba(217,164,65,.1);border-color:rgba(217,164,65,.3);color:#8A6420}
+/* Tools / bookings / plans */
+.tc-icon{background:rgba(232,97,60,.08);border:1px solid rgba(232,97,60,.2)}
+.tc-name{color:var(--t1)}
+.tc-desc{color:var(--t3)}
+.tc-btn{background:rgba(217,164,65,.1);border:1px solid rgba(217,164,65,.3);color:#8A6420;border-radius:99px}
+.tc-btn:hover{background:rgba(217,164,65,.18)}
+.book-link{background:rgba(232,97,60,.06);border:1px solid rgba(232,97,60,.2);color:#E8613C;border-radius:12px}
+.book-link:hover{background:rgba(232,97,60,.13)}
+.book-title{color:var(--t1)}
+.plan-card.curr{border-color:rgba(232,97,60,.4);background:rgba(232,97,60,.05)}
+.pc-name{color:var(--t1)}
+.pc-price{color:#E8613C}
+.pc-btn{border:1.5px solid var(--b2);color:var(--t1);background:transparent;border-radius:99px}
+.pc-btn:hover{background:rgba(10,20,40,.04)}
+.pc-btn.curr{border-color:rgba(232,97,60,.35);color:#E8613C;background:rgba(232,97,60,.06)}
+.ps-title{color:var(--t1);border-color:var(--b0)}
+/* Modals — paper cards */
+.m-ov{background:rgba(10,20,40,.55);backdrop-filter:blur(7px)}
+.m-box{border-radius:22px;box-shadow:var(--shadow-lg);animation:modalIn .3s var(--ease)}
+.m-head{border-color:var(--b0)}
+.m-title{color:var(--t1)}
+.m-close{background:rgba(10,20,40,.06);color:var(--t3)}
+.m-close:hover{background:rgba(232,97,60,.12);color:#E8613C}
+.m-foot{border-color:var(--b0)}
+.tool-out{background:#FFFDF8;border:1px solid var(--b1);color:var(--t2)}
+/* Exports */
+.ex-pdf{background:rgba(200,45,45,.07);border:1px solid rgba(200,45,45,.25);color:#B3282D}
+.ex-doc{background:rgba(59,91,219,.08);border:1px solid rgba(59,91,219,.25);color:#4A66D8}
+.ex-save{background:rgba(14,123,79,.08);border:1px solid rgba(14,123,79,.28);color:#0E7B4F}
+/* Notifications / saved */
+.notif-card.unread{border-color:rgba(232,97,60,.3);background:rgba(232,97,60,.04)}
+.notif-card.unread .nc-title::before{color:#E8613C}
+.nc-title{color:var(--t1)}
+.nc-msg{color:var(--t3)}
+.sr-title{color:var(--t1)}
+.sr-type{background:rgba(232,97,60,.08);color:#E8613C;border:1px solid rgba(232,97,60,.2)}
+.sr-preview{color:var(--t3)}
+/* Alerts + toast */
+.alert-error{background:rgba(200,45,45,.07);border:1px solid rgba(200,45,45,.25);color:#B3282D}
+.alert-success{background:rgba(14,123,79,.08);border:1px solid rgba(14,123,79,.28);color:#0C6B44}
+.alert-warning{background:rgba(217,164,65,.1);border:1px solid rgba(217,164,65,.3);color:#8A6420;display:block}
+#toast{background:#0A1428;color:#F7F3EA;border:none;border-radius:99px;box-shadow:0 16px 40px -12px rgba(10,20,40,.5)}
+/* Tables */
+th{color:var(--t3);border-color:var(--b1)}
+td{color:var(--t3);border-color:var(--b0)}
+tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
+/* ── 2D animated entrance + micro-interactions ─────────────────────────── */
+.view-wrap>*{animation:fadeUp .45s var(--ease) both}
+.sb-btn,.qc,.dest-card,.tc,.book-card,.notif-card,.sr-card,.plan-card{transition:transform .3s var(--ease),box-shadow .3s var(--ease),background .3s var(--ease),border-color .3s var(--ease)}
+.sb-btn:active,.qc:active{transform:scale(.98)}
+.chip,.f-chip,.dc-btn,.ex-btn{transition:transform .25s var(--ease),background .25s var(--ease),border-color .25s var(--ease)}
+.chip:active,.dc-btn:active{transform:scale(.95)}
+.f-chip{border:1px solid var(--b1);background:transparent;color:var(--t4);border-radius:99px}
+.f-chip:hover{color:var(--t1);border-color:var(--b2)}
+.f-chip.on{background:rgba(232,97,60,.08);border-color:rgba(232,97,60,.3);color:#E8613C}
+.progress{background:rgba(10,20,40,.08)}
+.progress-fill{background:linear-gradient(90deg,#E8613C,#F07B4F)}
+.progress-fill.warn{background:linear-gradient(90deg,#D9A441,#E6B55C)}
+.progress-fill.danger{background:linear-gradient(90deg,#C82D2D,#E8613C)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.view{animation:fadeIn .3s var(--ease)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.m-opt,.model-pill,.notif-btn,.menu-btn,.chip,.f-chip{transition:all .25s var(--ease)}
+
+/* ── Visual tuning: JS-injected styles that reference dark-theme tokens ── */
+#dest-grid .dest-card[style*="opacity:0.45"]{opacity:.45}
+#dest-grid .dest-card[style*="opacity:0.45"]:hover{opacity:.75}
+#dest-grid div[style*="border:1px dashed"],#dest-grid div[style*="border:1px dashed"] *{color:var(--t3)!important;background:#fff}
+#dest-grid div[style*="border:1px dashed"] b{color:var(--t1)!important}
+#dest-grid div[style*="border:1px dashed"] span[style*="var(--a300)"]{color:#8A6420!important}
+#dest-grid div[style*="border:1px dashed"] button{background:#0A1428!important;color:#F7F3EA!important;border-radius:99px!important;font-weight:600}
+/* Top-model pill in chat meta (uses dark rgba) */
+#chat-msgs span[style*="background:rgba(217,90,35,.15)"]{background:rgba(232,97,60,.08)!important;color:#C94E30!important;border-radius:99px;padding:1px 7px}
+/* Onboarding/account cards injected with elev2 background */
+#content div[style*="var(--elev2)"]{background:#FFFDF8!important}
+#content div[style*="var(--elev2)"] [style*="color:var(--t4)"]{color:var(--t3)!important}
+
+/* ── Visual tuning: scrollbars + focus visibility + touch polish ────────── */
+.input:focus-visible,.btn:focus-visible,.sb-btn:focus-visible,.qc:focus-visible{outline:2px solid rgba(232,97,60,.45);outline-offset:2px}
+.sb-btn,.qc,.dest-card,.tc,.book-card,.chip{will-change:transform}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
 </style>
 </head>
