@@ -152,6 +152,24 @@ const SCHEMA = [
     detected_at TEXT DEFAULT(datetime('now')),
     resolved_at TEXT)`,
 
+  // ── CONCIERGE — human assistance tickets ────────────────────────────────
+  `CREATE TABLE IF NOT EXISTS concierge_tickets(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    subject TEXT NOT NULL,
+    category TEXT DEFAULT 'general',
+    journey_id INTEGER,
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','answered','closed')),
+    created_at TEXT DEFAULT(datetime('now')),
+    updated_at TEXT DEFAULT(datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS concierge_replies(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL REFERENCES concierge_tickets(id) ON DELETE CASCADE,
+    author_role TEXT NOT NULL CHECK(author_role IN ('user','agent')),
+    author_name TEXT DEFAULT '',
+    body TEXT NOT NULL,
+    created_at TEXT DEFAULT(datetime('now')))`,
+
   // ── Japa Journey OS — smart trip execution system ────────────────────────
   `CREATE TABLE IF NOT EXISTS journeys(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -867,6 +885,49 @@ const Q = {
   setTaskRemindSent: (id,sent) => exec('UPDATE journey_tasks SET remind_sent=? WHERE id=?',[sent?1:0,id]),
   setEmailOptOut: (userId,optOut) => exec('UPDATE users SET email_opt_out=?,updated_at=datetime(\'now\') WHERE id=?',[optOut?1:0,userId]),
   setDigestOptOut: (userId,optOut) => exec('UPDATE users SET digest_opt_out=?,updated_at=datetime(\'now\') WHERE id=?',[optOut?1:0,userId]),
+
+  // ── CONCIERGE — human assistance tickets ────────────────────────────────
+  createConciergeTicket: (userId, data) => {
+    exec(`INSERT INTO concierge_tickets(user_id,subject,category,journey_id)
+      VALUES(?,?,?,?)`,
+      [userId, data.subject || 'Assistance request', data.category || 'general', data.journey_id || null]);
+    return lastId();
+  },
+  getConciergeTicket: (id, userId) => queryOne(
+    `SELECT t.*, u.name as user_name, u.email as user_email
+     FROM concierge_tickets t LEFT JOIN users u ON u.id=t.user_id
+     WHERE t.id=?${userId ? ' AND t.user_id=?' : ''}`,
+    userId ? [id, userId] : [id]),
+  getConciergeTickets: (userId) => queryAll(
+    `SELECT t.*, (SELECT body FROM concierge_replies r WHERE r.ticket_id=t.id ORDER BY r.id DESC LIMIT 1) as last_reply,
+            (SELECT COUNT(*) FROM concierge_replies r WHERE r.ticket_id=t.id) as replies
+     FROM concierge_tickets t WHERE t.user_id=? ORDER BY t.updated_at DESC, t.id DESC`,[userId]),
+  listConciergeTickets: (status) => queryAll(
+    `SELECT t.*, u.name as user_name, u.email as user_email,
+            (SELECT body FROM concierge_replies r WHERE r.ticket_id=t.id ORDER BY r.id DESC LIMIT 1) as last_reply,
+            (SELECT COUNT(*) FROM concierge_replies r WHERE r.ticket_id=t.id) as replies
+     FROM concierge_tickets t LEFT JOIN users u ON u.id=t.user_id
+     ${status ? "WHERE t.status='" + String(status).replace(/'/g, "''") + "'" : ''}
+     ORDER BY CASE t.status WHEN 'open' THEN 0 WHEN 'answered' THEN 1 ELSE 2 END, t.updated_at DESC, t.id DESC LIMIT 200`),
+  getConciergeReplies: (ticketId) => queryAll(
+    'SELECT * FROM concierge_replies WHERE ticket_id=? ORDER BY id',[ticketId]),
+  addConciergeReply: (ticketId, authorRole, authorName, body) => {
+    exec(`INSERT INTO concierge_replies(ticket_id,author_role,author_name,body)
+      VALUES(?,?,?,?)`,[ticketId,authorRole,authorName||'',body]);
+    exec(`UPDATE concierge_tickets SET updated_at=datetime('now') WHERE id=?`,[ticketId]);
+    return lastId();
+  },
+  setConciergeTicketStatus: (id, status) => exec(
+    `UPDATE concierge_tickets SET status=?, updated_at=datetime('now') WHERE id=?`,[status,id]),
+  setConciergeTicketJourney: (id, journeyId) => exec(
+    `UPDATE concierge_tickets SET journey_id=? WHERE id=?`,[journeyId,id]),
+  conciergeTicketStats: () => ({
+    total: queryScalar('SELECT COUNT(*) FROM concierge_tickets'),
+    open: queryScalar("SELECT COUNT(*) FROM concierge_tickets WHERE status='open'"),
+    answered: queryScalar("SELECT COUNT(*) FROM concierge_tickets WHERE status='answered'"),
+    closed: queryScalar("SELECT COUNT(*) FROM concierge_tickets WHERE status='closed'"),
+    byCategory: queryAll('SELECT category, COUNT(*) as count FROM concierge_tickets GROUP BY category ORDER BY count DESC'),
+  }),
 
   // ── ADMIN: Journey/Brain analytics (optionally filterable) ──────────────
   getJourneyStats: (filters = {}) => {

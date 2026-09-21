@@ -276,6 +276,13 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
 <div id="toast"></div>
 
 <!-- USER EDIT MODAL -->
+<div class="m-over" id="cq-modal" onclick="if(event.target===this)closeM('cq-modal')">
+  <div class="m-box" style="max-width:580px">
+    <div class="m-head"><div class="m-title">🤝 Concierge ticket</div><button class="m-close" onclick="closeM('cq-modal')">✕</button></div>
+    <div class="m-body" id="cq-modal-body"></div>
+  </div>
+</div>
+
 <div class="m-over" id="user-modal" onclick="if(event.target===this)closeM('user-modal')">
 <div class="m-box">
   <div class="m-head"><div class="m-title">✏️ Edit User</div><button class="m-close" onclick="closeM('user-modal')">✕</button></div>
@@ -368,6 +375,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <button class="sb-btn" id="snav-broadcast" onclick="sw('broadcast')">📢 Broadcast</button>
     <button class="sb-btn" id="snav-social" onclick="sw('social')">📣 Social Posts</button>
     <button class="sb-btn" id="snav-brain" onclick="sw('brain')">🧠 Journey & Brain</button>
+    <button class="sb-btn" id="snav-concierge" onclick="sw('concierge')">🤝 Concierge Queue</button>
     <button class="sb-btn" onclick="window.open('/dashboard','_blank')">👁️ View App</button>
   </div>
   <div class="sb-footer">
@@ -678,6 +686,22 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     </div>
   </div>
 
+  <!-- CONCIERGE QUEUE -->
+  <div class="view" id="view-concierge">
+    <div style="margin-bottom:16px">
+      <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">🤝 Concierge Queue</div>
+      <div style="font-size:.78rem;color:var(--t4)">Human assistance tickets escalated from the AI chat or raised directly. Reply inline — the traveller is notified instantly and the AI's verified data stays the backbone.</div>
+    </div>
+    <div class="stats-grid" id="cq-stats" style="margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn-ghost" style="padding:7px 14px" onclick="loadConciergeQ('')">All</button>
+      <button class="btn-ghost" style="padding:7px 14px" onclick="loadConciergeQ('open')">Open</button>
+      <button class="btn-ghost" style="padding:7px 14px" onclick="loadConciergeQ('answered')">Answered</button>
+      <button class="btn-ghost" style="padding:7px 14px" onclick="loadConciergeQ('closed')">Closed</button>
+    </div>
+    <div id="cq-list"></div>
+  </div>
+
   <!-- JOURNEY & BRAIN BASE -->
   <div class="view" id="view-brain">
     <div style="margin-bottom:16px">
@@ -845,15 +869,76 @@ function sw(v){
   document.querySelectorAll('.sb-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v)?.classList.add('active');
   document.getElementById('snav-'+v)?.classList.add('active');
-  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base'};
+  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base',concierge:'Concierge Queue'};
   document.getElementById('tb-title').textContent=T[v]||v;
-  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();
+  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();else if(v==='concierge')loadConciergeQ();
   if(v==='overview')loadClicks();
   history.replaceState(null,'','#'+v);
 }
 function swFromHash(){const v=(location.hash||'').slice(1);if(v&&document.getElementById('view-'+v))sw(v);}
 window.addEventListener('hashchange',swFromHash);
 window.addEventListener('load',swFromHash);
+
+/* ── CONCIERGE QUEUE ── */
+const CQ_META={open:{l:'Open',c:'#B3282D'},answered:{l:'Answered',c:'#0E7B4F'},closed:{l:'Closed',c:'rgba(10,20,40,.45)'}};
+async function loadConciergeQ(status){
+  try{
+    const r=await apiFetch('/api/admin/concierge/tickets'+(status?'?status='+status:''));const d=await r.json();if(!r.ok)throw new Error(d.error||'Failed');
+    const s=d.stats||{};
+    document.getElementById('cq-stats').innerHTML=`
+      <div class="stat-card"><div class="sc-lbl">Open</div><div class="sc-val">${s.open||0}</div><div class="sc-sub">awaiting first reply</div></div>
+      <div class="stat-card"><div class="sc-lbl">Answered</div><div class="sc-val">${s.answered||0}</div><div class="sc-sub">waiting on traveller</div></div>
+      <div class="stat-card"><div class="sc-lbl">Closed</div><div class="sc-val">${s.closed||0}</div><div class="sc-sub">resolved</div></div>
+      <div class="stat-card"><div class="sc-lbl">Categories</div><div class="sc-val">${(s.byCategory||[]).length}</div><div class="sc-sub">${(s.byCategory||[]).slice(0,2).map(c=>esc(c.category)).join(', ')||'—'}</div></div>`;
+    const list=d.tickets||[];
+    document.getElementById('cq-list').innerHTML=list.length?list.map(t=>{
+      const m=CQ_META[t.status]||CQ_META.open;
+      return `<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="openCQ(${t.id})">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+          <div style="flex:1"><b style="font-size:.92rem">${esc(t.subject)}</b>
+          <div style="font-size:.72rem;color:var(--t4);margin-top:3px">#${t.id} · ${esc(t.user_name||t.user_email||'—')} · ${esc(t.category)} · ${String(t.updated_at||t.created_at).slice(0,10)}</div>
+          ${t.last_reply?`<div style="font-size:.76rem;color:var(--t3);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:520px">${esc(t.last_reply).slice(0,110)}</div>`:''}</div>
+          <span class="badge" style="background:${m.c}18;color:${m.c};border:1px solid ${m.c}40">${m.l}</span>
+        </div></div>`;}).join(''):'<div class="card" style="text-align:center;padding:26px;color:var(--t4)">No tickets in this view</div>';
+  }catch(e){showToast('Could not load queue: '+e.message);}
+}
+async function openCQ(id){
+  const r=await apiFetch('/api/admin/concierge/tickets/'+id);const d=await r.json();if(!r.ok)return showToast(d.error||'Failed');
+  const t=d.ticket;const m=CQ_META[t.status]||CQ_META.open;
+  openM('cq-modal');
+  document.getElementById('cq-modal-body').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
+      <div><div style="font-family:var(--fd);font-size:1.05rem">${esc(t.subject)}</div>
+      <div style="font-size:.72rem;color:var(--t4);margin-top:3px">#${t.id} · ${esc(t.user_name||'')} (${esc(t.user_email||'')}) · ${esc(t.category)}</div></div>
+      <span class="badge" style="background:${m.c}18;color:${m.c};border:1px solid ${m.c}40">${m.l}</span>
+    </div>
+    ${d.journey?`<div style="font-size:.74rem;background:var(--elev2);border:1px solid var(--b1);border-radius:10px;padding:8px 12px;margin-bottom:10px">🧭 Linked journey: <b>${d.journey.dest_flag||''} ${esc(d.journey.dest_name||d.journey.destination_code)}</b> · ${esc(d.journey.purpose)} · dep ${d.journey.departure_date||'—'}</div>`:''}
+    <div style="max-height:300px;overflow-y:auto;margin-bottom:12px">
+      ${(d.replies||[]).map(rp=>`
+        <div style="margin-bottom:10px;padding:10px 14px;border-radius:12px;background:${rp.author_role==='agent'?'rgba(14,123,79,.07)':'var(--elev2)'};border:1px solid ${rp.author_role==='agent'?'rgba(14,123,79,.2)':'var(--b1)'}">
+          <div style="font-size:.68rem;font-weight:600;color:${rp.author_role==='agent'?'#0E7B4F':'var(--t4)'};margin-bottom:4px">${rp.author_role==='agent'?'🤝 '+esc(rp.author_name||'Concierge'):esc(rp.author_name||'Traveller')} · ${String(rp.created_at).slice(0,16).replace('T',' ')}</div>
+          <div style="font-size:.84rem;line-height:1.6;white-space:pre-wrap">${esc(rp.body)}</div>
+        </div>`).join('')||'<div style="color:var(--t4);font-size:.8rem">No messages yet.</div>'}
+    </div>
+    ${t.status!=='closed'?`
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input class="input" id="cq-reply-input" placeholder="Reply as concierge…" style="flex:1" onkeydown="if(event.key==='Enter')sendCQReply(${t.id})"/>
+      <button class="btn-primary" style="padding:9px 16px" onclick="sendCQReply(${t.id})">Send</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-ghost" style="padding:7px 12px;font-size:.74rem" onclick="setCQStatus(${t.id},'answered')">Mark answered</button>
+      <button class="btn-ghost" style="padding:7px 12px;font-size:.74rem" onclick="setCQStatus(${t.id},'closed')">Close ticket</button>
+    </div>`:'<div style="font-size:.78rem;color:var(--t4)">This ticket is closed.</div>'}`;
+}
+async function sendCQReply(id){
+  const inp=document.getElementById('cq-reply-input');const body=inp.value.trim();if(!body)return showToast('Write a reply first');
+  const r=await apiFetch(`/api/admin/concierge/tickets/${id}/reply`,{method:'POST',body:JSON.stringify({body})});const d=await r.json();
+  if(!r.ok)return showToast(d.error||'Failed');showToast(d.message);openCQ(id);loadConciergeQ();
+}
+async function setCQStatus(id,status){
+  const r=await apiFetch(`/api/admin/concierge/tickets/${id}/status`,{method:'POST',body:JSON.stringify({status})});const d=await r.json();
+  showToast(d.message||d.error||'Done');if(r.ok){if(status==='closed')closeM('cq-modal');openCQ(id);loadConciergeQ();}
+}
 
 /* ── JOURNEY & BRAIN BASE ANALYTICS ── */
 const CASE_LABELS={task_overdue:'⚠️ Overdue task',appointment_scarcity:'⏰ Appointment scarcity',passport_validity:'🛂 Passport validity',user_report:'🗣️ Traveller report'};

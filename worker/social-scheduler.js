@@ -12,6 +12,8 @@ const { deliverPost } = require('../utils/social-delivery');
 
 const SCAN_INTERVAL = parseInt(process.env.SOCIAL_SCAN_INTERVAL || '60') * 1000;
 let timer = null;
+let lastRunAt = null;
+let lastRunOk = null;
 
 async function runOnce() {
   try {
@@ -31,7 +33,10 @@ async function runOnce() {
         console.error(`[social-scheduler] post #${post.id} failed:`, e.message);
       }
     }
+    lastRunAt = new Date().toISOString();
+    lastRunOk = true;
   } catch (e) {
+    lastRunOk = false;
     console.error('[social-scheduler] scan failed:', e.message);
   }
 }
@@ -44,4 +49,4 @@ function startSocialScheduler() {
   console.log(`📣 Social scheduler running (scans every ${SCAN_INTERVAL / 1000}s)`);
 }
 
-module.exports = { startSocialScheduler, runOnce };
+module.exports = { startSocialScheduler, runOnce, status: () => ({ lastRunAt, lastRunOk, intervalSec: SCAN_INTERVAL / 1000 }) };

@@ -61,6 +61,29 @@ app.get('/api/app-info', (_req,res) => res.json({
   suite:       BRAND.SUITE,
 }));
 
+// ── HEALTH CHECK (uptime monitors; bypasses maintenance + needs no auth) ─────
+app.get('/api/health', async (_req,res) => {
+  const t0 = Date.now();
+  let db = 'down';
+  try { Q.getSetting('app_name'); db = 'ok'; } catch {}
+  const journey = require('./worker/journey-scheduler').status();
+  const social  = require('./worker/social-scheduler').status();
+  const now = Date.now();
+  const stale = ts => !ts || (now - new Date(ts).getTime()) > 10 * 60 * 1000; // >10 min = stale
+  res.json({
+    status: db === 'ok' ? 'ok' : 'degraded',
+    uptime_sec: Math.floor(process.uptime()),
+    db,
+    db_latency_ms: Date.now() - t0,
+    schedulers: {
+      journey: { ...journey, stale: journey.lastRunAt ? stale(journey.lastRunAt) : null },
+      social:  { ...social,  stale: social.lastRunAt  ? stale(social.lastRunAt)  : null },
+    },
+    version: require('./package.json').version,
+    time: new Date().toISOString(),
+  });
+});
+
 // ── MAINTENANCE ───────────────────────────────────────────────────────────────
 // NOTE: mounted under /api/, so req.path is relative — '/app-info', not '/api/app-info'
 app.use('/api/', (req,res,next) => {
@@ -79,6 +102,7 @@ app.use('/api/travel', require('./routes/travel'));
 app.use('/api/journey', require('./routes/journey'));
 app.use('/api/visa',   require('./routes/visa-db'));
 app.use('/api/chat',   require('./routes/chat'));
+app.use('/api/concierge', require('./routes/concierge'));
 
 // ── CRON TICK (for shared hosting without persistent workers) ────────────────
 // Truehost-style cPanel cron: curl -s "https://yourdomain.com/api/cron/tick?key=CRON_SECRET"
@@ -103,6 +127,64 @@ app.get('/api/cron/tick', async (req, res) => {
 // ── API 404 ───────────────────────────────────────────────────────────────────
 // Unknown API endpoints must return JSON 404, never the SPA fallback below.
 app.use('/api', (_req,res) => res.status(404).json({ error: 'Endpoint not found' }));
+
+// ── SUITE LANDING PAGES (server-rendered from config/brand.js) ───────────────
+const esc5 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+app.get('/suite',        (_req,res) => res.redirect('/#suite'));
+app.get('/suite/:key', (req,res) => {
+  const p = BRAND.SUITE.find(x => x.key === req.params.key);
+  if (!p) return res.redirect('/#suite');
+  const others = BRAND.SUITE.filter(x => x.key !== p.key);
+  const feats = p.features.map(([ic,t,d]) => `
+      <div class="f-card"><div class="f-ic">${ic}</div><div><div class="f-t">${esc5(t)}</div><p>${esc5(d)}</p></div></div>`).join('');
+  const nav = others.map(o => `<a class="pl" href="/suite/${o.key}">${o.icon} ${esc5(o.name)}</a>`).join('');
+  res.send(`<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${esc5(p.name)} — ${esc5(p.short)} | ${esc5(BRAND.NAME)}</title>
+<meta name="description" content="${esc5(p.desc)}"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--paper:#F7F3EA;--ink:#0A1428;--accent:#E8613C;--mut:rgba(10,20,40,.62);--line:rgba(10,20,40,.12);--fd:Fraunces,Georgia,serif;--fb:Outfit,Segoe UI,sans-serif}
+*{margin:0;box-sizing:border-box}body{background:var(--paper);color:var(--ink);font-family:var(--fb)}
+a{text-decoration:none;color:inherit}.wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:9px;font-family:var(--fd);font-weight:700;font-size:1.06rem}
+.logo-mark{width:34px;height:34px;border-radius:10px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:1rem}
+.logo-quest{color:var(--accent)}
+.top-link{font-size:.82rem;color:var(--mut)}
+.hero{padding:64px 0 40px}.kick{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);border:1px solid var(--line);border-radius:99px;padding:6px 14px;margin-bottom:20px;background:#fff}
+h1{font-family:var(--fd);font-size:clamp(2rem,4.6vw,3.1rem);line-height:1.12;font-weight:700}
+h1 em{font-style:italic;color:var(--accent)}
+.sub{margin:16px 0 26px;font-size:1.02rem;color:var(--mut);max-width:640px;line-height:1.7}
+.btn{display:inline-block;border-radius:99px;padding:13px 28px;font-weight:600;font-size:.92rem;font-family:var(--fb);border:none;cursor:pointer;transition:transform .3s cubic-bezier(.22,1,.36,1)}
+.btn-acc{background:var(--accent);color:#fff}.btn-line{border:1.5px solid var(--ink);color:var(--ink);background:transparent;margin-left:10px}
+.btn:hover{transform:translateY(-2px)}
+.f-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:44px 0 20px}
+.f-card{display:flex;gap:14px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s}
+.f-card:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(10,20,40,.09)}
+.f-ic{font-size:1.5rem}.f-t{font-weight:600;margin-bottom:4px}.f-card p{font-size:.84rem;color:var(--mut);line-height:1.65}
+.suite-nav{margin:44px 0 60px;padding-top:26px;border-top:1px solid var(--line)}
+.suite-nav h4{font-family:var(--fd);margin-bottom:14px;color:var(--mut);font-weight:500}
+.pl{display:inline-block;margin:0 8px 8px 0;background:#fff;border:1px solid var(--line);border-radius:99px;padding:8px 16px;font-size:.8rem;transition:transform .25s}
+.pl:hover{transform:translateY(-2px);border-color:var(--accent)}
+footer{border-top:1px solid var(--line);padding:24px 0;font-size:.78rem;color:var(--mut)}
+@media(max-width:760px){.f-grid{grid-template-columns:1fr}.btn-line{margin-left:0;margin-top:10px}}
+</style></head><body>
+<div class="wrap">
+<nav><a class="logo" href="/"><div class="logo-mark"><span>λ</span></div>Japa<span class="logo-quest">Quest</span></a><a class="top-link" href="/#suite">← All eight products</a></nav>
+<section class="hero">
+  <div class="kick">${p.icon} ${esc5(BRAND.NAME)} suite · ${esc5(p.name)}</div>
+  <h1>${esc5(p.short.replace(/\s*&\s*/,' & '))}, <em>handled.</em></h1>
+  <p class="sub">${esc5(p.desc)}</p>
+  <a class="btn btn-acc" href="/">${esc5(p.cta)} →</a><a class="btn btn-line" href="/#suite">Compare all lines</a>
+  <div class="f-grid">${feats}
+  </div>
+  <div class="suite-nav"><h4>Continue through the suite</h4>${nav}</div>
+</section>
+<footer>© 2026 ${esc5(BRAND.NAME)} — ${esc5(BRAND.TAGLINE)} Not a substitute for official embassy advice.</footer>
+</div></body></html>`);
+});
 
 // ── SPA ROUTING ───────────────────────────────────────────────────────────────
 app.get('/admin',       (_req,res) => res.sendFile(path.join(__dirname,'public','admin.html')));

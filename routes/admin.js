@@ -491,4 +491,46 @@ router.post('/destinations', (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── CONCIERGE — human assistance ticket queue ────────────────────────────────
+router.get('/concierge/tickets', (req, res) => {
+  res.json({ stats: Q.conciergeTicketStats(), tickets: Q.listConciergeTickets(req.query.status) });
+});
+
+router.get('/concierge/tickets/:id', (req, res) => {
+  const t = Q.getConciergeTicket(parseInt(req.params.id), null);
+  if (!t) return res.status(404).json({ error: 'Ticket not found' });
+  let journey = null;
+  if (t.journey_id) {
+    try {
+      journey = Q.queryAllSafe(`SELECT j.id, j.destination_code, j.purpose, j.departure_date, j.status, d.name as dest_name
+        FROM journeys j LEFT JOIN destinations d ON d.code=j.destination_code WHERE j.id=?`, [t.journey_id])[0] || null;
+    } catch {}
+  }
+  res.json({ ticket: t, replies: Q.getConciergeReplies(t.id), journey });
+});
+
+router.post('/concierge/tickets/:id/reply', (req, res) => {
+  const t = Q.getConciergeTicket(parseInt(req.params.id), null);
+  if (!t) return res.status(404).json({ error: 'Ticket not found' });
+  const body = String((req.body || {}).body || '').trim();
+  if (!body) return res.status(400).json({ error: 'Message is required' });
+  Q.addConciergeReply(t.id, 'agent', req.user.name || 'Concierge', body.slice(0, 4000));
+  Q.setConciergeTicketStatus(t.id, 'answered');
+  Q.createNotification(t.user_id, '🤝 Concierge replied', `Your request "${String(t.subject).slice(0, 80)}" has a new reply.`, 'concierge');
+  res.json({ message: 'Reply sent to traveller ✅', ticket: Q.getConciergeTicket(t.id, null) });
+});
+
+router.post('/concierge/tickets/:id/status', (req, res) => {
+  const t = Q.getConciergeTicket(parseInt(req.params.id), null);
+  if (!t) return res.status(404).json({ error: 'Ticket not found' });
+  const status = String((req.body || {}).status || '');
+  if (!['open', 'answered', 'closed'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  Q.setConciergeTicketStatus(t.id, status);
+  if (status === 'closed') {
+    Q.addConciergeReply(t.id, 'agent', 'Concierge', 'Ticket closed by the concierge team.');
+    Q.createNotification(t.user_id, '🤝 Concierge ticket closed', `Your request "${String(t.subject).slice(0, 80)}" was closed. Reply again any time.`, 'concierge');
+  }
+  res.json({ message: `Ticket marked ${status}`, ticket: Q.getConciergeTicket(t.id, null) });
+});
+
 module.exports = router;

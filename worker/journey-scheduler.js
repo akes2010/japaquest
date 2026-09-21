@@ -23,6 +23,8 @@ const BRAND = require('../config/brand');
 
 const SCAN_INTERVAL = parseInt(process.env.JOURNEY_SCAN_INTERVAL || '300') * 1000;
 let timer = null;
+let lastRunAt = null;      // ISO timestamp of the last completed scan
+let lastRunOk = null;      // true/false — did the last scan finish cleanly?
 
 function isoWeek(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -256,7 +258,10 @@ async function runOnce() {
       persist();
       console.log(`[journey-reminders] ${notifications} reminder(s), ${casesOpened} case(s) opened${emails ? ', ' + emails + ' email(s)' : ''}${digest.emails ? `, digest: ${digest.notifs} notif(s), ${digest.emails} email(s)` : ''}`);
     }
+    lastRunAt = new Date().toISOString();
+    lastRunOk = true;
   } catch (e) {
+    lastRunOk = false;
     console.error('[journey-reminders] scan failed:', e.message);
   }
 }
@@ -269,4 +274,4 @@ function startJourneyScheduler() {
   console.log(`⏰ Journey reminder scheduler running (scans every ${SCAN_INTERVAL / 1000}s)`);
 }
 
-module.exports = { startJourneyScheduler, runOnce, digestHtmlFor, sendWeeklyDigests };
+module.exports = { startJourneyScheduler, runOnce, digestHtmlFor, sendWeeklyDigests, status: () => ({ lastRunAt, lastRunOk, intervalSec: SCAN_INTERVAL / 1000 }) };
