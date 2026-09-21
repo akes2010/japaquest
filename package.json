@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:prod": "bash scripts/start-prod.sh",
     "start:clean": "bash scripts/start-clean.sh",
     "dev": "nodemon server.js",
     "reset-admin": "node reset-admin.js"

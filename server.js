@@ -48,6 +48,10 @@ app.use(helmet({
   },
 }));
 app.use(cors({ origin: true, credentials: true }));
+// Behind cPanel/Truehost's nginx proxy (and any CDN), X-Forwarded-For carries
+// the real client IP. Without this, express-rate-limit buckets ALL visitors
+// under the proxy IP and 429s the whole site once 300 requests arrive.
+app.set('trust proxy', 1);
 app.use(compress());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '2mb' }));
@@ -261,6 +265,14 @@ async function start() {
 }
 
 start().catch(e => { console.error('Startup failed:', e); process.exit(1); });
+
+// Graceful shutdown — cPanel restarts the app on deploy/toggle; flush the
+// debounced SQLite writes first so the last 200ms of changes are never lost.
+['SIGTERM', 'SIGINT'].forEach(sig => process.on(sig, () => {
+  console.log(`\n${sig} received — flushing database and shutting down…`);
+  try { persist(); } catch (e) { console.error('flush failed:', e.message); }
+  process.exit(0);
+}));
 
 // Friendly guidance when the port is taken (e.g. a previous instance is
 // still running) instead of an unhandled 'error' event stack trace.

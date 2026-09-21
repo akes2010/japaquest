@@ -66,7 +66,9 @@ OPENROUTER_API_KEY=sk-or-v1-...
 
 ## 5. Start the app
 
-In the cPanel **Setup Node.js App** page click **Start** (or via terminal: `npm start`).
+In the cPanel **Setup Node.js App** page click **Start** (or via terminal: `npm run start:prod`).
+
+`npm run start:prod` runs a pre-flight check first: installs dependencies if missing, warns about weak/missing secrets (JWT_SECRET, AI keys), verifies `data/` is writable, then boots in production mode. `npm start` skips the checks if you prefer.
 
 First boot creates the database and the admin account — the log/banner shows the credentials:
 
@@ -108,15 +110,18 @@ Every 10 minutes it runs both schedulers (social posting scan + journey reminder
 | Emails not sending | Set SMTP in **Admin → Email Settings** (see `EMAIL_SETUP_GUIDE.md`), then use 📤 Test |
 | AI replies fail | Add an AI key to `.env` (Admin → AI Engine shows provider status) |
 | DB resets after restart | `DB_PATH` in `.env` must point to a persistent path like `./data/jagaguru.db` inside the app root — and never delete `data/` |
+| "Too many requests" for everyone | The app must see real client IPs behind the proxy — `app.set('trust proxy', 1)` is already set in `server.js`; if you put Cloudflare in front, raise it to `trust proxy, 2` |
 
 ---
 
 ## 9. Quick launch checklist
 
-- [ ] Node app created in cPanel and **Started**
+- [ ] Node app created in cPanel and **Started** (`npm run start:prod`)
 - [ ] `npm install --omit=dev` completed
 - [ ] `.env` has `JWT_SECRET`, `APP_URL`, `CRON_SECRET`, at least one AI key
 - [ ] Domain loads the landing page (all 8 suite cards visible)
+- [ ] `https://yourdomain.com/api/health` returns `{"status":"ok"}` — point an uptime monitor at it
+- [ ] Cron job hitting `/api/cron/tick?key=…` every 10 minutes (section 7)
 - [ ] Admin password changed from the default
 - [ ] SMTP configured + 📤 Test email received
 - [ ] cPanel cron added for `/api/cron/tick`
