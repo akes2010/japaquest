@@ -535,6 +535,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
   </div>
   <div class="sb-nav">
     <button class="sb-btn active" id="nbtn-chat" onclick="sw('chat')"><span class="ni">💬</span>AI Travel Chat</button>
+    <button class="sb-btn" id="nbtn-journey" onclick="sw('journey')"><span class="ni">🧭</span>My Journey<span class="nb-badge" id="journey-badge" style="display:none">!</span></button>
     <button class="sb-btn" id="nbtn-explore" onclick="sw('explore')"><span class="ni">🌍</span>Explore Destinations</button>
     <button class="sb-btn" id="nbtn-book" onclick="sw('book')"><span class="ni">✈️</span>Book Travel</button>
     <button class="sb-btn" id="nbtn-tools" onclick="sw('tools')"><span class="ni">🛠️</span>Visa Tools</button>
@@ -591,6 +592,45 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
           <span class="usage-lbl" id="u-lbl">0/10 today</span>
         </div>
         <div style="text-align:center;font-size:.62rem;color:var(--t4);margin-top:4px">Japa+ · Verify visa requirements with official embassy sources before applying</div>
+      </div>
+    </div>
+
+    <!-- JOURNEY OS -->
+    <div class="view" id="view-journey">
+      <div class="view-wrap">
+        <!-- Empty state / wizard entry -->
+        <div id="jy-empty">
+          <div style="max-width:640px;margin:24px auto 0;text-align:center">
+            <div style="font-family:var(--fd);font-size:1.6rem;color:var(--t1);margin-bottom:8px">🧭 Turn your dream trip into a plan</div>
+            <div style="font-size:.9rem;color:var(--t3);line-height:1.7;margin-bottom:24px">Describe the trip you're dreaming about. Japa+ checks the <b>verified visa rule</b> for your passport, then builds a deadline-driven checklist — so a first-timer executes like an experienced traveller.</div>
+            <div style="background:#fff;border:1px solid var(--b1);border-radius:22px;padding:24px;text-align:left;box-shadow:var(--shadow-sm)">
+              <div class="form-group"><label class="form-label">Describe your dream trip</label>
+                <textarea class="input" id="jy-text" rows="3" placeholder="e.g. I want to take my family to London for 10 days next summer"></textarea></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+                <div class="form-group" style="margin-bottom:0"><label class="form-label">Departure date</label><input class="input" id="jy-dep" type="date"/></div>
+                <div class="form-group" style="margin-bottom:0"><label class="form-label">Return date</label><input class="input" id="jy-ret" type="date"/></div>
+                <div class="form-group" style="margin-bottom:0"><label class="form-label">Travellers</label><input class="input" id="jy-pax" type="number" value="1" min="1" max="20"/></div>
+              </div>
+              <button class="btn btn-primary" style="width:100%" onclick="createJourney()">🧭 Build my plan</button>
+              <div style="font-size:.68rem;color:var(--t4);margin-top:10px;text-align:center">Destination and trip purpose are detected from your description — or tell the AI chat and ask it to plan it.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Journey list -->
+        <div id="jy-list" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+            <div><div style="font-family:var(--fd);font-size:1.2rem;color:var(--t1)">🧭 My Journeys</div>
+            <div style="font-size:.76rem;color:var(--t4)">Deadline-driven execution plans from verified visa rules</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="showJourneyWizard()">➕ New Journey</button>
+          </div>
+          <div id="jy-cards"></div>
+        </div>
+
+        <!-- Journey detail -->
+        <div id="jy-detail" style="display:none">
+          <div id="jy-detail-body"></div>
+        </div>
       </div>
     </div>
 
@@ -853,13 +893,14 @@ function sw(v){
   document.querySelectorAll('.sb-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v)?.classList.add('active');
   document.getElementById('nbtn-'+v)?.classList.add('active');
-  const T={chat:'AI Travel Chat',explore:'Explore Destinations',book:'Book Travel',tools:'Visa Tools',saved:'Saved Documents',history:'Chat History',notif:'Notifications',sub:'Subscription',profile:'My Profile'};
+  const T={chat:'AI Travel Chat',journey:'My Journey',explore:'Explore Destinations',book:'Book Travel',tools:'Visa Tools',saved:'Saved Documents',history:'Chat History',notif:'Notifications',sub:'Subscription',profile:'My Profile'};
   document.getElementById('tb-title').textContent=T[v]||v;
   if(v==='notif'){loadNotifs();markAllRead();}
   if(v==='history')loadAllConvs();
   if(v==='explore')loadDestinations();
   if(v==='saved')loadSaved();
   if(v==='sub')loadPlans();
+  if(v==='journey')loadJourneys();
   if(v==='chat')document.getElementById('msg-ta').focus();
   document.body.classList.remove('sb-open');
 }
@@ -1099,6 +1140,148 @@ function relTime(d){if(!d)return'';const diff=Math.floor((Date.now()-new Date(d)
 function fmt(t){if(!t)return'';const mkLink=(m,txt,u)=>{txt=String(txt).replace(/[<>"'\\]/g,'');return '<a href="'+u+'" target="_blank" rel="noopener nofollow sponsored" style="color:var(--a300);text-decoration:underline" onclick="logAffClick(\''+txt+'\',\''+u+'\')">'+txt+'</a>';};return t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,mkLink).replace(/(^|\s)(https?:\/\/[^\s<]+)/g,(m,pre,u)=>pre+'<a href="'+u+'" target="_blank" rel="noopener nofollow sponsored" style="color:var(--a300);text-decoration:underline" onclick="logAffClick(\''+u.replace(/^https?:\/\//,'').split('/')[0]+'\',\''+u+'\')">'+u+'</a>').replace(/^###\s(.+)$/gm,'<div style="font-family:var(--fd);color:var(--a300);font-size:.92rem;margin:10px 0 4px;font-weight:600">$1</div>').replace(/^##\s(.+)$/gm,'<div style="font-family:var(--fd);color:var(--a300);font-size:.96rem;margin:12px 0 5px;font-weight:700">$1</div>').replace(/🔗\s\*\*([^*]+)\*\*:\s*([^\n]+)/g,'<div class="aff-card"><div><strong style="color:var(--o300)">🔗 $1</strong><br/><span style="font-size:.75rem;color:var(--t3)">$2</span></div></div>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code style="font-family:monospace;font-size:.79rem;background:rgba(217,90,35,.12);padding:1px 5px;border-radius:4px;color:var(--o300)">$1</code>').replace(/^✅\s(.+)$/gm,'<div class="ck"><span>✅</span><span>$1</span></div>').replace(/^⚠️\s(.+)$/gm,'<div class="ck"><span>⚠️</span><span>$1</span></div>').replace(/^❌\s(.+)$/gm,'<div class="ck"><span>❌</span><span>$1</span></div>').replace(/^[-•]\s(.+)$/gm,'<div class="bl">• $1</div>').replace(/^(\d+)\.\s(.+)$/gm,'<div class="bl"><strong>$1.</strong> $2</div>').replace(/^💡\s(.+)$/gm,'<div class="ibox">💡 $1</div>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');}
 document.getElementById('msg-ta').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}});
 document.getElementById('msg-ta').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
+/* ═══════════════ JOURNEY OS ═══════════════ */
+let curJourneyId=null;
+const PHASE_META={research:{l:'Research',i:'🔎'},documents:{l:'Documents',i:'📄'},money:{l:'Money',i:'💳'},apply:{l:'Apply',i:'🛂'},book:{l:'Book',i:'✈️'},'pre-departure':{l:'Final week',i:'🎒'},'on arrival':{l:'On arrival',i:'🛬'}};
+const READY_META={ready:{l:'Ready to fly',c:'#0E7B4F'},on_track:{l:'On track',c:'#0E7B4F'},needs_attention:{l:'Needs attention',c:'#8A6420'},behind:{l:'Behind schedule',c:'#B3282D'},not_started:{l:'Not started',c:'rgba(10,20,40,.62)'}};
+
+async function loadJourneys(){
+  document.getElementById('jy-detail').style.display='none';
+  try{
+    const r=await api('/api/journey');const d=await r.json();
+    const list=d.journeys||[];
+    if(!list.length){document.getElementById('jy-empty').style.display='block';document.getElementById('jy-list').style.display='none';return;}
+    document.getElementById('jy-empty').style.display='none';document.getElementById('jy-list').style.display='block';
+    document.getElementById('jy-cards').innerHTML=list.map(j=>{
+      const rm=READY_META[j.readiness.status]||READY_META.not_started;
+      const dd=j.readiness.daysToDeparture;
+      const overdue=j.readiness.overdue;
+      if(overdue>0){const b=document.getElementById('journey-badge');b.style.display='inline-block';}
+      return `<div class="card" style="margin-bottom:12px;cursor:pointer" onclick="openJourney(${j.id})">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="font-size:2rem">${j.dest_flag||'🌍'}</div>
+          <div style="flex:1;min-width:180px">
+            <div style="font-weight:600;color:var(--t1)">${j.dest_name||j.destination_code} · ${j.purpose}</div>
+            <div style="font-size:.75rem;color:var(--t4)">${dd!=null?(dd>=0?`Departs in <b>${dd} days</b> · ${j.departure_date}`:'Trip in progress · '+j.departure_date):'No departure date yet'} · visa: ${j.visa_status||'?'}</div>
+          </div>
+          ${overdue>0?`<span style="font-size:.68rem;font-weight:700;background:rgba(200,45,45,.08);border:1px solid rgba(200,45,45,.25);color:#B3282D;border-radius:99px;padding:3px 10px">⚠️ ${overdue} overdue</span>`:''}
+          <div style="text-align:right;min-width:90px">
+            <div style="font-family:var(--fd);font-size:1.5rem;font-weight:700;color:${rm.c}">${j.readiness.score}%</div>
+            <div style="font-size:.62rem;font-weight:600;color:${rm.c}">${rm.l}</div>
+          </div>
+        </div>
+        <div class="progress" style="margin-top:12px"><div class="progress-fill" style="width:${j.readiness.score}%"></div></div>
+        <div style="font-size:.68rem;color:var(--t4);margin-top:6px">${j.readiness.done}/${j.readiness.total} tasks done${j.nextTask?` · next: ${j.nextTask.title.slice(0,60)}`:''}</div>
+      </div>`;}).join('');
+  }catch(e){showToast('Could not load journeys');}
+}
+function showJourneyWizard(){document.getElementById('jy-empty').style.display='block';document.getElementById('jy-list').style.display='none';document.getElementById('jy-detail').style.display='none';document.getElementById('jy-text')?.focus();}
+
+async function createJourney(){
+  const text=document.getElementById('jy-text').value.trim();
+  const dep=document.getElementById('jy-dep').value,ret=document.getElementById('jy-ret').value,pax=document.getElementById('jy-pax').value||1;
+  if(!text){showToast('Describe your dream trip first');return;}
+  try{
+    const r=await api('/api/journey/wizard',{method:'POST',body:JSON.stringify({text,departure_date:dep||null,return_date:ret||null,travellers:pax})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Failed');
+    showToast(d.message||'Plan created');
+    document.getElementById('jy-text').value='';
+    curJourneyId=d.journey.id;renderJourneyDetail(d);
+  }catch(e){showToast(e.message||'Could not create plan');}
+}
+
+async function openJourney(id){
+  try{
+    const r=await api('/api/journey/'+id);const d=await r.json();if(!r.ok)throw new Error(d.error||'Not found');
+    curJourneyId=id;renderJourneyDetail(d);
+  }catch(e){showToast(e.message||'Could not open journey');}
+}
+
+function renderJourneyDetail(d){
+  document.getElementById('jy-empty').style.display='none';document.getElementById('jy-list').style.display='none';
+  const det=document.getElementById('jy-detail');det.style.display='block';
+  const j=d.journey,rm=READY_META[d.readiness.status]||READY_META.not_started,dd=j.days_to_departure;
+  const v=d.visa||{};
+  let html=`
+  <button class="btn btn-ghost btn-sm" onclick="loadJourneys()" style="margin-bottom:14px">← All journeys</button>
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+      <div style="font-size:2.6rem">${j.dest_flag||'🌍'}</div>
+      <div style="flex:1;min-width:220px">
+        <div style="font-family:var(--fd);font-size:1.4rem;color:var(--t1)">${j.dest_name||j.destination_code}</div>
+        <div style="font-size:.8rem;color:var(--t3)">${j.purpose} · ${j.travellers||1} traveller(s)${j.departure_date?` · ${j.departure_date}${j.return_date?' → '+j.return_date:''}`:''}</div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <span style="font-size:.66rem;font-weight:700;background:${rm.c}14;border:1px solid ${rm.c}40;color:${rm.c};border-radius:99px;padding:3px 10px">${rm.l} · ${d.readiness.score}%</span>
+          <span style="font-size:.66rem;font-weight:600;background:rgba(14,123,79,.08);border:1px solid rgba(14,123,79,.22);color:#0E7B4F;border-radius:99px;padding:3px 10px">Source tier ${v.source_tier??'—'} · ${v.confidence||'confidence —'}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <input class="input" type="date" id="jy-dep-edit" value="${j.departure_date||''}" style="width:150px" onchange="updateJourneyDate()"/>
+        <button class="btn btn-ghost btn-sm" onclick="deleteJourney(${j.id})" title="Delete journey">🗑</button>
+      </div>
+    </div>
+    ${dd!=null&&dd>=0?`<div style="margin-top:12px;font-size:.8rem;color:var(--t3)">⏳ <b>${dd} days</b> to departure${d.readiness.overdue?` · <span style="color:#B3282D;font-weight:600">${d.readiness.overdue} task(s) overdue</span>`:''}</div>`:''}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px" id="jy-visa-grid">
+    <div class="card"><div style="font-size:.78rem;font-weight:600;color:var(--t1);margin-bottom:8px">🛂 Verified visa rule</div>
+      <div style="font-size:.78rem;color:var(--t3);line-height:1.8">
+        Status: <b>${v.status||'needs_verification'}</b><br/>
+        Fee: <b>${v.fees?.amount||'—'}</b> · Processing: <b>${v.processing_days||'—'}</b><br/>
+        Max stay: <b>${v.max_stay||'—'}</b><br/>
+        Source: ${v.source_authority||'—'}
+        ${v.official_url?`<br/><a href="${v.official_url}" target="_blank" rel="noopener">Apply on the official site ↗</a>`:''}
+      </div>
+      ${(v.conditions||[]).length?`<div style="margin-top:8px;font-size:.72rem;color:var(--t4);border-top:1px dashed var(--b0);padding-top:8px">${v.conditions.map(c=>'• '+esc(c)).join('<br/>')}</div>`:''}
+    </div>
+    <div class="card"><div style="font-size:.78rem;font-weight:600;color:var(--t1);margin-bottom:8px">🧳 Pre-departure briefing</div>
+      ${d.briefing.warnings.map(w=>`<div style="font-size:.74rem;background:rgba(200,45,45,.06);border:1px solid rgba(200,45,45,.22);color:#B3282D;border-radius:10px;padding:8px 11px;margin-bottom:6px">⚠️ ${esc(w)}</div>`).join('')}
+      ${d.briefing.tips.map(t=>`<div style="font-size:.74rem;color:var(--t3);margin-bottom:5px;line-height:1.6">💡 ${esc(t)}</div>`).join('')}
+    </div>
+  </div>
+  <div style="font-size:.8rem;font-weight:600;color:var(--t1);margin:16px 0 8px">Execution checklist</div>`;
+  // Group tasks by phase preserving phase order
+  const phases=[...new Set(d.tasks.map(t=>t.phase))];
+  for(const ph of phases){
+    const meta=PHASE_META[ph]||{l:ph,i:'☑️'};
+    const ts=d.tasks.filter(t=>t.phase===ph);
+    const doneN=ts.filter(t=>t.status==='done').length;
+    html+=`<div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">${meta.i} ${meta.l} <span style="font-weight:500">${doneN}/${ts.length}</span></div>
+      ${ts.map(t=>{
+        const late=t.status!=='done'&&t.deadline&&t.deadline<new Date().toISOString().slice(0,10);
+        return `<div class="card" style="padding:12px 14px;margin-bottom:6px;display:flex;gap:10px;align-items:flex-start;${late?'border-color:rgba(200,45,45,.35);':''}">
+          <input type="checkbox" ${t.status==='done'?'checked':''} onchange="tickTask(${j.id},${t.id},this.checked)" style="margin-top:3px;accent-color:#E8613C;width:16px;height:16px;cursor:pointer"/>
+          <div style="flex:1">
+            <div style="font-size:.84rem;font-weight:600;color:${t.status==='done'?'var(--t4)':'var(--t1)'};text-decoration:${t.status==='done'?'line-through':'none'}">${esc(t.title)}</div>
+            ${t.detail?`<div style="font-size:.74rem;color:var(--t4);margin-top:2px;line-height:1.6">${esc(t.detail)}</div>`:''}
+          </div>
+          ${t.deadline?`<div style="font-size:.66rem;font-weight:600;white-space:nowrap;color:${late?'#B3282D':'var(--t4)'};background:${late?'rgba(200,45,45,.08)':'rgba(10,20,40,.05)'};border:1px solid ${late?'rgba(200,45,45,.22)':'var(--b0)'};border-radius:99px;padding:3px 9px">${late?'⚠️ ':''}${t.deadline}</div>`:''}
+        </div>`;}).join('')}
+    </div>`;
+  }
+  document.getElementById('jy-detail-body').innerHTML=html;
+}
+
+async function tickTask(jid,tid,done){
+  try{
+    const r=await api(`/api/journey/${jid}/task/${tid}`,{method:'PATCH',body:JSON.stringify({status:done?'done':'pending'})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Failed');
+    const b=document.getElementById('jy-detail');if(b&&b.style.display!=='none')openJourney(jid);else loadJourneys();
+  }catch(e){showToast('Could not update task');}
+}
+async function updateJourneyDate(){
+  const dep=document.getElementById('jy-dep-edit').value;
+  try{
+    const r=await api('/api/journey/'+curJourneyId,{method:'PATCH',body:JSON.stringify({departure_date:dep||null})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Failed');
+    showToast('Deadlines recalculated');renderJourneyDetail(d);
+  }catch(e){showToast(e.message||'Update failed');}
+}
+async function deleteJourney(id){
+  if(!confirm('Remove this journey and its checklist?'))return;
+  await api('/api/journey/'+id,{method:'DELETE'});showToast('Journey removed');loadJourneys();
+}
+
 init();
 </script>
 </body>

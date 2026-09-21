@@ -6,6 +6,7 @@ const { Q } = require('../db');
 const { extractIntent, lookupGroundingFacts, buildGroundedSystemPrompt } = require('../ai/grounding');
 const { listAll } = require('../ai/registry');
 const { partnerDirectory, getEffectivePartners, clearPartnerCache } = require('../ai/affiliates');
+const { plannerContext } = require('../utils/journey');
 // Refresh the affiliate cache so admin panel edits apply on the next request
 setInterval(clearPartnerCache, 60 * 1000).unref();
 
@@ -120,7 +121,7 @@ router.post('/chat', requireAuth, async (req, res) => {
 
   const travelProfile = Q.getTravelProfile(req.user.id);
   const addon = Q.getSetting('ai_system_prompt_addon') || '';
-  const userContext = `\nUser passport: ${req.user.country || 'Nigeria'} (${req.user.passport_code || 'NG'}). Budget level: ${travelProfile?.budget_label || 'medium'}.${addon ? '\n'+addon : ''}`;
+  const userContext = `\nUser passport: ${req.user.country || 'Nigeria'} (${req.user.passport_code || 'NG'}). Budget level: ${travelProfile?.budget_label || 'medium'}.${addon ? '\n'+addon : ''}${plannerContext(req.user)}`;
   // Partner directory is rebuilt per-request so admin panel link edits are
   // live immediately (no restart needed).
   const system = buildGroundedSystemPrompt(BASE_SYSTEM + partnerPromptBlock() + userContext, groundingData, travelProfile);

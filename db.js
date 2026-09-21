@@ -129,7 +129,52 @@ const SCHEMA = [
     result_json TEXT DEFAULT '[]',
     created_at TEXT DEFAULT(datetime('now')))`,
 
-  // ── Indexes ───────────────────────────────────────────────────────────────
+  // ── Japa Journey OS — smart trip execution system ────────────────────────
+  `CREATE TABLE IF NOT EXISTS journeys(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    destination_code TEXT NOT NULL,
+    purpose TEXT NOT NULL DEFAULT 'Tourism',
+    departure_date TEXT,
+    return_date TEXT,
+    travellers INTEGER DEFAULT 1,
+    budget_usd REAL,
+    status TEXT NOT NULL DEFAULT 'planning'
+      CHECK(status IN ('planning','visa_process','booked','in_transit','completed','cancelled')),
+    source_tier INTEGER,
+    confidence TEXT,
+    visa_status TEXT,
+    visa_fee TEXT,
+    processing_days TEXT,
+    embassy_url TEXT,
+    schema_version INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT(datetime('now')),
+    updated_at TEXT DEFAULT(datetime('now')),
+    UNIQUE(user_id, destination_code, purpose))`,
+  `CREATE TABLE IF NOT EXISTS journey_tasks(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    journey_id INTEGER NOT NULL REFERENCES journeys(id) ON DELETE CASCADE,
+    phase TEXT NOT NULL,
+    title TEXT NOT NULL,
+    detail TEXT DEFAULT '',
+    offset_days INTEGER,
+    deadline TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','done')),
+    completed_at TEXT,
+    sort_order INTEGER DEFAULT 0,
+    source TEXT DEFAULT 'template')`,
+  `CREATE TABLE IF NOT EXISTS passport_wallet(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    doc_type TEXT NOT NULL,
+    doc_number TEXT DEFAULT '',
+    holder_name TEXT DEFAULT '',
+    issue_date TEXT,
+    expiry_date TEXT,
+    issuing_country TEXT DEFAULT '',
+    notes TEXT DEFAULT '',
+    created_at TEXT DEFAULT(datetime('now')),
+    updated_at TEXT DEFAULT(datetime('now')))`,
   `CREATE INDEX IF NOT EXISTS idx_users_email    ON users(email)`,
   `CREATE INDEX IF NOT EXISTS idx_convs_user     ON conversations(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_msgs_conv      ON messages(conversation_id)`,
@@ -139,6 +184,9 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_travel_user    ON travel_searches(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_affclicks_date ON affiliate_clicks(created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_social_status  ON social_posts(status,scheduled_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_journeys_user  ON journeys(user_id,status)`,
+  `CREATE INDEX IF NOT EXISTS idx_jtasks_journey ON journey_tasks(journey_id,status)`,
+  `CREATE INDEX IF NOT EXISTS idx_wallet_user    ON passport_wallet(user_id)`,
 ];
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -661,6 +709,72 @@ const Q = {
   getDueSocialPosts: () => queryAll(
     `SELECT * FROM social_posts WHERE status='scheduled' AND scheduled_at IS NOT NULL AND scheduled_at <= datetime('now')`),
   deleteSocialPost: (id) => exec('DELETE FROM social_posts WHERE id=?',[id]),
+
+  // ── JOURNEY OS (smart trip execution) ───────────────────────────────────
+  createJourney: (userId, data) => {
+    exec(`INSERT OR IGNORE INTO journeys(user_id,destination_code,purpose,departure_date,return_date,travellers,budget_usd,
+      status,source_tier,confidence,visa_status,visa_fee,processing_days,embassy_url)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [userId, String(data.destination_code||'').toUpperCase(), data.purpose||'Tourism',
+       data.departure_date||null, data.return_date||null, parseInt(data.travellers)||1,
+       data.budget_usd??null, data.status||'planning', data.source_tier??null,
+       data.confidence||null, data.visa_status||null, data.visa_fee||null,
+       data.processing_days||null, data.embassy_url||null]);
+    return queryOne('SELECT * FROM journeys WHERE user_id=? AND destination_code=? AND purpose=?',
+      [userId, String(data.destination_code||'').toUpperCase(), data.purpose||'Tourism']);
+  },
+  getJourneys: (userId) => queryAll(
+    `SELECT j.*, d.name as dest_name, d.flag as dest_flag, d.region
+     FROM journeys j LEFT JOIN destinations d ON d.code=j.destination_code
+     WHERE j.user_id=? AND j.status!='cancelled' ORDER BY
+       CASE WHEN j.departure_date IS NULL THEN 1 ELSE 0 END, j.departure_date, j.created_at DESC`,[userId]),
+  getJourney: (id, userId) => queryOne(
+    `SELECT j.*, d.name as dest_name, d.flag as dest_flag, d.region, d.currency, d.avg_daily_budget_usd
+     FROM journeys j LEFT JOIN destinations d ON d.code=j.destination_code
+     WHERE j.id=? AND j.user_id=?`,[id,userId]),
+  updateJourney: (id,userId,fields) => {
+    const allowed = ['destination_code','purpose','departure_date','return_date','travellers','budget_usd','status'];
+    const sets=['updated_at=datetime(\'now\')'],params=[];
+    for (const k of allowed) if (fields[k]!==undefined) { sets.push(`${k}=?`); params.push(fields[k]); }
+    if (!sets.length) return;
+    exec(`UPDATE journeys SET ${sets.join(',')} WHERE id=? AND user_id=?`,[...params,id,userId]);
+  },
+  deleteJourney: (id,userId) => {
+    exec('DELETE FROM journey_tasks WHERE journey_id=?',[id]);
+    exec('DELETE FROM journeys WHERE id=? AND user_id=?',[id,userId]); persist();
+  },
+  // Replace the whole checklist for a journey (regeneration)
+  setJourneyTasks: (journeyId, tasks) => {
+    exec('DELETE FROM journey_tasks WHERE journey_id=?',[journeyId]);
+    for (const [i,t] of (tasks||[]).entries()) {
+      exec(`INSERT INTO journey_tasks(journey_id,phase,title,detail,offset_days,deadline,sort_order,source)
+        VALUES(?,?,?,?,?,?,?,?)`,
+        [journeyId, t.phase, t.title, t.detail||'', t.offset_days??null, t.deadline||null, i, t.source||'template']);
+    }
+    persist();
+  },
+  getJourneyTasks: (journeyId) => queryAll(
+    `SELECT * FROM journey_tasks WHERE journey_id=? ORDER BY
+      CASE WHEN deadline IS NULL THEN 1 ELSE 0 END, deadline, sort_order`,[journeyId]),
+  updateJourneyTask: (id,journeyId,status) => exec(
+    `UPDATE journey_tasks SET status=?, completed_at=${status==='done' ? "datetime('now')" : 'NULL'} WHERE id=? AND journey_id=?`,
+    [status,id,journeyId]),
+  getWalletDocs: (userId) => queryAll('SELECT * FROM passport_wallet WHERE user_id=? ORDER BY expiry_date IS NULL, expiry_date',[userId]),
+  getWalletDoc: (id,userId) => queryOne('SELECT * FROM passport_wallet WHERE id=? AND user_id=?',[id,userId]),
+  upsertWalletDoc: (userId,data) => {
+    if (data.id) {
+      exec(`UPDATE passport_wallet SET doc_type=?,doc_number=?,holder_name=?,issue_date=?,expiry_date=?,issuing_country=?,notes=?,updated_at=datetime('now') WHERE id=? AND user_id=?`,
+        [data.doc_type||'passport',data.doc_number||'',data.holder_name||'',data.issue_date||null,
+         data.expiry_date||null,data.issuing_country||'',data.notes||'',data.id,userId]);
+      return data.id;
+    }
+    exec(`INSERT INTO passport_wallet(user_id,doc_type,doc_number,holder_name,issue_date,expiry_date,issuing_country,notes)
+      VALUES(?,?,?,?,?,?,?,?)`,
+      [userId,data.doc_type||'passport',data.doc_number||'',data.holder_name||'',
+       data.issue_date||null,data.expiry_date||null,data.issuing_country||'',data.notes||'']);
+    return lastId();
+  },
+  deleteWalletDoc: (id,userId) => { exec('DELETE FROM passport_wallet WHERE id=? AND user_id=?',[id,userId]); persist(); },
 };
 
 module.exports = { initDB, Q, persist };

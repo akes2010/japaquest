@@ -74,6 +74,7 @@ app.use('/api/ai',     require('./routes/ai'));
 app.use('/api/user',   require('./routes/user'));
 app.use('/api/admin',  require('./routes/admin'));
 app.use('/api/travel', require('./routes/travel'));
+app.use('/api/journey', require('./routes/journey'));
 app.use('/api/visa',   require('./routes/visa-db'));
 app.use('/api/chat',   require('./routes/chat'));
 

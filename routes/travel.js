@@ -189,3 +189,4 @@ router.get('/budget', requireAuth, (req, res) => {
 });
 
 module.exports = router;
+module.exports.buildAffiliateLinks = buildAffiliateLinks;
