@@ -1699,6 +1699,7 @@ async function loadEarnings(){
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <span style="font-size:.76rem;color:var(--t4)">Your tracking code</span>
           <code style="background:var(--bg);padding:3px 12px;border-radius:8px;font-family:var(--fd);font-size:1rem;color:var(--o300)">${esc(d.code)}</code>
+          ${d.org?`<span style="font-size:.72rem;color:var(--t4)">🏢 ${esc(d.org)}</span>`:''}
           <span style="font-size:.68rem;padding:2px 10px;border-radius:99px;background:${d.status==='approved'?'rgba(14,123,79,.15)':'rgba(180,106,31,.15)'};color:${d.status==='approved'?'#7fbf95':'#e0a45e'}">${d.status}${d.status==='pending'?' — links already track, commissions start on approval':''}</span>
         </div>
         ${d.status==='approved'?'':'<div style="font-size:.74rem;color:var(--t4);margin-bottom:8px">⏳ Your application is being reviewed. Your links already work — share away.</div>'}

@@ -16,6 +16,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/auth');
 const { Q, persist } = require('../db');
 const registry = require('../payments/registry');
+const { sendEmail } = require('../utils/mailer');
 
 function appUrl() {
   return (Q.getSetting('app_url') || process.env.APP_URL || 'http://localhost:4001').replace(/\/$/, '');
@@ -43,6 +44,15 @@ function settlePayment(payment) {
       const commission = Math.round(payment.amount_usd * commissionRate() * 100) / 100;
       if (commission > 0) {
         Q.addAffiliateCredit(aff.id, payment.user_id, payment.id, payment.amount_usd, commission, `Plan payment ${payment.reference}`);
+        // Alert the marketer — best-effort, never blocks settlement.
+        try {
+          const link = `${appUrl()}/r/${aff.code}`;
+          sendEmail({
+            to: aff.email,
+            subject: `💸 Commission earned — $${commission.toFixed(2)}`,
+            html: `<h2>💰 You just earned $${commission.toFixed(2)}!</h2><p>A traveller who signed up through your link <strong>${aff.code}</strong> paid for a plan (<strong>$${Number(payment.amount_usd).toFixed(2)}</strong>, ref ${payment.reference}) — your commission is credited.</p><p><strong>Lifetime earned:</strong> $${(Q.getAffiliateById(aff.id).earned_minor / 100).toFixed(2)} · <strong>Available:</strong> $${(Q.affiliateBalanceMinor(aff.id) / 100).toFixed(2)}</p><p>Keep sharing: <code>${link}</code></p>`,
+          }).catch(() => {});
+        } catch {}
         try {
           const { createNotification } = Q;
           createNotification(payment.user_id, '💸 Payment confirmed', 'Your plan is active. Welcome aboard!', 'success');

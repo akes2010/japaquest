@@ -584,6 +584,20 @@ router.post('/affiliates/:id/status', requireAdmin, (req, res) => {
   const aff = Q.getAffiliateById(parseInt(req.params.id));
   if (!aff) return res.status(404).json({ error: 'Affiliate not found' });
   Q.setAffiliateStatus(aff.id, status);
+  // Alert the marketer (best-effort; only on approve/reject, not pending→pending).
+  if (status !== 'pending') {
+    try {
+      const appUrl = (Q.getSetting('app_url') || process.env.APP_URL || '').replace(/\/$/, '');
+      const link = `${appUrl}/r/${aff.code}`;
+      if (status === 'approved') {
+        sendEmail({ to: aff.email, subject: `✅ Approved — your ${Q.getSetting('app_name') || 'JapaQuest'} tracking code is live`,
+          html: `<h2>🎉 You're approved, ${aff.name}!</h2><p>Your tracking code <strong style="font-size:1.2em">${aff.code}</strong> is now earning. Every traveller who registers through your link and pays earns you <strong>${Math.round((parseFloat(Q.getSetting('affiliate_commission_rate')) || 0.30) * 100)}% commission</strong>.</p><p>Share: <code>${link}</code></p><p>Track clicks and commissions in <a href="${appUrl}/dashboard#earnings">your dashboard</a>.</p>` }).catch(() => {});
+      } else {
+        sendEmail({ to: aff.email, subject: `Update on your affiliate application`,
+          html: `<p>Hi ${aff.name},</p><p>After review, we are unable to approve your affiliate application (code ${aff.code}) at this time.</p><p>If you believe this is a mistake or your audience has changed, reply to this email — we reconsider.</p>` }).catch(() => {});
+      }
+    } catch {}
+  }
   res.json({ message: `Affiliate ${status}`, affiliate: Q.getAffiliateById(aff.id) });
 });
 
@@ -594,6 +608,13 @@ router.post('/affiliates/:id/pay', requireAdmin, (req, res) => {
   const ids = (req.body || {}).credit_ids || Q.getAffiliateCredits(aff.id).filter(c => c.status === 'earned').map(c => c.id);
   if (!ids.length) return res.status(400).json({ error: 'No earned credits to pay' });
   Q.markAffiliateCreditsPaid(aff.id, ids);
+  // Alert the marketer that money is on the way (best-effort).
+  try {
+    const paidTotal = ids.reduce((s, id) => s + (Q.getAffiliateCredits(aff.id).find(c => c.id === id)?.commission_usd || 0), 0);
+    const method = aff.payout_method ? aff.payout_method.replace('_', ' ') : 'your payout method';
+    sendEmail({ to: aff.email, subject: `💰 Payout sent — $${paidTotal.toFixed(2)}`,
+      html: `<h2>💰 Payout on the way!</h2><p>We've marked <strong>$${paidTotal.toFixed(2)}</strong> as paid to your ${method} account${aff.payout_account ? ` (<code>${aff.payout_account.slice(0, 12)}…</code>)` : ''}.</p><p>Commissions keep accruing on every new payment from your referrals — keep sharing <code>${(Q.getSetting('app_url') || process.env.APP_URL || '').replace(/\/$/, '')}/r/${aff.code}</code>.</p>` }).catch(() => {});
+  } catch {}
   res.json({ message: `Marked ${ids.length} credit(s) paid — balance now ₦0 / $${Q.affiliateBalanceMinor(aff.id)/100}`, balance: Q.affiliateBalanceMinor(aff.id) / 100 });
 });
 

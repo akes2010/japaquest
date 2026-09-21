@@ -244,6 +244,128 @@ footer{border-top:1px solid var(--line);padding:24px 0;font-size:.78rem;color:va
 </div></body></html>`);
 });
 
+// ── PUBLIC AFFILIATE PAGE ───────────────────────────────────────────────────
+app.get('/affiliate', (req, res) => {
+  const rate = Math.round((parseFloat(Q.getSetting('affiliate_commission_rate')) || 0.30) * 100);
+  const appUrl = (Q.getSetting('app_url') || process.env.APP_URL || '').replace(/\/$/, '');
+  const payNote = `Payouts are sent manually once your balance is due — choose Payoneer, bank transfer, USDT/BTC, OPay or mobile money in your dashboard.`;
+  res.send(`<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Earn ${rate}% — ${esc5(BRAND.NAME)} Affiliate Program</title>
+<meta name="description" content="Share ${esc5(BRAND.NAME)} with your audience and earn ${rate}% commission on every paid plan. Individuals, groups and organisations welcome."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--paper:#F7F3EA;--ink:#0A1428;--accent:#E8613C;--mut:rgba(10,20,40,.62);--line:rgba(10,20,40,.12);--fd:Fraunces,Georgia,serif;--fb:Outfit,Segoe UI,sans-serif}
+*{margin:0;box-sizing:border-box}body{background:var(--paper);color:var(--ink);font-family:var(--fb)}
+a{text-decoration:none;color:inherit}.wrap{max-width:860px;margin:0 auto;padding:0 22px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:9px;font-family:var(--fd);font-weight:700;font-size:1.06rem}
+.logo-mark{width:34px;height:34px;border-radius:10px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:1rem}
+.logo-quest{color:var(--accent)}.top-link{font-size:.82rem;color:var(--mut)}
+.hero{padding:60px 0 34px}.kick{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);border:1px solid var(--line);border-radius:99px;padding:6px 14px;margin-bottom:20px;background:#fff}
+h1{font-family:var(--fd);font-size:clamp(2rem,4.6vw,3rem);line-height:1.12;font-weight:700}h1 em{font-style:italic;color:var(--accent)}
+.sub{margin:16px 0 8px;font-size:1.02rem;color:var(--mut);max-width:620px;line-height:1.7}
+.big-rate{display:inline-flex;align-items:baseline;gap:8px;margin:18px 0 6px;background:var(--ink);color:var(--paper);border-radius:18px;padding:14px 26px}
+.big-rate b{font-family:var(--fd);font-size:2rem}.big-rate span{font-size:.8rem;opacity:.75}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:36px 0 8px}
+.step{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s}
+.step:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(10,20,40,.09)}
+.step .n{font-family:var(--fd);color:var(--accent);font-size:1.1rem;margin-bottom:6px}.step h3{font-size:.95rem;margin-bottom:5px}.step p{font-size:.8rem;color:var(--mut);line-height:1.6}
+.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:30px;margin:38px 0 60px}
+.card h2{font-family:var(--fd);font-size:1.4rem;margin-bottom:6px}
+.card .lead{font-size:.86rem;color:var(--mut);margin-bottom:20px}
+label{display:block;font-size:.74rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);margin:14px 0 5px}
+input,textarea,select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper);font-family:var(--fb);font-size:.92rem;color:var(--ink)}
+input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.btn{display:inline-block;border-radius:99px;padding:13px 30px;font-weight:600;font-size:.92rem;border:none;cursor:pointer;transition:transform .3s cubic-bezier(.22,1,.36,1)}
+.btn-acc{background:var(--accent);color:#fff;margin-top:20px}.btn:hover{transform:translateY(-2px)}
+#ok{display:none;text-align:center;padding:16px 0 4px}
+#ok .code{font-family:var(--fd);font-size:2rem;color:var(--accent);letter-spacing:.06em;margin:10px 0}
+#ok .lnk{word-break:break-all;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:.82rem;margin:12px 0;display:block}
+.share{display:flex;gap:10px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.share a{background:var(--ink);color:var(--paper);border-radius:99px;padding:9px 18px;font-size:.8rem}
+#err{display:none;color:#B3282D;font-size:.84rem;margin-top:14px}
+.pays{font-size:.78rem;color:var(--mut);margin-top:14px;line-height:1.6}
+footer{border-top:1px solid var(--line);padding:24px 0;font-size:.78rem;color:var(--mut)}
+@media(max-width:640px){.card{padding:22px}}
+</style></head><body>
+<div class="wrap">
+<nav><a class="logo" href="/"><div class="logo-mark"><span>λ</span></div>Japa<span class="logo-quest">Quest</span></a><a class="top-link" href="/">← Back to ${esc5(BRAND.NAME)}</a></nav>
+<section class="hero">
+  <div class="kick">🤝 Partner program</div>
+  <h1>Share the journey. <em>Earn ${rate}%.</em></h1>
+  <p class="sub">Refer travellers, study-abroad hopefuls, organisations and communities to ${esc5(BRAND.NAME)}. When anyone registers through your link and pays for a plan, you earn <strong>${rate}% of the payment</strong> — every time they pay.</p>
+  <div class="big-rate"><b>${rate}%</b><span>commission on every paid plan</span></div>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><h3>Apply</h3><p>Individuals, groups and organisations — tell us who you are and where your audience lives.</p></div>
+    <div class="step"><div class="n">2</div><h3>Get your tracking code</h3><p>Approved within 24h. Your code works instantly — commissions flow once approved.</p></div>
+    <div class="step"><div class="n">3</div><h3>Share anywhere</h3><p>WhatsApp, X, Facebook, Telegram, classrooms, church groups — 30-day cookie attribution.</p></div>
+    <div class="step"><div class="n">4</div><h3>Get paid</h3><p>Watch clicks, signups and commissions live in your dashboard. Withdraw when due.</p></div>
+  </div>
+</section>
+<div class="card" id="apply-card">
+  <div id="form-zone">
+    <h2>Apply for your tracking code</h2>
+    <p class="lead">Takes under a minute. Your code is emailed to you immediately.</p>
+    <form id="af-form">
+      <label for="af-name">Your name or organisation</label>
+      <input id="af-name" required maxlength="120" placeholder="e.g. Ada Obi or Lagos Travel Club"/>
+      <label for="af-email">Email</label>
+      <input id="af-email" type="email" required maxlength="160" placeholder="you@example.com"/>
+      <label for="af-org">Organisation (optional — for groups)</label>
+      <input id="af-org" maxlength="160" placeholder="e.g. Campus Fellowship Media Team"/>
+      <label for="af-aud">Audience / channels (optional)</label>
+      <textarea id="af-aud" rows="2" maxlength="500" placeholder="e.g. 12k WhatsApp travel group, TikTok @handle, university mailing list"></textarea>
+      <button class="btn btn-acc" type="submit">Get my tracking code →</button>
+      <div id="err"></div>
+    </form>
+  </div>
+  <div id="ok">
+    <h2>You're in! 🎉</h2>
+    <p class="lead">Your tracking code — we've also emailed it to you:</p>
+    <div class="code" id="ok-code"></div>
+    <span class="lnk" id="ok-link"></span>
+    <div class="share">
+      <a id="ok-wa" target="_blank" rel="noopener">WhatsApp</a>
+      <a id="ok-x" target="_blank" rel="noopener">X / Twitter</a>
+      <a id="ok-fb" target="_blank" rel="noopener">Facebook</a>
+      <a id="ok-dash" href="/dashboard#earnings">Dashboard →</a>
+    </div>
+  </div>
+  <div class="pays">💸 ${esc5(payNote)}<br/>Questions? <a href="mailto:support@japaplus.app" style="color:var(--accent)">support@japaplus.app</a></div>
+</div>
+<footer>© 2026 ${esc5(BRAND.NAME)} — ${esc5(BRAND.TAGLINE)} Fraud or self-referral abuse voids commissions.</footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+document.getElementById('af-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=e.target.querySelector('button');btn.disabled=true;btn.textContent='Submitting…';
+  try{
+    const r=await fetch('/api/affiliate/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('af-name').value.trim(),email:$('af-email').value.trim(),org:$('af-org').value.trim(),audience:$('af-aud').value.trim()})});
+    const d=await r.json();
+    if(r.status===201){
+      const link=(${JSON.stringify(appUrl)}||location.origin)+'/r/'+d.code;
+      $('ok-code').textContent=d.code;$('ok-link').textContent=link;
+      const msg=encodeURIComponent('Plan your visa, studies, work or relocation abroad with ${esc5(BRAND.NAME)} — start free: '+link);
+      $('ok-wa').href='https://wa.me/?text='+msg;
+      $('ok-x').href='https://twitter.com/intent/tweet?text='+encodeURIComponent('Plan your journey abroad with ${esc5(BRAND.NAME)} — start free:')+'&url='+encodeURIComponent(link);
+      $('ok-fb').href='https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(link);
+      $('form-zone').style.display='none';$('ok').style.display='block';
+    }else{
+      $('err').style.display='block';$('err').textContent=d.error||('Application failed ('+r.status+')');
+      btn.disabled=false;btn.textContent='Get my tracking code →';
+    }
+  }catch(err){
+    $('err').style.display='block';$('err').textContent='Network error — please try again.';
+    btn.disabled=false;btn.textContent='Get my tracking code →';
+  }
+});
+</script>
+</body></html>`);
+});
+
 // ── SPA ROUTING ───────────────────────────────────────────────────────────────
 app.get('/admin',       (_req,res) => res.sendFile(path.join(__dirname,'public','admin.html')));
 app.get('/admin-login', (_req,res) => res.sendFile(path.join(__dirname,'public','admin-login.html')));
