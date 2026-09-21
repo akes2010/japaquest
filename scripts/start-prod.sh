@@ -36,6 +36,12 @@ fi
 if ! grep -qE '^(OPENROUTER|GROQ|GEMINI|OPENAI|ANTHROPIC|DEEPSEEK|TOGETHER|HUGGINGFACE)_API_KEY=' .env 2>/dev/null; then
   echo "⚠️  No AI provider key found in .env — AI chat will be unavailable."
 fi
+if ! grep -qE '^APP_URL=https?://' .env 2>/dev/null; then
+  echo "⚠️  APP_URL not set — affiliate links, posters, QR codes and payment callbacks will use localhost. Set APP_URL=https://yourdomain.com"
+fi
+if ! grep -qE '^(PAYSTACK|FLUTTERWAVE|STRIPE|OPAY|PAYONEER)_SECRET' .env 2>/dev/null; then
+  echo "ℹ️  No payment keys in .env — configure gateways in Admin → Payment Gateways (or add PAYSTACK_SECRET_KEY etc. here)."
+fi
 
 # 3. data/ directory writable?
 mkdir -p data

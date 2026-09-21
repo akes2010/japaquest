@@ -29,6 +29,39 @@ function commissionRate() {
   return Number.isFinite(v) && v >= 0 && v <= 1 ? v : 0.30;
 }
 
+// ── Tiered commissions ──────────────────────────────────────────────────────
+// Setting 'affiliate_tiers' is JSON: [{conversions:10,rate:0.35},{conversions:25,rate:0.40}]
+// — an affiliate with ≥10 settled conversions earns 35%, ≥25 earns 40%.
+// Base rate applies below the first threshold. Monotonic, capped at 0.9.
+function tierConfig() {
+  try {
+    const raw = JSON.parse(Q.getSetting('affiliate_tiers') || '[]');
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map(t => ({ conversions: Math.max(1, parseInt(t.conversions, 10) || 0), rate: parseFloat(t.rate) }))
+      .filter(t => Number.isFinite(t.rate) && t.rate >= 0 && t.rate <= 0.9)
+      .sort((a, b) => a.conversions - b.conversions);
+  } catch { return []; }
+}
+function tieredRate(aff) {
+  const base = commissionRate();
+  const tiers = tierConfig();
+  let rate = base;
+  for (const t of tiers) if ((aff.conversions || 0) >= t.conversions) rate = Math.max(rate, t.rate);
+  return Math.min(rate, 0.9);
+}
+function tierInfo(aff) {
+  const base = commissionRate();
+  const tiers = tierConfig();
+  const conv = aff.conversions || 0;
+  let current = base, next = null;
+  for (const t of tiers) {
+    if (conv >= t.conversions) current = Math.max(current, t.rate);
+    else if (!next || t.conversions < next.conversions) next = { conversions: t.conversions, rate: t.rate };
+  }
+  return { base, current, next, conversions: conv };
+}
+
 /** Settle a paid payment: upgrade plan + credit the affiliate. */
 function settlePayment(payment) {
   if (payment.status !== 'pending') return;
@@ -52,16 +85,18 @@ function settlePayment(payment) {
       }
     }
     if (aff && aff.status === 'approved' && !emailSelf && !buyerOther) {
-      const commission = Math.round(payment.amount_usd * commissionRate() * 100) / 100;
+      const rate = tieredRate(aff);
+      const commission = Math.round(payment.amount_usd * rate * 100) / 100;
       if (commission > 0) {
         Q.addAffiliateCredit(aff.id, payment.user_id, payment.id, payment.amount_usd, commission, `Plan payment ${payment.reference}`);
         // Alert the marketer — best-effort, never blocks settlement.
         try {
           const link = `${appUrl()}/r/${aff.code}`;
+          const tierLine = rate > commissionRate() ? `<p>🏆 <strong>Tier bonus!</strong> You earned <strong>${Math.round(rate * 100)}%</strong> on this payment (base is ${Math.round(commissionRate() * 100)}%).</p>` : '';
           sendEmail({
             to: aff.email,
             subject: `💸 Commission earned — $${commission.toFixed(2)}`,
-            html: `<h2>💰 You just earned $${commission.toFixed(2)}!</h2><p>A traveller who signed up through your link <strong>${aff.code}</strong> paid for a plan (<strong>$${Number(payment.amount_usd).toFixed(2)}</strong>, ref ${payment.reference}) — your commission is credited.</p><p><strong>Lifetime earned:</strong> $${(Q.getAffiliateById(aff.id).earned_minor / 100).toFixed(2)} · <strong>Available:</strong> $${(Q.affiliateBalanceMinor(aff.id) / 100).toFixed(2)}</p><p>Keep sharing: <code>${link}</code></p>`,
+            html: `<h2>💰 You just earned $${commission.toFixed(2)}!</h2>${tierLine}<p>A traveller who signed up through your link <strong>${aff.code}</strong> paid for a plan (<strong>$${Number(payment.amount_usd).toFixed(2)}</strong>, ref ${payment.reference}) — your commission is credited.</p><p><strong>Lifetime earned:</strong> $${(Q.getAffiliateById(aff.id).earned_minor / 100).toFixed(2)} · <strong>Available:</strong> $${(Q.affiliateBalanceMinor(aff.id) / 100).toFixed(2)}</p><p>Keep sharing: <code>${link}</code></p>`,
           }).catch(() => {});
         } catch {}
         try {
@@ -164,3 +199,6 @@ router.get('/mine', requireAuth, (req, res) => {
 module.exports = router;
 module.exports.settlePayment = settlePayment;
 module.exports.commissionRate = commissionRate;
+module.exports.tierConfig = tierConfig;
+module.exports.tieredRate = tieredRate;
+module.exports.tierInfo = tierInfo;

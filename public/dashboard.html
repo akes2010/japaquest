@@ -1671,12 +1671,22 @@ async function loadEarnings(){
       return;
     }
     const cur='$';
+    // Tagged links: /r/CODE?s=wa records the click source; in-site links carry
+    // ?ref=CODE&s=tag so they attribute AND track the channel that converted.
+    const base=d.link.replace('/r/'+d.code,'');
+    const mkR=(tag)=>d.link+'?s='+tag;
+    const mkS=(tag,u)=>u+(u.includes('?')?'&':'?')+'ref='+encodeURIComponent(d.code)+'&s='+tag;
     const links=[
-      ['Referral link',d.link],['Landing page',d.link.replace('/r/'+d.code,'/')],
-      ['Create account',d.link.replace('/r/'+d.code,'/register')],
-      ['JapaQuest Visa',d.link.replace('/r/'+d.code,'/suite/visa')],
-      ['JapaQuest Study',d.link.replace('/r/'+d.code,'/suite/study')],
-      ['JapaQuest Work',d.link.replace('/r/'+d.code,'/suite/work')],
+      ['Referral link · auto',d.link],
+      ['WhatsApp',mkR('wa')],
+      ['X / Twitter',mkR('x')],
+      ['Facebook',mkR('fb')],
+      ['Telegram',mkR('tg')],
+      ['Landing page',mkS('bio',base+'/')],
+      ['Create account',mkS('bio',base+'/register')],
+      ['JapaQuest Visa',mkS('visa',base+'/suite/visa')],
+      ['JapaQuest Study',mkS('study',base+'/suite/study')],
+      ['JapaQuest Work',mkS('work',base+'/suite/work')],
     ];
     const shareTxt=encodeURIComponent('Plan your visa, studies, work or relocation abroad with JapaQuest AI — start free:');
     const linkRows=links.map(([n,u])=>`
@@ -1700,6 +1710,7 @@ async function loadEarnings(){
           <span style="font-size:.76rem;color:var(--t4)">Your tracking code</span>
           <code style="background:var(--bg);padding:3px 12px;border-radius:8px;font-family:var(--fd);font-size:1rem;color:var(--o300)">${esc(d.code)}</code>
           ${d.org?`<span style="font-size:.72rem;color:var(--t4)">🏢 ${esc(d.org)}</span>`:''}
+          ${d.tier?`<span title="Your current commission rate" style="font-size:.7rem;padding:2px 10px;border-radius:99px;background:rgba(232,97,60,.15);color:var(--o300)">🏆 ${Math.round((d.tier.current||0.3)*100)}% rate</span>${d.tier.next?`<span style="font-size:.68rem;color:var(--t4)">${d.tier.next.conversions-(d.tier.conversions||0)} more paid referrals → ${Math.round(d.tier.next.rate*100)}%</span>`:''}`:''}
           <span style="font-size:.68rem;padding:2px 10px;border-radius:99px;background:${d.status==='approved'?'rgba(14,123,79,.15)':'rgba(180,106,31,.15)'};color:${d.status==='approved'?'#7fbf95':'#e0a45e'}">${d.status}${d.status==='pending'?' — links already track, commissions start on approval':''}</span>
         </div>
         ${d.status==='approved'?'':'<div style="font-size:.74rem;color:var(--t4);margin-bottom:8px">⏳ Your application is being reviewed. Your links already work — share away.</div>'}

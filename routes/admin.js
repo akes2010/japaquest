@@ -669,7 +669,9 @@ router.get('/payment-gateways', requireAdmin, (_req, res) => {
       hasValue: !!require('../payments/base').cfg(p.key, f, (p.envMap || {})[f] || ''),
     })),
   }));
-  res.json({ providers, commissionRate: parseFloat(Q.getSetting('affiliate_commission_rate')) || 0.30 });
+  let tiers = [];
+  try { tiers = JSON.parse(Q.getSetting('affiliate_tiers') || '[]'); } catch {}
+  res.json({ providers, commissionRate: parseFloat(Q.getSetting('affiliate_commission_rate')) || 0.30, tiers });
 });
 
 router.post('/payment-gateways', requireAdmin, (req, res) => {
@@ -686,6 +688,13 @@ router.post('/payment-gateways', requireAdmin, (req, res) => {
   if (commission_rate !== undefined) {
     const r = parseFloat(commission_rate);
     if (Number.isFinite(r) && r >= 0 && r <= 1) Q.setSetting('affiliate_commission_rate', String(r));
+  }
+  if (Array.isArray((req.body || {}).tiers)) {
+    const clean = req.body.tiers
+      .map(t => ({ conversions: Math.max(1, parseInt(t.conversions, 10) || 0), rate: parseFloat(t.rate) }))
+      .filter(t => Number.isFinite(t.rate) && t.rate >= 0 && t.rate <= 0.9 && t.conversions >= 1)
+      .sort((a, b) => a.conversions - b.conversions);
+    Q.setSetting('affiliate_tiers', JSON.stringify(clean));
   }
   res.json({ message: `${p.displayName} configuration saved` });
 });

@@ -12,6 +12,7 @@ const router = require('express').Router();
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { Q } = require('../db');
 const { sendEmail } = require('../utils/mailer');
+const { tierInfo } = require('./payments');
 
 const PAYOUT_METHODS = ['payoneer', 'bank_transfer', 'crypto_usdt', 'crypto_btc', 'opay', 'mobile_money'];
 
@@ -55,6 +56,7 @@ router.get('/me', optionalAuth, requireAuth, (req, res) => {
   res.json({
     enrolled: true,
     id: row.id, code: row.code, status: row.status, org: row.org,
+    tier: tierInfo(row),
     clicks: row.clicks, signups: row.signups, conversions: row.conversions,
     earned: row.earned_minor / 100, paid: row.paid_minor / 100,
     balance: balanceMinor / 100,

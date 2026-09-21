@@ -111,6 +111,9 @@ Every 10 minutes it runs both schedulers (social posting scan + journey reminder
 | AI replies fail | Add an AI key to `.env` (Admin → AI Engine shows provider status) |
 | DB resets after restart | `DB_PATH` in `.env` must point to a persistent path like `./data/jagaguru.db` inside the app root — and never delete `data/` |
 | "Too many requests" for everyone | The app must see real client IPs behind the proxy — `app.set('trust proxy', 1)` is already set in `server.js`; if you put Cloudflare in front, raise it to `trust proxy, 2` |
+| Payment webhook 401s | The gateway secret in **Admin → Payment Gateways** must exactly match the provider dashboard (Paystack signs with your secret key; Flutterwave/OPay use their webhook hash). Webhook URL per provider: `https://yourdomain.com/api/payments/webhooks/<provider>` |
+| Crypto payments not appearing | Crypto is **manual**: traveller submits the tx hash, you confirm in **Admin → Payment Gateways → Manual payment confirmations** |
+| Affiliate commissions not crediting | The buyer must register through the affiliate's link (30-day cookie) and the affiliate must be **approved**; self-referrals and buyers already attributed to another affiliate are refused by design — check the ⚠️ flag in Admin → Affiliates |
 
 ---
 
@@ -126,3 +129,26 @@ Every 10 minutes it runs both schedulers (social posting scan + journey reminder
 - [ ] SMTP configured + 📤 Test email received
 - [ ] cPanel cron added for `/api/cron/tick`
 - [ ] Register a test account, run the Journey wizard end-to-end
+
+---
+
+## 10. Payments & affiliate go-live
+
+1. **Gateways** — Admin → Payment Gateways: paste keys for what you actually use
+   (Paystack is the usual first choice for NG; Stripe for international cards).
+   Secrets fall back to `.env` if left empty here. Commission rate: base `0.30` = 30%.
+2. **Performance tiers (optional)** — same page, add rows like `≥10 conversions → 0.35`.
+   An affiliate with enough *settled* conversions automatically earns the higher rate.
+3. **Webhooks** — in each provider's dashboard set the webhook URL to
+   `https://yourdomain.com/api/payments/webhooks/paystack` (or `flutterwave`, `stripe`,
+   `opay`). Without this, card payments won't auto-settle — you'd confirm them manually.
+4. **Crypto** — paste receiving addresses (USDT TRC-20 etc.). Travellers get the address +
+   submit a tx hash; you confirm in **Manual payment confirmations** after checking the chain.
+5. **Affiliate program** — link your partners to `https://yourdomain.com/affiliate`.
+   They apply, you approve in **Admin → Affiliates**, they share `/r/CODE` links
+   (WhatsApp/X/Facebook buttons are built in) and track conversions in their dashboard.
+   Payouts: send money via their stated method, then click **Pay** to mark credits paid
+   (they get an email).
+6. **Test one real loop** — register through an affiliate link, pay ₦100 via Paystack test
+   keys, confirm the plan upgraded, the commission credited, and both emails arrived.
+

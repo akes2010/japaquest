@@ -685,8 +685,11 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
       <div style="font-size:.78rem;color:var(--t4)">Collect plan payments and settle affiliate payouts. Keys are stored server-side and shown masked. Values fall back to <code>.env</code> if left empty here.</div>
     </div>
     <div class="s-card" style="margin-bottom:14px"><div class="s-title">🤝 Affiliate Commission</div>
-      <div class="form-group" style="max-width:280px"><label class="form-label">Commission rate (0–1, e.g. 0.30 = 30%)</label><input class="input" id="aff-commission-rate" type="number" step="0.01" min="0" max="1"/></div>
-      <button class="btn btn-primary btn-sm" onclick="saveCommissionRate()">💾 Save Rate</button>
+      <div class="form-group" style="max-width:280px"><label class="form-label">Base commission rate (0–1, e.g. 0.30 = 30%)</label><input class="input" id="aff-commission-rate" type="number" step="0.01" min="0" max="1"/></div>
+      <div style="margin:10px 0 4px;font-size:.74rem;color:var(--t4)">🏆 Performance tiers — affiliates with enough settled conversions automatically earn a higher rate (optional, highest matching tier wins):</div>
+      <div id="tier-rows"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addTierRow()" style="margin-top:6px">➕ Add tier</button>
+      <button class="btn btn-primary btn-sm" onclick="saveCommissionRate()" style="margin-left:8px">💾 Save Rate &amp; Tiers</button>
     </div>
     <div id="gateways-list"><div style="color:var(--t4);font-size:.8rem">Loading gateways…</div></div>
   </div>
@@ -1542,6 +1545,7 @@ async function loadGateways(){
     const r=await apiFetch('/api/admin/payment-gateways');const d=await r.json();
     if(!r.ok)return showToast(d.error||'Failed to load gateways','error');
     const cr=document.getElementById('aff-commission-rate');if(cr)cr.value=d.commissionRate??0.30;
+    renderTierRows(d.tiers||[]);
     document.getElementById('gateways-list').innerHTML=(d.providers||[]).map(p=>{
       const fields=(p.fields||[]).map(f=>`
         <div class="form-group" style="margin:8px 0">
@@ -1573,12 +1577,42 @@ async function saveGateway(key){
   const d=await r.json();
   if(r.ok)showToast(d.message||'Saved ✅');else showToast(d.error||'Save failed','error');
 }
+function renderTierRows(tiers){
+  const el=document.getElementById('tier-rows');if(!el)return;
+  el.innerHTML=(tiers||[]).map((t,i)=>`
+    <div style="display:flex;gap:8px;align-items:center;margin:6px 0">
+      <span style="font-size:.76rem;color:var(--t4)">≥</span>
+      <input class="input tier-conv" data-i="${i}" type="number" min="1" step="1" value="${t.conversions}" style="width:90px" title="Settled conversions needed"/>
+      <span style="font-size:.76rem;color:var(--t4)">conversions → rate</span>
+      <input class="input tier-rate" data-i="${i}" type="number" min="0" max="0.9" step="0.01" value="${t.rate}" style="width:90px" title="Commission rate (0–0.9)"/>
+      <button class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>
+    </div>`).join('')||'<div style="font-size:.72rem;opacity:.5;margin:4px 0">No tiers — everyone earns the base rate.</div>';
+}
+function addTierRow(){
+  const el=document.getElementById('tier-rows');
+  const i=el.querySelectorAll('.tier-conv').length;
+  if(el.querySelector('div[style*="opacity"]'))el.innerHTML='';
+  const div=document.createElement('div');
+  div.style.cssText='display:flex;gap:8px;align-items:center;margin:6px 0';
+  div.innerHTML=`<span style="font-size:.76rem;color:var(--t4)">≥</span>
+    <input class="input tier-conv" type="number" min="1" step="1" value="${(i+1)*10}" style="width:90px" title="Settled conversions needed"/>
+    <span style="font-size:.76rem;color:var(--t4)">conversions → rate</span>
+    <input class="input tier-rate" type="number" min="0" max="0.9" step="0.01" value="${Math.min(0.9,0.30+(i+1)*0.05)}" style="width:90px" title="Commission rate (0–0.9)"/>
+    <button class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+  el.appendChild(div);
+}
 async function saveCommissionRate(){
   const v=parseFloat(document.getElementById('aff-commission-rate').value);
   if(!(v>=0&&v<=1))return showToast('Rate must be between 0 and 1 (e.g. 0.30)','error');
-  const r=await apiFetch('/api/admin/payment-gateways',{method:'POST',body:JSON.stringify({provider:'paystack',commission_rate:v})});
+  const tiers=[];
+  document.querySelectorAll('#tier-rows > div').forEach(row=>{
+    const c=parseInt(row.querySelector('.tier-conv')?.value,10);
+    const r=parseFloat(row.querySelector('.tier-rate')?.value);
+    if(c>=1&&Number.isFinite(r)&&r>=0&&r<=0.9)tiers.push({conversions:c,rate:r});
+  });
+  const r=await apiFetch('/api/admin/payment-gateways',{method:'POST',body:JSON.stringify({provider:'paystack',commission_rate:v,tiers})});
   const d=await r.json();
-  if(r.ok)showToast('Commission rate saved ✅');else showToast(d.error||'Save failed','error');
+  if(r.ok)showToast('Commission rate & tiers saved ✅');else showToast(d.error||'Save failed','error');
 }
 async function loadPendingPays(){
   try{

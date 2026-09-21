@@ -263,12 +263,14 @@ footer{border-top:1px solid var(--line);padding:24px 0;font-size:.78rem;color:va
 // ── PUBLIC AFFILIATE PAGE ───────────────────────────────────────────────────
 app.get('/affiliate', (req, res) => {
   const rate = Math.round((parseFloat(Q.getSetting('affiliate_commission_rate')) || 0.30) * 100);
+  let maxRate = rate;
+  try { (JSON.parse(Q.getSetting('affiliate_tiers') || '[]')).forEach(t => { const r = Math.round(t.rate * 100); if (r > maxRate) maxRate = r; }); } catch {}
   const appUrl = (Q.getSetting('app_url') || process.env.APP_URL || '').replace(/\/$/, '');
   const payNote = `Payouts are sent manually once your balance is due — choose Payoneer, bank transfer, USDT/BTC, OPay or mobile money in your dashboard.`;
   res.send(`<!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Earn ${rate}% — ${esc5(BRAND.NAME)} Affiliate Program</title>
-<meta name="description" content="Share ${esc5(BRAND.NAME)} with your audience and earn ${rate}% commission on every paid plan. Individuals, groups and organisations welcome."/>
+<title>Earn up to ${maxRate}% — ${esc5(BRAND.NAME)} Affiliate Program</title>
+<meta name="description" content="Share ${esc5(BRAND.NAME)} with your audience and earn ${rate}%${maxRate > rate ? ' (up to ' + maxRate + '% with performance tiers)' : ''} commission on every paid plan. Individuals, groups and organisations welcome."/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -310,9 +312,9 @@ footer{border-top:1px solid var(--line);padding:24px 0;font-size:.78rem;color:va
 <nav><a class="logo" href="/"><div class="logo-mark"><span>λ</span></div>Japa<span class="logo-quest">Quest</span></a><a class="top-link" href="/">← Back to ${esc5(BRAND.NAME)}</a></nav>
 <section class="hero">
   <div class="kick">🤝 Partner program</div>
-  <h1>Share the journey. <em>Earn ${rate}%.</em></h1>
-  <p class="sub">Refer travellers, study-abroad hopefuls, organisations and communities to ${esc5(BRAND.NAME)}. When anyone registers through your link and pays for a plan, you earn <strong>${rate}% of the payment</strong> — every time they pay.</p>
-  <div class="big-rate"><b>${rate}%</b><span>commission on every paid plan</span></div>
+  <h1>Share the journey. <em>Earn up to ${maxRate}%.</em></h1>
+  <p class="sub">Refer travellers, study-abroad hopefuls, organisations and communities to ${esc5(BRAND.NAME)}. When anyone registers through your link and pays for a plan, you earn <strong>${rate}% of the payment</strong>${maxRate > rate ? ` — growing to <strong>${maxRate}%</strong> as your referrals pay` : ''} — every time they pay.</p>
+  <div class="big-rate"><b>${maxRate}%</b><span>commission on every paid plan${maxRate > rate ? ' (performance tiers)' : ''}</span></div>
   <div class="steps">
     <div class="step"><div class="n">1</div><h3>Apply</h3><p>Individuals, groups and organisations — tell us who you are and where your audience lives.</p></div>
     <div class="step"><div class="n">2</div><h3>Get your tracking code</h3><p>Approved within 24h. Your code works instantly — commissions flow once approved.</p></div>
@@ -362,12 +364,13 @@ document.getElementById('af-form').addEventListener('submit',async e=>{
     const r=await fetch('/api/affiliate/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('af-name').value.trim(),email:$('af-email').value.trim(),org:$('af-org').value.trim(),audience:$('af-aud').value.trim()})});
     const d=await r.json();
     if(r.status===201){
-      const link=(${JSON.stringify(appUrl)}||location.origin)+'/r/'+d.code;
-      $('ok-code').textContent=d.code;$('ok-link').textContent=link;
-      const msg=encodeURIComponent('Plan your visa, studies, work or relocation abroad with ${esc5(BRAND.NAME)} — start free: '+link);
-      $('ok-wa').href='https://wa.me/?text='+msg;
-      $('ok-x').href='https://twitter.com/intent/tweet?text='+encodeURIComponent('Plan your journey abroad with ${esc5(BRAND.NAME)} — start free:')+'&url='+encodeURIComponent(link);
-      $('ok-fb').href='https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(link);
+      const base=(${JSON.stringify(appUrl)}||location.origin)+'/r/'+d.code;
+      const tagged=t=>base+'?s='+t; // source-tagged so analytics show which channel converts
+      $('ok-code').textContent=d.code;$('ok-link').textContent=base;
+      const brand='${esc5(BRAND.NAME)}';
+      $('ok-wa').href='https://wa.me/?text='+encodeURIComponent('Plan your visa, studies, work or relocation abroad with '+brand+' — start free: '+tagged('wa'));
+      $('ok-x').href='https://twitter.com/intent/tweet?text='+encodeURIComponent('Plan your journey abroad with '+brand+' — start free:')+'&url='+encodeURIComponent(tagged('x'));
+      $('ok-fb').href='https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(tagged('fb'));
       $('form-zone').style.display='none';$('ok').style.display='block';
     }else{
       $('err').style.display='block';$('err').textContent=d.error||('Application failed ('+r.status+')');
