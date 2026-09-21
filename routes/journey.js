@@ -310,14 +310,15 @@ router.get('/cases', requireAuth, (req, res) => {
 
 // Reminder email preference (profile)
 router.get('/reminders/pref', requireAuth, (req, res) => {
-  res.json({ email_opt_out: !!req.user.email_opt_out, digest_opt_out: !!req.user.digest_opt_out, admin_enabled: Q.getSetting('notif_email_reminders') !== '0', digest_enabled: Q.getSetting('notif_email_digest') === '1' });
+  res.json({ email_opt_out: !!req.user.email_opt_out, digest_opt_out: !!req.user.digest_opt_out, concierge_emails: Number(req.user.concierge_emails ?? 1) !== 0, admin_enabled: Q.getSetting('notif_email_reminders') !== '0', digest_enabled: Q.getSetting('notif_email_digest') === '1' });
 });
 
 router.post('/reminders/pref', requireAuth, (req, res) => {
-  const { email_opt_out, digest_opt_out } = req.body || {};
+  const { email_opt_out, digest_opt_out, concierge_emails } = req.body || {};
   if (email_opt_out !== undefined) Q.setEmailOptOut(req.user.id, !!email_opt_out);
   if (digest_opt_out !== undefined) Q.setDigestOptOut(req.user.id, !!digest_opt_out);
-  res.json({ message: 'Preference saved', email_opt_out: email_opt_out !== undefined ? !!email_opt_out : !!req.user.email_opt_out, digest_opt_out: digest_opt_out !== undefined ? !!digest_opt_out : !!req.user.digest_opt_out });
+  if (concierge_emails !== undefined) Q.setConciergeEmailsPref(req.user.id, !!concierge_emails);
+  res.json({ message: 'Preference saved', email_opt_out: email_opt_out !== undefined ? !!email_opt_out : !!req.user.email_opt_out, digest_opt_out: digest_opt_out !== undefined ? !!digest_opt_out : !!req.user.digest_opt_out, concierge_emails: concierge_emails !== undefined ? !!concierge_emails : Number(req.user.concierge_emails ?? 1) !== 0 });
 });
 
 router.post('/cases/:id/report', requireAuth, (req, res) => {

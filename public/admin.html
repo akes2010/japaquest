@@ -632,6 +632,8 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
         <div class="tgl-row"><div><div class="tgl-lbl">System Notifications (in-app)</div></div><label class="toggle"><input type="checkbox" id="notif_system_alerts"/><span class="toggle-sl"></span></label></div>
         <div class="tgl-row"><div><div class="tgl-lbl">Journey Reminder Emails</div><div class="tgl-sub">Email travellers about due/overdue tasks, departures (T-30/14/7/1) and expiring documents. Needs working SMTP. Travellers can opt out in their profile.</div></div><label class="toggle"><input type="checkbox" id="notif_email_reminders"/><span class="toggle-sl"></span></label></div>
         <div class="tgl-row"><div><div class="tgl-lbl">Weekly Digest Email</div><div class="tgl-sub">Every Monday: readiness per trip, next deadlines, open cases and departure countdowns. Needs working SMTP. Travellers can opt out separately in their profile.</div></div><label class="toggle"><input type="checkbox" id="notif_email_digest"/><span class="toggle-sl"></span></label></div>
+        <div class="tgl-row"><div><div class="tgl-lbl">Concierge Emails — Travellers</div><div class="tgl-sub">Ticket confirmation, concierge replies and closure notices to the traveller. Respects each traveller's own concierge-email preference.</div></div><label class="toggle"><input type="checkbox" id="notif_email_concierge_user"/><span class="toggle-sl"></span></label></div>
+        <div class="tgl-row"><div><div class="tgl-lbl">Concierge Emails — Concierge Inbox</div><div class="tgl-sub">Alert the concierge inbox when a new request arrives or a traveller replies, so nothing waits unseen in the app.</div></div><label class="toggle"><input type="checkbox" id="notif_email_concierge_admin"/><span class="toggle-sl"></span></label></div>
       </div>
       <button class="btn btn-primary" onclick="saveNotifs()">💾 Save Settings</button>
     </div>
@@ -661,6 +663,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
           <div class="form-group"><label class="form-label">App Name</label><input class="input" id="app_name" placeholder="JapaQuest"/></div>
           <div class="form-group"><label class="form-label">Tagline</label><input class="input" id="app_tagline" placeholder="African Visa Intelligence Platform"/></div>
           <div class="form-group"><label class="form-label">Support Email</label><input class="input" id="support_email" type="email"/></div>
+          <div class="form-group"><label class="form-label">Concierge Inbox (email alerts for new tickets &amp; replies)</label><input class="input" id="concierge_notify_email" type="email" placeholder="Same as support email if left empty"/></div>
           <div class="form-group" style="margin-bottom:0"><label class="form-label">App URL</label><input class="input" id="app_url" placeholder="https://yourdomain.com"/></div>
         </div>
         <div class="s-card"><div class="s-title">🔒 Access Control</div>
@@ -881,6 +884,7 @@ window.addEventListener('load',swFromHash);
 
 /* ── CONCIERGE QUEUE ── */
 const CQ_META={open:{l:'Open',c:'#B3282D'},answered:{l:'Answered',c:'#0E7B4F'},closed:{l:'Closed',c:'rgba(10,20,40,.45)'}};
+const CQ_SLA={urgent:{l:'Urgent',h:2,c:'#C0392B'},high:{l:'High',h:8,c:'#D35400'},normal:{l:'Normal',h:24,c:'#8A6420'},low:{l:'Low',h:72,c:'rgba(10,20,40,.45)'}};
 async function loadConciergeQ(status){
   try{
     const r=await apiFetch('/api/admin/concierge/tickets'+(status?'?status='+status:''));const d=await r.json();if(!r.ok)throw new Error(d.error||'Failed');
@@ -889,28 +893,44 @@ async function loadConciergeQ(status){
       <div class="stat-card"><div class="sc-lbl">Open</div><div class="sc-val">${s.open||0}</div><div class="sc-sub">awaiting first reply</div></div>
       <div class="stat-card"><div class="sc-lbl">Answered</div><div class="sc-val">${s.answered||0}</div><div class="sc-sub">waiting on traveller</div></div>
       <div class="stat-card"><div class="sc-lbl">Closed</div><div class="sc-val">${s.closed||0}</div><div class="sc-sub">resolved</div></div>
-      <div class="stat-card"><div class="sc-lbl">Categories</div><div class="sc-val">${(s.byCategory||[]).length}</div><div class="sc-sub">${(s.byCategory||[]).slice(0,2).map(c=>esc(c.category)).join(', ')||'—'}</div></div>`;
+      <div class="stat-card"><div class="sc-lbl">SLA breached</div><div class="sc-val" style="color:${(s.breachedCount||0)>0?'#C0392B':'inherit'}">${s.breachedCount||0}</div><div class="sc-sub">${(s.avgFirstResponseMins!=null&&s.avgFirstResponseMins!==0)?'avg first reply '+(s.avgFirstResponseMins>=60?(s.avgFirstResponseMins/60).toFixed(1)+'h':Math.round(s.avgFirstResponseMins)+'m'):'no responses yet'}</div></div>`;
     const list=d.tickets||[];
     document.getElementById('cq-list').innerHTML=list.length?list.map(t=>{
       const m=CQ_META[t.status]||CQ_META.open;
-      return `<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="openCQ(${t.id})">
+      const sla=t.sla||{};
+      const badges=`<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+        <span class="badge" style="background:${m.c}18;color:${m.c};border:1px solid ${m.c}40">${m.l}</span>
+        ${sla.key&&sla.key!=='ok'?`<span title="First response target: ${sla.hours}h" style="font-size:.62rem;font-weight:700;color:${sla.color};border:1px solid ${sla.color}40;background:${sla.color}12;border-radius:20px;padding:2px 8px">⏱ ${sla.label}</span>`:(sla.key==='ok'?`<span style="font-size:.62rem;font-weight:700;color:#4a7c59;border:1px solid #4a7c5940;background:#4a7c5912;border-radius:20px;padding:2px 8px">✓ ${sla.label}</span>`:'')}
+      </div>`;
+      return `<div class="card" style="margin-bottom:10px;cursor:pointer;border-left:3px solid ${sla.key==='breached'?'#C0392B':(sla.key==='due-soon'?'#D35400':'transparent')}" onclick="openCQ(${t.id})">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-          <div style="flex:1"><b style="font-size:.92rem">${esc(t.subject)}</b>
+          <div style="flex:1"><b style="font-size:.92rem">${t.priority&&t.priority!=='normal'?`<span style="color:${(CQ_SLA[t.priority]||{}).c||'inherit'};font-size:.7rem;letter-spacing:.5px">[${(CQ_SLA[t.priority]||{}).l||t.priority}]</span> `:''}${esc(t.subject)}</b>
           <div style="font-size:.72rem;color:var(--t4);margin-top:3px">#${t.id} · ${esc(t.user_name||t.user_email||'—')} · ${esc(t.category)} · ${String(t.updated_at||t.created_at).slice(0,10)}</div>
           ${t.last_reply?`<div style="font-size:.76rem;color:var(--t3);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:520px">${esc(t.last_reply).slice(0,110)}</div>`:''}</div>
-          <span class="badge" style="background:${m.c}18;color:${m.c};border:1px solid ${m.c}40">${m.l}</span>
+          ${badges}
         </div></div>`;}).join(''):'<div class="card" style="text-align:center;padding:26px;color:var(--t4)">No tickets in this view</div>';
   }catch(e){showToast('Could not load queue: '+e.message);}
 }
 async function openCQ(id){
   const r=await apiFetch('/api/admin/concierge/tickets/'+id);const d=await r.json();if(!r.ok)return showToast(d.error||'Failed');
   const t=d.ticket;const m=CQ_META[t.status]||CQ_META.open;
+  const sla=t.sla||{};
   openM('cq-modal');
+  const slaLine=t.first_response_at
+    ? `<span style="font-size:.7rem;color:#4a7c59">✓ first response ${String(t.first_response_at).slice(0,16).replace('T',' ')} · target ${((CQ_SLA[t.priority]||{}).h||24)}h</span>`
+    : `<span style="font-size:.7rem;color:${sla.color||'var(--t4)'}">⏱ ${sla.label||'awaiting first response'} · target ${((CQ_SLA[t.priority]||{}).h||24)}h</span>`;
   document.getElementById('cq-modal-body').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
       <div><div style="font-family:var(--fd);font-size:1.05rem">${esc(t.subject)}</div>
       <div style="font-size:.72rem;color:var(--t4);margin-top:3px">#${t.id} · ${esc(t.user_name||'')} (${esc(t.user_email||'')}) · ${esc(t.category)}</div></div>
       <span class="badge" style="background:${m.c}18;color:${m.c};border:1px solid ${m.c}40">${m.l}</span>
+    </div>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      ${slaLine}
+      <span style="display:flex;align-items:center;gap:6px;font-size:.7rem;color:var(--t4)">Priority:
+        <select class="input" id="cq-prio" style="padding:3px 6px;font-size:.7rem;width:auto" onchange="setCQPrio(${t.id},this.value)">
+          ${['urgent','high','normal','low'].map(p=>`<option value="${p}" ${t.priority===p?'selected':''}>${(CQ_SLA[p]||{}).l||p} · ${(CQ_SLA[p]||{}).h}h</option>`).join('')}
+        </select></span>
     </div>
     ${d.journey?`<div style="font-size:.74rem;background:var(--elev2);border:1px solid var(--b1);border-radius:10px;padding:8px 12px;margin-bottom:10px">🧭 Linked journey: <b>${d.journey.dest_flag||''} ${esc(d.journey.dest_name||d.journey.destination_code)}</b> · ${esc(d.journey.purpose)} · dep ${d.journey.departure_date||'—'}</div>`:''}
     <div style="max-height:300px;overflow-y:auto;margin-bottom:12px">
@@ -918,6 +938,7 @@ async function openCQ(id){
         <div style="margin-bottom:10px;padding:10px 14px;border-radius:12px;background:${rp.author_role==='agent'?'rgba(14,123,79,.07)':'var(--elev2)'};border:1px solid ${rp.author_role==='agent'?'rgba(14,123,79,.2)':'var(--b1)'}">
           <div style="font-size:.68rem;font-weight:600;color:${rp.author_role==='agent'?'#0E7B4F':'var(--t4)'};margin-bottom:4px">${rp.author_role==='agent'?'🤝 '+esc(rp.author_name||'Concierge'):esc(rp.author_name||'Traveller')} · ${String(rp.created_at).slice(0,16).replace('T',' ')}</div>
           <div style="font-size:.84rem;line-height:1.6;white-space:pre-wrap">${esc(rp.body)}</div>
+          ${rp.file_name?`<a href="/api/admin/concierge/attachments/${rp.id}" style="display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:.72rem;color:var(--a300);text-decoration:none">📎 ${esc(rp.file_name)}${rp.file_size?` <span style="color:var(--t4)">(${(rp.file_size/1024).toFixed(0)} KB)</span>`:''}</a>`:''}
         </div>`).join('')||'<div style="color:var(--t4);font-size:.8rem">No messages yet.</div>'}
     </div>
     ${t.status!=='closed'?`
@@ -934,6 +955,10 @@ async function sendCQReply(id){
   const inp=document.getElementById('cq-reply-input');const body=inp.value.trim();if(!body)return showToast('Write a reply first');
   const r=await apiFetch(`/api/admin/concierge/tickets/${id}/reply`,{method:'POST',body:JSON.stringify({body})});const d=await r.json();
   if(!r.ok)return showToast(d.error||'Failed');showToast(d.message);openCQ(id);loadConciergeQ();
+}
+async function setCQPrio(id,priority){
+  const r=await apiFetch(`/api/admin/concierge/tickets/${id}/priority`,{method:'POST',body:JSON.stringify({priority})});const d=await r.json();
+  showToast(d.message||d.error||'Done');if(r.ok){openCQ(id);loadConciergeQ();}
 }
 async function setCQStatus(id,status){
   const r=await apiFetch(`/api/admin/concierge/tickets/${id}/status`,{method:'POST',body:JSON.stringify({status})});const d=await r.json();
@@ -1265,13 +1290,13 @@ async function testEmail(){const to=document.getElementById('test-email-to').val
 async function testDigest(){const to=document.getElementById('test-email-to').value;if(!to)return showToast('Enter recipient email','error');showToast('Sending sample digest…');const r=await apiFetch('/api/admin/settings/test-digest',{method:'POST',body:JSON.stringify({to})});const d=await r.json();r.ok?showToast(d.message):showToast(d.error,'error');}
 
 // ── NOTIF SETTINGS ────────────────────────────────────────────────────────────
-async function loadNotifS(){const r=await apiFetch('/api/admin/settings/notifications');const d=await r.json();const s=d.settings||{};['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts','notif_email_reminders','notif_email_digest'].forEach(k=>{const el=document.getElementById(k);if(el)el.checked=s[k]==='1';});document.getElementById('notif_usage_threshold').value=s.notif_usage_threshold||'80';}
-async function saveNotifs(){const tgls=['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts','notif_email_reminders','notif_email_digest'];const settings=tgls.reduce((a,k)=>({...a,[k]:document.getElementById(k).checked?'1':'0'}),{});settings.notif_usage_threshold=document.getElementById('notif_usage_threshold').value;const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});const d=await r.json();r.ok?showToast('Notification settings saved ✅'):showToast(d.error,'error');}
+async function loadNotifS(){const r=await apiFetch('/api/admin/settings/notifications');const d=await r.json();const s=d.settings||{};['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts','notif_email_reminders','notif_email_digest','notif_email_concierge_user','notif_email_concierge_admin'].forEach(k=>{const el=document.getElementById(k);if(el)el.checked=s[k]==='1';});document.getElementById('notif_usage_threshold').value=s.notif_usage_threshold||'80';}
+async function saveNotifs(){const tgls=['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts','notif_email_reminders','notif_email_digest','notif_email_concierge_user','notif_email_concierge_admin'];const settings=tgls.reduce((a,k)=>({...a,[k]:document.getElementById(k).checked?'1':'0'}),{});settings.notif_usage_threshold=document.getElementById('notif_usage_threshold').value;const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});const d=await r.json();r.ok?showToast('Notification settings saved ✅'):showToast(d.error,'error');}
 
 // ── GENERAL SETTINGS ──────────────────────────────────────────────────────────
 async function loadGeneral(){
   const r=await apiFetch('/api/admin/settings/general');const d=await r.json();const s=d.settings||{};
-  ['app_name','app_tagline','app_logo','support_email','app_url'].forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k]||'';});
+  ['app_name','app_tagline','app_logo','support_email','app_url','concierge_notify_email'].forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k]||'';});
   document.getElementById('maintenance_mode').checked=s.maintenance_mode==='1';
   document.getElementById('registration_open').checked=s.registration_open!=='0';
   updateMaintBadge(s.maintenance_mode==='1');
@@ -1280,7 +1305,7 @@ async function loadGeneral(){
   else if(s.app_logo){document.getElementById('logo-preview-box').textContent=s.app_logo;}
 }
 async function saveGeneral(){
-  const fields=['app_name','app_tagline','app_logo','support_email','app_url'];
+  const fields=['app_name','app_tagline','app_logo','support_email','app_url','concierge_notify_email'];
   const settings=fields.reduce((a,k)=>({...a,[k]:document.getElementById(k)?.value||''}),{});
   settings.maintenance_mode=document.getElementById('maintenance_mode').checked?'1':'0';
   settings.registration_open=document.getElementById('registration_open').checked?'1':'0';

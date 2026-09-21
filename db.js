@@ -158,8 +158,10 @@ const SCHEMA = [
     user_id INTEGER NOT NULL,
     subject TEXT NOT NULL,
     category TEXT DEFAULT 'general',
+    priority TEXT DEFAULT 'normal' CHECK(priority IN ('urgent','high','normal','low')),
     journey_id INTEGER,
     status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','answered','closed')),
+    first_response_at TEXT,
     created_at TEXT DEFAULT(datetime('now')),
     updated_at TEXT DEFAULT(datetime('now')))`,
   `CREATE TABLE IF NOT EXISTS concierge_replies(
@@ -168,6 +170,10 @@ const SCHEMA = [
     author_role TEXT NOT NULL CHECK(author_role IN ('user','agent')),
     author_name TEXT DEFAULT '',
     body TEXT NOT NULL,
+    file_name TEXT DEFAULT '',
+    file_path TEXT DEFAULT '',
+    file_size INTEGER DEFAULT 0,
+    file_mime TEXT DEFAULT '',
     created_at TEXT DEFAULT(datetime('now')))`,
 
   // ── Japa Journey OS — smart trip execution system ────────────────────────
@@ -349,6 +355,9 @@ function seedDefaults() {
     ['app_name','JapaQuest','general'],['app_tagline','Your Journey. Our Intelligence.','general'],
     ['app_logo','✈','general'],['app_logo_url','','general'],
     ['support_email','support@japaplus.app','general'],
+    ['concierge_notify_email','','general'],
+    ['notif_email_concierge_user','0','notifications'],
+    ['notif_email_concierge_admin','0','notifications'],
     ['app_url','http://localhost:4001','general'],
     ['upload_dir','./data/uploads','general'],
     ['maintenance_mode','0','general'],['registration_open','1','general'],
@@ -514,6 +523,13 @@ function migrateJourneyOS() {
   const alters = [
     ['users', "ALTER TABLE users ADD COLUMN email_opt_out INTEGER DEFAULT 0"],
     ['users', "ALTER TABLE users ADD COLUMN digest_opt_out INTEGER DEFAULT 0"],
+    ['users', "ALTER TABLE users ADD COLUMN concierge_emails INTEGER DEFAULT 1"],
+    ['concierge_tickets', "ALTER TABLE concierge_tickets ADD COLUMN priority TEXT DEFAULT 'normal'"],
+    ['concierge_tickets', "ALTER TABLE concierge_tickets ADD COLUMN first_response_at TEXT"],
+    ['concierge_replies', "ALTER TABLE concierge_replies ADD COLUMN file_name TEXT DEFAULT ''"],
+    ['concierge_replies', "ALTER TABLE concierge_replies ADD COLUMN file_path TEXT DEFAULT ''"],
+    ['concierge_replies', "ALTER TABLE concierge_replies ADD COLUMN file_size INTEGER DEFAULT 0"],
+    ['concierge_replies', "ALTER TABLE concierge_replies ADD COLUMN file_mime TEXT DEFAULT ''"],
     ['journeys', "ALTER TABLE journeys ADD COLUMN dossier_json TEXT"],
     ['journeys', "ALTER TABLE journeys ADD COLUMN risk_json TEXT"],
     ['journeys', "ALTER TABLE journeys ADD COLUMN fee_confidence_usd REAL"],
@@ -885,12 +901,13 @@ const Q = {
   setTaskRemindSent: (id,sent) => exec('UPDATE journey_tasks SET remind_sent=? WHERE id=?',[sent?1:0,id]),
   setEmailOptOut: (userId,optOut) => exec('UPDATE users SET email_opt_out=?,updated_at=datetime(\'now\') WHERE id=?',[optOut?1:0,userId]),
   setDigestOptOut: (userId,optOut) => exec('UPDATE users SET digest_opt_out=?,updated_at=datetime(\'now\') WHERE id=?',[optOut?1:0,userId]),
+  setConciergeEmailsPref: (userId,on) => exec('UPDATE users SET concierge_emails=?,updated_at=datetime(\'now\') WHERE id=?',[on?1:0,userId]),
 
   // ── CONCIERGE — human assistance tickets ────────────────────────────────
   createConciergeTicket: (userId, data) => {
-    exec(`INSERT INTO concierge_tickets(user_id,subject,category,journey_id)
-      VALUES(?,?,?,?)`,
-      [userId, data.subject || 'Assistance request', data.category || 'general', data.journey_id || null]);
+    exec(`INSERT INTO concierge_tickets(user_id,subject,category,priority,journey_id)
+      VALUES(?,?,?,?,?)`,
+      [userId, data.subject || 'Assistance request', data.category || 'general', data.priority || 'normal', data.journey_id || null]);
     return lastId();
   },
   getConciergeTicket: (id, userId) => queryOne(
@@ -911,9 +928,10 @@ const Q = {
      ORDER BY CASE t.status WHEN 'open' THEN 0 WHEN 'answered' THEN 1 ELSE 2 END, t.updated_at DESC, t.id DESC LIMIT 200`),
   getConciergeReplies: (ticketId) => queryAll(
     'SELECT * FROM concierge_replies WHERE ticket_id=? ORDER BY id',[ticketId]),
-  addConciergeReply: (ticketId, authorRole, authorName, body) => {
-    exec(`INSERT INTO concierge_replies(ticket_id,author_role,author_name,body)
-      VALUES(?,?,?,?)`,[ticketId,authorRole,authorName||'',body]);
+  addConciergeReply: (ticketId, authorRole, authorName, body, file) => {
+    exec(`INSERT INTO concierge_replies(ticket_id,author_role,author_name,body,file_name,file_path,file_size,file_mime)
+      VALUES(?,?,?,?,?,?,?,?)`,
+      [ticketId, authorRole, authorName||'', body, file?.file_name || '', file?.file_path || '', file?.file_size || 0, file?.file_mime || '']);
     exec(`UPDATE concierge_tickets SET updated_at=datetime('now') WHERE id=?`,[ticketId]);
     return lastId();
   },
@@ -921,12 +939,21 @@ const Q = {
     `UPDATE concierge_tickets SET status=?, updated_at=datetime('now') WHERE id=?`,[status,id]),
   setConciergeTicketJourney: (id, journeyId) => exec(
     `UPDATE concierge_tickets SET journey_id=? WHERE id=?`,[journeyId,id]),
+  setConciergeTicketPriority: (id, priority) => exec(
+    `UPDATE concierge_tickets SET priority=?, updated_at=datetime('now') WHERE id=?`,[priority,id]),
+  markConciergeFirstResponse: (id) => exec(
+    `UPDATE concierge_tickets SET first_response_at=datetime('now')
+     WHERE id=? AND first_response_at IS NULL`,[id]),
   conciergeTicketStats: () => ({
     total: queryScalar('SELECT COUNT(*) FROM concierge_tickets'),
     open: queryScalar("SELECT COUNT(*) FROM concierge_tickets WHERE status='open'"),
     answered: queryScalar("SELECT COUNT(*) FROM concierge_tickets WHERE status='answered'"),
     closed: queryScalar("SELECT COUNT(*) FROM concierge_tickets WHERE status='closed'"),
-    byCategory: queryAll('SELECT category, COUNT(*) as count FROM concierge_tickets GROUP BY category ORDER BY count DESC'),
+    slaOpen: queryAll(`SELECT priority, COUNT(*) as count FROM concierge_tickets WHERE status='open' GROUP BY priority`),
+    avgFirstResponseMins: queryScalar('SELECT AVG((julianday(first_response_at)-julianday(created_at))*1440) FROM concierge_tickets WHERE first_response_at IS NOT NULL'),
+    breachedCount: queryScalar(`SELECT COUNT(*) FROM concierge_tickets t
+      WHERE t.status='open' AND t.first_response_at IS NULL
+      AND (julianday('now')-julianday(t.created_at))*24 > CASE t.priority WHEN 'urgent' THEN 2 WHEN 'high' THEN 8 WHEN 'low' THEN 72 ELSE 24 END`),
   }),
 
   // ── ADMIN: Journey/Brain analytics (optionally filterable) ──────────────

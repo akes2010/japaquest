@@ -87,4 +87,13 @@ const SUITE = [
     cta: 'Meet your human concierge' },
 ];
 
-module.exports = { NAME, TAGLINE, SUITE };
+// Concierge SLA — first-response targets in hours, per ticket priority.
+const SLA_POLICY = [
+  { key: 'urgent',    label: 'Urgent',    hours: 2,  color: '#c0392b' },
+  { key: 'high',      label: 'High',      hours: 8,  color: '#d35400' },
+  { key: 'normal',    label: 'Normal',    hours: 24, color: '#b8860b' },
+  { key: 'low',       label: 'Low',       hours: 72, color: '#6b705c' },
+];
+const slaFor = p => SLA_POLICY.find(s => s.key === p) || SLA_POLICY[2];
+
+module.exports = { NAME, TAGLINE, SUITE, SLA_POLICY, slaFor };

@@ -11,6 +11,8 @@ const { PLATFORMS, shareLinks } = require('../utils/social');
 const { socialDirectConfig } = require('../utils/social');
 const { tagUtm } = require('../utils/utm');
 const { REGIONS, describeAudience, deliverPost } = require('../utils/social-delivery');
+const { slaState, onAgentReply } = require('../utils/concierge');
+const crypto = require('crypto');
 
 router.use(requireAdmin);
 
@@ -493,7 +495,8 @@ router.post('/destinations', (req, res) => {
 
 // ── CONCIERGE — human assistance ticket queue ────────────────────────────────
 router.get('/concierge/tickets', (req, res) => {
-  res.json({ stats: Q.conciergeTicketStats(), tickets: Q.listConciergeTickets(req.query.status) });
+  const tickets = Q.listConciergeTickets(req.query.status).map(t => ({ ...t, sla: slaState(t) }));
+  res.json({ stats: Q.conciergeTicketStats(), tickets });
 });
 
 router.get('/concierge/tickets/:id', (req, res) => {
@@ -506,7 +509,7 @@ router.get('/concierge/tickets/:id', (req, res) => {
         FROM journeys j LEFT JOIN destinations d ON d.code=j.destination_code WHERE j.id=?`, [t.journey_id])[0] || null;
     } catch {}
   }
-  res.json({ ticket: t, replies: Q.getConciergeReplies(t.id), journey });
+  res.json({ ticket: { ...t, sla: slaState(t) }, replies: Q.getConciergeReplies(t.id), journey });
 });
 
 router.post('/concierge/tickets/:id/reply', (req, res) => {
@@ -515,9 +518,32 @@ router.post('/concierge/tickets/:id/reply', (req, res) => {
   const body = String((req.body || {}).body || '').trim();
   if (!body) return res.status(400).json({ error: 'Message is required' });
   Q.addConciergeReply(t.id, 'agent', req.user.name || 'Concierge', body.slice(0, 4000));
+  Q.markConciergeFirstResponse(t.id); // stamps the SLA clock once per ticket
   Q.setConciergeTicketStatus(t.id, 'answered');
+  const user = Q.queryAllSafe('SELECT * FROM users WHERE id=?', [t.user_id])[0] || null;
   Q.createNotification(t.user_id, '🤝 Concierge replied', `Your request "${String(t.subject).slice(0, 80)}" has a new reply.`, 'concierge');
+  if (user) onAgentReply(t, user, { body, author_name: req.user.name || 'Concierge' }).catch(() => {});
   res.json({ message: 'Reply sent to traveller ✅', ticket: Q.getConciergeTicket(t.id, null) });
+});
+
+// Adjust a ticket's priority (re-arms the SLA target)
+router.post('/concierge/tickets/:id/priority', (req, res) => {
+  const t = Q.getConciergeTicket(parseInt(req.params.id), null);
+  if (!t) return res.status(404).json({ error: 'Ticket not found' });
+  const priority = String((req.body || {}).priority || '');
+  if (!['urgent', 'high', 'normal', 'low'].includes(priority)) return res.status(400).json({ error: 'Invalid priority' });
+  Q.setConciergeTicketPriority(t.id, priority);
+  res.json({ message: `Priority set to ${priority}`, ticket: Q.getConciergeTicket(t.id, null) });
+});
+
+// Download a reply attachment (admins may access any ticket's files)
+router.get('/concierge/attachments/:replyId', (req, res) => {
+  const r = Q.queryAllSafe('SELECT * FROM concierge_replies WHERE id=?', [parseInt(req.params.replyId)])[0];
+  if (!r || !r.file_path) return res.status(404).json({ error: 'No attachment' });
+  if (!fs.existsSync(r.file_path)) return res.status(410).json({ error: 'File missing from storage' });
+  res.setHeader('Content-Type', r.file_mime || 'application/octet-stream');
+  res.setHeader('Content-Disposition', `attachment; filename="${r.file_name || 'attachment'}"`);
+  res.sendFile(path.resolve(r.file_path));
 });
 
 router.post('/concierge/tickets/:id/status', (req, res) => {

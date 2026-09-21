@@ -805,7 +805,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:18px">
           <div>
             <div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300)">🤝 JapaQuest Concierge</div>
-            <div style="font-size:.78rem;color:var(--t4)">A real human for the moments that matter — escalations from the AI, tricky visa cases, anything urgent.</div>
+            <div style="font-size:.78rem;color:var(--t4)">A real human for the moments that matter — escalations from the AI, tricky visa cases, anything urgent. Urgent requests get a reply within 2 hours.</div>
           </div>
           <button class="btn-primary" style="padding:9px 18px" onclick="conciergeNewForm()">＋ New request</button>
         </div>
@@ -814,9 +814,12 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
           <div class="form-grid" style="display:flex;gap:10px;flex-wrap:wrap">
             <div style="flex:1;min-width:160px"><label class="form-label">Category</label>
               <select class="input" id="cc-category"><option value="general">General</option><option value="visa">Visa</option><option value="travel">Travel / booking</option><option value="study">Study</option><option value="work">Work</option><option value="move">Relocation</option><option value="business">Business</option></select></div>
+            <div style="flex:1;min-width:160px"><label class="form-label">Urgency</label>
+              <select class="input" id="cc-priority"><option value="normal">Normal — reply within 24h</option><option value="high">High — reply within 8h</option><option value="urgent">Urgent — reply within 2h</option><option value="low">Low — reply within 3 days</option></select></div>
             <div style="flex:2;min-width:220px"><label class="form-label">Link a journey (optional)</label><select class="input" id="cc-journey"><option value="">— none —</option></select></div>
           </div>
           <div class="form-group"><label class="form-label">Tell us the situation</label><textarea class="input" id="cc-message" rows="4" placeholder="What happened, what you tried, and what you need. The more detail, the faster we can help." maxlength="4000"></textarea></div>
+          <div class="form-group"><label class="form-label">Attachment (optional)</label><input type="file" id="cc-file" class="input" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx" style="padding:7px"/><div style="font-size:.68rem;color:var(--t4);margin-top:4px">PDF, image or Word document up to 10 MB — e.g. a refusal letter or appointment confirmation.</div></div>
           <div style="display:flex;gap:8px"><button class="btn-primary" style="padding:9px 18px" onclick="submitConciergeRequest()">Send to concierge</button><button class="btn-ghost" style="padding:9px 14px" onclick="document.getElementById('cc-form').style.display='none'">Cancel</button></div>
         </div>
         <div id="cc-list"></div>
@@ -1234,6 +1237,7 @@ async function saveDigestPref(on){
 
 /* ═══════════════ CONCIERGE — human assistance ═══════════════ */
 const CC_META={open:{l:'Open',c:'#C94E30'},answered:{l:'Answered',c:'#0E7B4F'},closed:{l:'Closed',c:'rgba(10,20,40,.45)'}};
+const CC_SLA={urgent:{l:'Urgent',h:2,c:'#C0392B'},high:{l:'High',h:8,c:'#D35400'},normal:{l:'Normal',h:24,c:'#8A6420'},low:{l:'Low',h:72,c:'rgba(10,20,40,.45)'}};
 async function loadConcierge(){
   try{
     const r=await api('/api/concierge/tickets');const d=await r.json();if(!r.ok)throw new Error(d.error||'Failed');
@@ -1241,12 +1245,17 @@ async function loadConcierge(){
     if(!list.length){document.getElementById('cc-list').innerHTML=`<div class="card" style="text-align:center;padding:34px 20px"><div style="font-size:1.8rem;margin-bottom:8px">🤝</div><div style="font-family:var(--fd);font-size:1rem;margin-bottom:6px">No requests yet</div><div style="font-size:.8rem;color:var(--t4);max-width:420px;margin:0 auto;line-height:1.6">Stuck on a rejection, an appointment crisis or anything the AI can't solve? Escalate with the 🤝 button in the chat, or create a request here — a real human picks it up.</div></div>`;return;}
     document.getElementById('cc-list').innerHTML=list.map(t=>{
       const m=CC_META[t.status]||CC_META.open;
+      const s=CC_SLA[t.priority]||CC_SLA.normal;
+      const needsResp=t.status==='open';
       return `<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="openTicket(${t.id})">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
           <div style="flex:1"><b style="font-size:.92rem">${esc(t.subject)}</b>
           <div style="font-size:.72rem;color:var(--t4);margin-top:3px">#${t.id} · ${esc(t.category)} · ${String(t.created_at).slice(0,10)} · ${t.replies||0} message(s)</div>
           ${t.last_reply?`<div style="font-size:.76rem;color:var(--t3);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:520px">${esc(t.last_reply).slice(0,110)}</div>`:''}</div>
-          <span class="badge" style="background:${m.c}18;color:${m.c};border:1px solid ${m.c}40">${m.l}</span>
+          <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+            <span class="badge" style="background:${m.c}18;color:${m.c};border:1px solid ${m.c}40">${m.l}</span>
+            ${t.status!=='closed'?`<span style="font-size:.62rem;font-weight:700;color:${s.c};border:1px solid ${s.c}40;background:${s.c}12;border-radius:20px;padding:2px 8px">${needsResp?`⏱ ${s.l} · ${s.h}h reply`:`💬 ${s.l}`}</span>`:''}
+          </div>
         </div></div>`;}).join('');
   }catch(e){showToast('Could not load requests: '+e.message,'error');}
 }
@@ -1256,41 +1265,68 @@ function conciergeNewForm(){document.getElementById('cc-form').style.display='bl
 async function submitConciergeRequest(){
   const subject=document.getElementById('cc-subject').value.trim();
   if(!subject)return showToast('Add a short subject first','error');
-  const body={subject,category:document.getElementById('cc-category').value,message:document.getElementById('cc-message').value.trim()};
+  const body={subject,category:document.getElementById('cc-category').value,priority:document.getElementById('cc-priority').value,message:document.getElementById('cc-message').value.trim()};
   const jid=parseInt(document.getElementById('cc-journey').value);if(jid)body.journey_id=jid;
-  const r=await api('/api/concierge/tickets',{method:'POST',body:JSON.stringify(body)});const d=await r.json();
+  const f=document.getElementById('cc-file').files[0];
+  let r;
+  if(f){
+    const fd=new FormData();fd.append('file',f);
+    r=await fetch('/api/concierge/tickets',{method:'POST',headers:{'Authorization':'Bearer '+tok,'X-File-Name':f.name,'X-Meta':btoa(unescape(encodeURIComponent(JSON.stringify(body))))},body:f});
+  }else{
+    r=await api('/api/concierge/tickets',{method:'POST',body:JSON.stringify(body)});
+  }
+  if(r.status===401){localStorage.clear();window.location.href='/';return;}
+  const d=await r.json();
   if(!r.ok)return showToast(d.error||'Failed','error');
   showToast(d.message||'Request sent ✅');document.getElementById('cc-form').style.display='none';
-  document.getElementById('cc-subject').value='';document.getElementById('cc-message').value='';
+  document.getElementById('cc-subject').value='';document.getElementById('cc-message').value='';document.getElementById('cc-file').value='';
   loadConcierge();
 }
 async function openTicket(id){
   const r=await api('/api/concierge/tickets/'+id);const d=await r.json();if(!r.ok)return showToast(d.error||'Failed','error');
   const t=d.ticket;const m=CC_META[t.status]||CC_META.open;
+  const sla=CC_SLA[t.priority]||CC_SLA.normal;
   openM('cc-modal');
+  const respInfo=t.first_response_at
+    ? `<span style="font-size:.68rem;color:#0E7B4F">✓ first response ${String(t.first_response_at).slice(0,16).replace('T',' ')}</span>`
+    : `<span style="font-size:.68rem;color:${sla.c}">⏱ first reply within ${sla.h}h (${sla.l.toLowerCase()} priority)</span>`;
   document.getElementById('cc-modal-body').innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px">
       <div><div style="font-family:var(--fd);font-size:1.05rem">${esc(t.subject)}</div>
       <div style="font-size:.72rem;color:var(--t4);margin-top:3px">#${t.id} · ${esc(t.category)} · created ${String(t.created_at).slice(0,10)}</div></div>
       <span class="badge" style="background:${m.c}18;color:${m.c};border:1px solid ${m.c}40">${m.l}</span>
     </div>
+    ${t.status!=='closed'?`<div style="font-size:.7rem;margin-bottom:12px">${respInfo}</div>`:''}
     <div id="cc-thread" style="max-height:320px;overflow-y:auto;margin-bottom:12px">
       ${(d.replies||[]).map(rp=>`
         <div style="margin-bottom:10px;padding:10px 14px;border-radius:12px;background:${rp.author_role==='agent'?'rgba(14,123,79,.07)':'var(--glass2)'};border:1px solid ${rp.author_role==='agent'?'rgba(14,123,79,.2)':'var(--line)'}">
           <div style="font-size:.68rem;font-weight:600;color:${rp.author_role==='agent'?'#0E7B4F':'var(--t4)'};margin-bottom:4px">${rp.author_role==='agent'?'🤝 '+esc(rp.author_name||'Concierge team'):esc(rp.author_name||'You')} · ${String(rp.created_at).slice(0,16).replace('T',' ')}</div>
           <div style="font-size:.84rem;line-height:1.6;white-space:pre-wrap">${esc(rp.body)}</div>
+          ${rp.file_name?`<a href="/api/concierge/attachments/${rp.id}" style="display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:.72rem;color:var(--a300);text-decoration:none">📎 ${esc(rp.file_name)}${rp.file_size?` <span style="color:var(--t4)">(${(rp.file_size/1024).toFixed(0)} KB)</span>`:''}</a>`:''}
         </div>`).join('')||'<div style="color:var(--t4);font-size:.8rem">No messages yet.</div>'}
     </div>
     ${t.status!=='closed'?`
-    <div style="display:flex;gap:8px">
-      <input class="input" id="cc-reply-input" placeholder="Write a reply…" style="flex:1" onkeydown="if(event.key==='Enter')sendTicketReply(${t.id})"/>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input class="input" id="cc-reply-input" placeholder="Write a reply…" style="flex:1;min-width:140px" onkeydown="if(event.key==='Enter')sendTicketReply(${t.id})"/>
+      <label class="btn-ghost" style="padding:9px 12px;cursor:pointer;margin:0" title="Attach a document">📎<input type="file" id="cc-reply-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx" style="display:none" onchange="const l=this.closest('label');l.title=this.files[0]?this.files[0].name:'Attach a document';l.style.color=this.files[0]?'var(--a300)':''"/></label>
       <button class="btn-primary" style="padding:9px 16px" onclick="sendTicketReply(${t.id})">Send</button>
       <button class="btn-ghost" style="padding:9px 14px" title="Mark resolved" onclick="closeTicket(${t.id})">✓</button>
     </div>`:''}`;
 }
 async function sendTicketReply(id){
-  const inp=document.getElementById('cc-reply-input');const body=inp.value.trim();if(!body)return;
-  const r=await api(`/api/concierge/tickets/${id}/reply`,{method:'POST',body:JSON.stringify({body})});const d=await r.json();
+  const inp=document.getElementById('cc-reply-input');
+  const body=inp?inp.value.trim():'';
+  const f=document.getElementById('cc-reply-file');
+  const file=f&&f.files[0];
+  if(!body && !file)return showToast('Write a reply or attach a file','error');
+  let r;
+  if(file){
+    r=await fetch(`/api/concierge/tickets/${id}/reply`,{method:'POST',headers:{'Authorization':'Bearer '+tok,'X-File-Name':file.name,'X-Meta':btoa(unescape(encodeURIComponent(JSON.stringify({body}))))},body:file});
+  }else{
+    r=await api(`/api/concierge/tickets/${id}/reply`,{method:'POST',body:JSON.stringify({body})});
+  }
+  if(r.status===401){localStorage.clear();window.location.href='/';return;}
+  const d=await r.json();
   if(!r.ok)return showToast(d.error||'Failed','error');openTicket(id);loadConcierge();
 }
 async function closeTicket(id){
@@ -1300,7 +1336,7 @@ async function closeTicket(id){
 async function escalateToConcierge(){
   const ta=document.getElementById('msg-ta');const text=ta.value.trim();
   if(!text){conciergeNewForm();sw('concierge');return showToast('Describe your situation, then tap 🤝 — or fill the form here');}
-  const r=await api('/api/concierge/tickets',{method:'POST',body:JSON.stringify({subject:text.slice(0,120),category:'general',message:text})});
+  const r=await api('/api/concierge/tickets',{method:'POST',body:JSON.stringify({subject:text.slice(0,120),category:'general',priority:'urgent',message:text})});
   const d=await r.json();if(!r.ok)return showToast(d.error||'Failed','error');
   ta.value='';sw('concierge');showToast('Escalated to a human concierge 🤝 — track it here');
 }
