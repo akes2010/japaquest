@@ -649,8 +649,8 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <div class="view" id="view-explore">
       <div class="view-wrap">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-          <div><div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300)">🌍 Explore Destinations</div>
-          <div style="font-size:.78rem;color:var(--t4);margin-top:3px">Real visa requirements from our verified database</div></div>
+          <div><div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300)">🌍 <span data-i18n="nav_explore">Explore Destinations</span></div>
+          <div style="font-size:.78rem;color:var(--t4);margin-top:3px" data-i18n="exp_sub">Real visa requirements from our verified database</div></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <select class="input" id="exp-passport" onchange="loadDestinations()" style="width:150px">
               <option value="NG">🇳🇬 Nigerian</option><option value="GH">🇬🇭 Ghanaian</option>
@@ -662,17 +662,17 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
           </div>
         </div>
         <div class="filter-bar">
-          <button class="f-chip on" id="fc-all" onclick="filterDest('all')">All</button>
-          <button class="f-chip" id="fc-visa_free" onclick="filterDest('visa_free')">🟢 Visa-Free</button>
-          <button class="f-chip" id="fc-voa" onclick="filterDest('voa')">🟡 On Arrival</button>
-          <button class="f-chip" id="fc-evisa" onclick="filterDest('evisa')">🔵 eVisa</button>
-          <button class="f-chip" id="fc-eta" onclick="filterDest('eta')">🟣 eTA</button>
-          <button class="f-chip" id="fc-visa_required" onclick="filterDest('visa_required')">🔴 Visa Required</button>
-          <button class="f-chip" id="fc-Africa" onclick="filterDest('Africa')">🌍 Africa</button>
-          <button class="f-chip" id="fc-Europe" onclick="filterDest('Europe')">🏛️ Europe</button>
-          <button class="f-chip" id="fc-Middle_East" onclick="filterDest('Middle East')">🕌 Middle East</button>
+          <button class="f-chip on" id="fc-all" onclick="filterDest('all')" data-i18n="exp_all">All</button>
+          <button class="f-chip" id="fc-visa_free" onclick="filterDest('visa_free')" data-i18n="st_visa_free">🟢 Visa-Free</button>
+          <button class="f-chip" id="fc-voa" onclick="filterDest('voa')" data-i18n="st_voa">🟡 On Arrival</button>
+          <button class="f-chip" id="fc-evisa" onclick="filterDest('evisa')" data-i18n="st_evisa">🔵 eVisa</button>
+          <button class="f-chip" id="fc-eta" onclick="filterDest('eta')" data-i18n="st_eta">🟣 eTA</button>
+          <button class="f-chip" id="fc-visa_required" onclick="filterDest('visa_required')" data-i18n="st_visa_required">🔴 Visa Required</button>
+          <button class="f-chip" id="fc-Africa" onclick="filterDest('Africa')" data-i18n="reg_africa">🌍 Africa</button>
+          <button class="f-chip" id="fc-Europe" onclick="filterDest('Europe')" data-i18n="reg_europe">🏛️ Europe</button>
+          <button class="f-chip" id="fc-Middle_East" onclick="filterDest('Middle East')" data-i18n="reg_mideast">🕌 Middle East</button>
         </div>
-        <div class="dest-grid" id="dest-grid"><div style="color:var(--t4);text-align:center;padding:40px"><div class="spinner" style="margin:0 auto 10px;border-top-color:var(--o400);border-color:var(--glass2)"></div>Loading visa database…</div></div>
+        <div class="dest-grid" id="dest-grid"><div style="color:var(--t4);text-align:center;padding:40px"><div class="spinner" style="margin:0 auto 10px;border-top-color:var(--o400);border-color:var(--glass2)"></div><span data-i18n="exp_loading">Loading visa database…</span></div></div>
       </div>
     </div>
 
@@ -906,6 +906,8 @@ let user=null,allModels=[],selModel='claude',curConvUUID=null,curMsgs=[],loading
 const MC={claude:'#F59E0B',deepseek:'#818CF8',qwen:'#38BDF8',llama:'#A78BFA',gemma:'#F472B6',mistral:'#F59E0B','llama-groq':'#00C478','gemini-flash':'#60A5FA','gemini-pro':'#3B82F6','llama-together':'#FB923C',mistral7b:'#E879F9',zephyr:'#C084FC'};
 const MI={claude:'✨',deepseek:'🔍',qwen:'🧠',llama:'🦙',gemma:'💎',mistral:'🌪️','llama-groq':'⚡','gemini-flash':'🔮','gemini-pro':'🔮','llama-together':'🤝',mistral7b:'🤗',zephyr:'🤗',openai:'🧠'};
 const STATUS_LBL={visa_free:'Visa-Free',voa:'On Arrival',evisa:'eVisa',eta:'eTA',visa_required:'Visa Required',needs_verification:'Check Embassy'};
+// Locale-aware status label (falls back to English when strings not loaded).
+function stLbl(k){const s=_geoCache&&_geoCache.strings;return (s&&(s['st_'+k]||s['st_check']))||STATUS_LBL[k]||'Check Embassy';}
 
 async function api(path,opts={}){
   const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok,...(opts.headers||{})}});
@@ -1050,10 +1052,10 @@ function renderDests(dests){
   document.getElementById('dest-grid').innerHTML=filtered.length?filtered.map(d=>{
     const cls=d.visaStatus==='visa_free'||d.visaStatus==='voa'?'free':d.visaStatus==='evisa'||d.visaStatus==='eta'?'easy':'visa';
     return `<div class="dest-card ${cls}">
-      <div class="dc-head"><span class="dc-flag">${d.flag}</span><span class="dc-status status-${d.visaStatus||'needs_verification'}">${STATUS_LBL[d.visaStatus]||'Check Embassy'}</span></div>
+      <div class="dc-head"><span class="dc-flag">${d.flag}</span><span class="dc-status status-${d.visaStatus||'needs_verification'}">${stLbl(d.visaStatus)}</span></div>
       <div class="dc-name">${d.name}</div>
       <div class="dc-meta">${d.region}${d.processingDays?` · ${d.processingDays}`:''}</div>
-      ${d.avgDailyBudget?`<div class="dc-budget">~$${d.avgDailyBudget}/day</div>`:''}
+      ${d.avgDailyBudget?`<div class="dc-budget" title="≈ $${d.avgDailyBudget}/day USD">~${_geoCache&&_geoCache.currency&&_geoCache.currency!=='USD'?fxLocal(d.avgDailyBudget,_geoCache):'$'+d.avgDailyBudget}/day</div>`:''}
       <div class="dc-btns">
         <button class="dc-btn" onclick="ask('Complete travel guide for ${d.name} (${d.code}) — visa requirements, best time to visit, cost of living, must-see places, flights from Nigeria, budget breakdown')">✈ Plan Trip</button>
         <a class="dc-btn book" href="${d.links?.flights?.skyscanner||'https://www.skyscanner.net'}" target="_blank" onclick="logClick('skyscanner','flight','${d.name}',this.href)">🔍 Find Flights</a>

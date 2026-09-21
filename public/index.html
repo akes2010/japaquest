@@ -848,7 +848,16 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch
       const sel = document.createElement('select');
       sel.id = 'lang-pill'; sel.className = 'lang-pill'; sel.setAttribute('aria-label','Language');
       sel.innerHTML = (g.languages||[]).map(l => `<option value="${l.code}"${l.code===lang?' selected':''}>${l.flag} ${l.name}</option>`).join('');
-      sel.onchange = () => { localStorage.setItem('vg_lang', sel.value); location.reload(); };
+      sel.onchange = async () => {
+        localStorage.setItem('vg_lang', sel.value);
+        try {
+          const tok = localStorage.getItem('vg_token');
+          if (tok) { // logged-in: persist server-side so the dashboard follows
+            await fetch('/api/geo/pref', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ lang: sel.value }) });
+          }
+        } catch {}
+        location.reload();
+      };
       (nav.querySelector('.nav-links') || nav).appendChild(sel);
     }
     const st = document.createElement('style');
