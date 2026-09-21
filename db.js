@@ -524,6 +524,9 @@ function migrateJourneyOS() {
     ['users', "ALTER TABLE users ADD COLUMN email_opt_out INTEGER DEFAULT 0"],
     ['users', "ALTER TABLE users ADD COLUMN digest_opt_out INTEGER DEFAULT 0"],
     ['users', "ALTER TABLE users ADD COLUMN concierge_emails INTEGER DEFAULT 1"],
+    ['users', "ALTER TABLE users ADD COLUMN geo_country TEXT"],
+    ['users', "ALTER TABLE users ADD COLUMN geo_currency TEXT"],
+    ['users', "ALTER TABLE users ADD COLUMN geo_lang TEXT"],
     ['concierge_tickets', "ALTER TABLE concierge_tickets ADD COLUMN priority TEXT DEFAULT 'normal'"],
     ['concierge_tickets', "ALTER TABLE concierge_tickets ADD COLUMN first_response_at TEXT"],
     ['concierge_replies', "ALTER TABLE concierge_replies ADD COLUMN file_name TEXT DEFAULT ''"],
@@ -902,6 +905,12 @@ const Q = {
   setEmailOptOut: (userId,optOut) => exec('UPDATE users SET email_opt_out=?,updated_at=datetime(\'now\') WHERE id=?',[optOut?1:0,userId]),
   setDigestOptOut: (userId,optOut) => exec('UPDATE users SET digest_opt_out=?,updated_at=datetime(\'now\') WHERE id=?',[optOut?1:0,userId]),
   setConciergeEmailsPref: (userId,on) => exec('UPDATE users SET concierge_emails=?,updated_at=datetime(\'now\') WHERE id=?',[on?1:0,userId]),
+  setUserGeoPrefs: (userId,updates) => {
+    const keys = Object.keys(updates).filter(k => ['geo_country','geo_currency','geo_lang'].includes(k));
+    if (!keys.length) return;
+    const set = keys.map(k => `${k}=?`).join(',');
+    exec(`UPDATE users SET ${set},updated_at=datetime('now') WHERE id=?`, [...keys.map(k => updates[k]), userId]);
+  },
 
   // ── CONCIERGE — human assistance tickets ────────────────────────────────
   createConciergeTicket: (userId, data) => {

@@ -593,7 +593,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
           <button class="chip" onclick="ask('Help me plan a 10-day trip budget to Turkey — flights from Lagos, hotels, food, activities')">💰 Plan Budget</button>
         </div>
         <div class="input-box">
-          <textarea id="msg-ta" placeholder="Ask about visas, flights, hotels, study abroad, or any travel question…" rows="1"></textarea>
+          <textarea id="msg-ta" data-i18n-ph="tag_search_ph" placeholder="Ask about visas, flights, hotels, study abroad, or any travel question…" rows="1"></textarea>
           <button class="send-btn" id="send-btn" onclick="sendMsg()" title="Send">↑</button>
           <button class="send-btn" id="esc-btn" onclick="escalateToConcierge()" title="Escalate to a human concierge" style="background:transparent;border:1.5px solid var(--line);color:var(--t3);font-size:.95rem">🤝</button>
         </div>
@@ -848,6 +848,12 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
             <label class="toggle"><input type="checkbox" id="pref-email-rem" onchange="saveReminderPref(this.checked)"/><span class="toggle-sl"></span></label></div>
           <div class="tgl-row" id="digest-row" style="display:none"><div><div class="tgl-lbl">Weekly digest email</div><div class="tgl-sub">Every Monday: readiness per trip, next deadlines, open cases and departure countdowns.</div></div>
             <label class="toggle"><input type="checkbox" id="pref-email-digest" onchange="saveDigestPref(this.checked)"/><span class="toggle-sl"></span></label></div>
+          <div class="tgl-row"><div><div class="tgl-lbl">🌐 Language &amp; region</div><div class="tgl-sub">Flag, currency and language are detected automatically — override below.</div></div>
+            <span></span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <select class="input" id="pref-geo-lang" onchange="saveGeoPref()"><option value="">Language: auto 🌍</option></select>
+            <select class="input" id="pref-geo-cur" onchange="saveGeoPref()"><option value="">Currency: auto 💱</option></select>
+          </div>
         </div>
         <div class="ps-card"><div class="ps-title">Personal Information</div>
           <div class="form-group"><label class="form-label">Full Name</label><input class="input" id="p-name" tabindex="1"/></div>
@@ -929,7 +935,7 @@ async function init(){
     document.getElementById('sc-desc').textContent=(user.plan?.daily_limit>=99999?'Unlimited':user.plan?.daily_limit||10)+' messages/day';
     setUsage(usageToday,dailyLimit);
     if(meD.unread>0)setNotifBadge(meD.unread);
-    buildMM();showEmpty();loadConvs();loadNotifs();loadPlans();loadTravelProfile();loadTpPartners();
+    buildMM();showEmpty();loadConvs();loadNotifs();loadPlans();loadTravelProfile();loadTpPartners();initGeoPickers();
     if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
   }catch(e){console.error('init:',e);}
 }
@@ -1149,21 +1155,44 @@ function downloadDoc(){
   showToast('Downloaded ✅ — opens in Microsoft Word');
 }
 
-// BUDGET CALCULATOR
+// BUDGET CALCULATOR — USD base, auto-converted to the traveller's currency
+let _geoCache = null;
+async function getGeo(){
+  if(_geoCache) return _geoCache;
+  try{
+    const tok=localStorage.getItem('vg_token');
+    const r=await fetch('/api/geo',{headers:tok?{'Authorization':'Bearer '+tok}:{}});
+    _geoCache=await r.json();
+  }catch{ _geoCache={currency:'USD',currencySymbol:'$'}; }
+  document.documentElement.lang=_geoCache.lang||'en';
+  if(_geoCache.rtl) document.documentElement.dir='rtl';
+  return _geoCache;
+}
+getGeo().then(g=>{ if(g.strings){ document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.getAttribute('data-i18n'); if(g.strings[k]) el.textContent=g.strings[k];}); document.querySelectorAll('[data-i18n-ph]').forEach(el=>{const k=el.getAttribute('data-i18n-ph'); if(g.strings[k]) el.placeholder=g.strings[k];}); } });
+function convLabel(usd, geo, totalUsd){
+  if(!geo||geo.currency==='USD') return '$'+usd.toLocaleString();
+  return `<span title="≈ $${usd.toLocaleString()} USD">${fxLocal(usd,geo)}</span>`;
+}
+function fxLocal(usd, geo){
+  const rates = geo.fx_rates||{}; const rate = rates[geo.currency]||1;
+  const v = usd*rate;
+  const dec = v>=1000?0:2;
+  return (geo.currencySymbol||'') + v.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+}
 async function calcBudget(){
   const dest=document.getElementById('bud-dest').value;
   const days=document.getElementById('bud-days').value||7;
   const style=document.getElementById('bud-style').value;
   const pax=document.getElementById('bud-pax').value||1;
-  const r=await api(`/api/travel/budget?destination=${dest}&days=${days}&style=${style}`);
+  const [r, geo] = await Promise.all([api(`/api/travel/budget?destination=${dest}&days=${days}&style=${style}`), getGeo()]);
   const d=await r.json();
   if(!r.ok)return;
   const b=d.breakdown;const total=b.total*parseInt(pax);
-  document.getElementById('bud-total').textContent=`Total: ~$${total.toLocaleString()} USD`;
+  document.getElementById('bud-total').textContent=`Total: ~${geo.currency==='USD'?'$'+total.toLocaleString()+' USD':fxLocal(total,geo)+' ('+geo.currency+')'}`;
   document.getElementById('bud-breakdown').innerHTML=[
     ['🏨 Accommodation','accommodation'],['🍽️ Food & Drinks','food'],
     ['🚌 Local Transport','transport'],['🎟️ Activities','activities'],['🛍️ Misc','misc'],
-  ].map(([label,key])=>`<div style="display:flex;justify-content:space-between;font-size:.79rem;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--t3)">${label}</span><span style="color:var(--t1);font-weight:500">$${(b[key]*parseInt(pax)).toLocaleString()}</span></div>`).join('');
+  ].map(([label,key])=>`<div style="display:flex;justify-content:space-between;font-size:.79rem;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--t3)">${label}</span><span style="color:var(--t1);font-weight:500">${convLabel(b[key]*parseInt(pax),geo)}</span></div>`).join('');
   document.getElementById('budget-result').style.display='block';
 }
 
@@ -1233,6 +1262,29 @@ async function saveReminderPref(on){
 async function saveDigestPref(on){
   const r=await api('/api/journey/reminders/pref',{method:'POST',body:JSON.stringify({digest_opt_out:!on})});
   const d=await r.json();showToast(d.message||d.error||'Saved');
+}
+
+/* ═══════════════ GEO — language/currency pickers ═══════════════ */
+async function initGeoPickers(){
+  const g=await getGeo();
+  const langSel=document.getElementById('pref-geo-lang');
+  const curSel=document.getElementById('pref-geo-cur');
+  if(!langSel||!curSel||!g.languages)return;
+  langSel.innerHTML='<option value="">Language: auto ('+(g.strings&&g.lang?g.lang.toUpperCase():'EN')+')</option>'+
+    g.languages.map(l=>`<option value="${l.code}"${l.code===g.lang?' selected':''}>${l.flag} ${l.name}</option>`).join('');
+  const cur=g.currency||'USD';
+  curSel.innerHTML='<option value="">Currency: auto ('+(g.currencySymbol||'')+ ' '+(g.currency||'USD')+')</option>'+
+    ['USD','EUR','GBP','NGN','GHS','KES','ZAR','EGP','MAD','AED','SAR','INR','BRL','CAD','AUD','XOF','XAF','TZS','UGX','RWF','ZMW','JPY','CNY','TRY','QAR'].map(c=>
+      `<option value="${c}"${c===cur?' selected':''}>${(g.fx_rates&&c!=='USD')?'':''}${c}</option>`).join('');
+  langSel.dataset.loaded='1';
+}
+async function saveGeoPref(){
+  const lang=document.getElementById('pref-geo-lang').value;
+  const currency=document.getElementById('pref-geo-cur').value;
+  const r=await api('/api/geo/pref',{method:'POST',body:JSON.stringify({lang,currency})});
+  const d=await r.json();
+  if(r.ok){showToast(d.message||'Saved');_geoCache=null;localStorage.setItem('vg_lang',lang||'');if(!lang)localStorage.removeItem('vg_lang');setTimeout(()=>location.reload(),600);}
+  else showToast(d.error||'Could not save','error');
 }
 
 /* ═══════════════ CONCIERGE — human assistance ═══════════════ */

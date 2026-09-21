@@ -9,10 +9,23 @@ const compress = require('compression');
 const rateLimit= require('express-rate-limit');
 const { initDB, Q, persist } = require('./db');
 const BRAND = require('./config/brand');
+const geo = require('./utils/geo');
+const fx = require('./utils/fx');
+const i18n = require('./utils/i18n');
 
 const app = express();
 
-// ── SECURITY ──────────────────────────────────────────────────────────────────
+// ── GEO / FX / LOCALE ─────────────────────────────────────────────────────
+// Attach req.geo (country, flag, currency, languages) + req.lang to every
+// request. Cheap: CDN header → IP cache → default; live IP lookup happens
+// lazily in /api/geo, never blocking normal requests.
+app.use((req, _res, next) => {
+  req.geo = geo.detectSync(req);
+  req.lang = i18n.negotiate({ acceptLanguage: req.headers['accept-language'], geoLanguages: req.geo.languages });
+  next();
+});
+
+// ── SECURITY ──────────────────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {
     useDefaults: false,
@@ -103,6 +116,7 @@ app.use('/api/journey', require('./routes/journey'));
 app.use('/api/visa',   require('./routes/visa-db'));
 app.use('/api/chat',   require('./routes/chat'));
 app.use('/api/concierge', require('./routes/concierge'));
+app.use('/api/geo', require('./routes/geo'));
 
 // ── CRON TICK (for shared hosting without persistent workers) ────────────────
 // Truehost-style cPanel cron: curl -s "https://yourdomain.com/api/cron/tick?key=CRON_SECRET"
@@ -207,6 +221,8 @@ async function start() {
   console.log('\n🗄  Initialising JapaQuest database with sql.js…');
   await initDB();
   console.log('✅ Database ready\n');
+
+  fx.startFx(); // daily exchange-rate refresh (falls back to static table offline)
 
   const PORT = parseInt(process.env.PORT)||4001;
   require('./worker/social-scheduler').startSocialScheduler();
