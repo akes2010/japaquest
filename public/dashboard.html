@@ -542,18 +542,18 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <button class="new-chat-btn" onclick="startNewChat()">✏️ New Chat</button>
   </div>
   <div class="sb-nav">
-    <button class="sb-btn active" id="nbtn-chat" onclick="sw('chat')"><span class="ni">💬</span>AI Travel Chat</button>
-    <button class="sb-btn" id="nbtn-journey" onclick="sw('journey')"><span class="ni">🧭</span>My Journey<span class="nb-badge" id="journey-badge" style="display:none">!</span></button>
-    <button class="sb-btn" id="nbtn-explore" onclick="sw('explore')"><span class="ni">🌍</span>Explore Destinations</button>
-    <button class="sb-btn" id="nbtn-book" onclick="sw('book')"><span class="ni">✈️</span>Book Travel</button>
-    <button class="sb-btn" id="nbtn-tools" onclick="sw('tools')"><span class="ni">🛠️</span>Visa Tools</button>
-    <button class="sb-btn" id="nbtn-saved" onclick="sw('saved')"><span class="ni">📁</span>Saved Documents</button>
+    <button class="sb-btn active" id="nbtn-chat" onclick="sw('chat')"><span class="ni">💬</span><span data-i18n="nav_chat">AI Travel Chat</span></button>
+    <button class="sb-btn" id="nbtn-journey" onclick="sw('journey')"><span class="ni">🧭</span><span data-i18n="nav_journey">My Journey</span><span class="nb-badge" id="journey-badge" style="display:none">!</span></button>
+    <button class="sb-btn" id="nbtn-explore" onclick="sw('explore')"><span class="ni">🌍</span><span data-i18n="nav_explore">Explore Destinations</span></button>
+    <button class="sb-btn" id="nbtn-book" onclick="sw('book')"><span class="ni">✈️</span><span data-i18n="nav_book">Book Travel</span></button>
+    <button class="sb-btn" id="nbtn-tools" onclick="sw('tools')"><span class="ni">🛠️</span><span data-i18n="nav_tools">Visa Tools</span></button>
+    <button class="sb-btn" id="nbtn-saved" onclick="sw('saved')"><span class="ni">📁</span><span data-i18n="nav_saved">Saved Documents</span></button>
     <div class="nav-sec">Account</div>
-    <button class="sb-btn" id="nbtn-history" onclick="sw('history')"><span class="ni">📂</span>Chat History</button>
-    <button class="sb-btn" id="nbtn-notif" onclick="sw('notif')"><span class="ni">🔔</span>Notifications<span class="nb-badge" id="notif-badge">0</span></button>
-    <button class="sb-btn" id="nbtn-concierge" onclick="sw('concierge')"><span class="ni">🤝</span>Human Help</button>
-    <button class="sb-btn" id="nbtn-sub" onclick="sw('sub')"><span class="ni">💳</span>Subscription</button>
-    <button class="sb-btn" id="nbtn-profile" onclick="sw('profile')"><span class="ni">👤</span>Profile</button>
+    <button class="sb-btn" id="nbtn-history" onclick="sw('history')"><span class="ni">📂</span><span data-i18n="nav_history">Chat History</span></button>
+    <button class="sb-btn" id="nbtn-notif" onclick="sw('notif')"><span class="ni">🔔</span><span data-i18n="nav_notifs">Notifications</span><span class="nb-badge" id="notif-badge">0</span></button>
+    <button class="sb-btn" id="nbtn-concierge" onclick="sw('concierge')"><span class="ni">🤝</span><span data-i18n="nav_concierge">Human Help</span></button>
+    <button class="sb-btn" id="nbtn-sub" onclick="sw('sub')"><span class="ni">💳</span><span data-i18n="nav_sub">Subscription</span></button>
+    <button class="sb-btn" id="nbtn-profile" onclick="sw('profile')"><span class="ni">👤</span><span data-i18n="nav_profile">Profile</span></button>
   </div>
   <div class="sb-history">
     <div class="sh-label">Recent Chats</div>
@@ -562,6 +562,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
   <div class="sb-user">
     <div class="u-ava" id="u-ava" onclick="sw('profile')">U</div>
     <div><div class="u-name" id="u-name">Loading…</div><div class="u-plan" id="u-plan">Free Plan</div></div>
+    <span id="u-flag" title="Detected country" style="display:none;font-size:1.05rem;margin-left:2px;cursor:pointer" onclick="sw('profile')"></span>
     <button class="sb-logout" onclick="doLogout()" title="Sign out">↩</button>
   </div>
 </div>
@@ -611,18 +612,18 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
         <!-- Empty state / wizard entry -->
         <div id="jy-empty">
           <div style="max-width:640px;margin:24px auto 0;text-align:center">
-            <div style="font-family:var(--fd);font-size:1.6rem;color:var(--t1);margin-bottom:8px">🧭 Turn your dream trip into a plan</div>
-            <div style="font-size:.9rem;color:var(--t3);line-height:1.7;margin-bottom:24px">Describe the trip you're dreaming about. JapaQuest checks the <b>verified visa rule</b> for your passport, then builds a deadline-driven checklist — so a first-timer executes like an experienced traveller.</div>
+            <div style="font-family:var(--fd);font-size:1.6rem;color:var(--t1);margin-bottom:8px" data-i18n="wiz_title">🧭 Turn your dream trip into a plan</div>
+            <div style="font-size:.9rem;color:var(--t3);line-height:1.7;margin-bottom:24px" data-i18n="wiz_lede">Describe the trip you're dreaming about. JapaQuest checks the <b>verified visa rule</b> for your passport, then builds a deadline-driven checklist — so a first-timer executes like an experienced traveller.</div>
             <div style="background:#fff;border:1px solid var(--b1);border-radius:22px;padding:24px;text-align:left;box-shadow:var(--shadow-sm)">
-              <div class="form-group"><label class="form-label">Describe your dream trip</label>
-                <textarea class="input" id="jy-text" rows="3" placeholder="e.g. I want to take my family to London for 10 days next summer"></textarea></div>
+              <div class="form-group"><label class="form-label" data-i18n="wiz_desc_label">Describe your dream trip</label>
+                <textarea class="input" id="jy-text" rows="3" data-i18n-ph="wiz_desc_ph" placeholder="e.g. I want to take my family to London for 10 days next summer"></textarea></div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
-                <div class="form-group" style="margin-bottom:0"><label class="form-label">Departure date</label><input class="input" id="jy-dep" type="date"/></div>
-                <div class="form-group" style="margin-bottom:0"><label class="form-label">Return date</label><input class="input" id="jy-ret" type="date"/></div>
-                <div class="form-group" style="margin-bottom:0"><label class="form-label">Travellers</label><input class="input" id="jy-pax" type="number" value="1" min="1" max="20"/></div>
+                <div class="form-group" style="margin-bottom:0"><label class="form-label" data-i18n="wiz_dep">Departure date</label><input class="input" id="jy-dep" type="date"/></div>
+                <div class="form-group" style="margin-bottom:0"><label class="form-label" data-i18n="wiz_ret">Return date</label><input class="input" id="jy-ret" type="date"/></div>
+                <div class="form-group" style="margin-bottom:0"><label class="form-label" data-i18n="wiz_pax">Travellers</label><input class="input" id="jy-pax" type="number" value="1" min="1" max="20"/></div>
               </div>
-              <button class="btn btn-primary" style="width:100%" onclick="createJourney()">🧭 Build my plan</button>
-              <div style="font-size:.68rem;color:var(--t4);margin-top:10px;text-align:center">Destination and trip purpose are detected from your description — or tell the AI chat and ask it to plan it.</div>
+              <button class="btn btn-primary" style="width:100%" onclick="createJourney()" data-i18n="wiz_cta">🧭 Build my plan</button>
+              <div style="font-size:.68rem;color:var(--t4);margin-top:10px;text-align:center" data-i18n="wiz_hint">Destination and trip purpose are detected from your description — or tell the AI chat and ask it to plan it.</div>
             </div>
           </div>
         </div>
@@ -1166,6 +1167,9 @@ async function getGeo(){
   }catch{ _geoCache={currency:'USD',currencySymbol:'$'}; }
   document.documentElement.lang=_geoCache.lang||'en';
   if(_geoCache.rtl) document.documentElement.dir='rtl';
+  // Detected-country flag in the sidebar header (title shows country name).
+  const fl=document.getElementById('u-flag');
+  if(fl&&_geoCache.flag){fl.textContent=_geoCache.flag;fl.style.display='inline';fl.title=(_geoCache.countryName||_geoCache.country||'')+' · '+(_geoCache.currency||'');}
   return _geoCache;
 }
 getGeo().then(g=>{ if(g.strings){ document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.getAttribute('data-i18n'); if(g.strings[k]) el.textContent=g.strings[k];}); document.querySelectorAll('[data-i18n-ph]').forEach(el=>{const k=el.getAttribute('data-i18n-ph'); if(g.strings[k]) el.placeholder=g.strings[k];}); } });

@@ -149,10 +149,19 @@ app.get('/suite/:key', (req,res) => {
   const p = BRAND.SUITE.find(x => x.key === req.params.key);
   if (!p) return res.redirect('/#suite');
   const others = BRAND.SUITE.filter(x => x.key !== p.key);
+  // Server-side i18n: ?lang= > cookie > Accept-Language > geo languages.
+  const L = i18n.negotiate({
+    pref: req.query.lang || (req.headers.cookie || '').match(/vg_lang=([a-z]{2})/i)?.[1] || '',
+    acceptLanguage: req.headers['accept-language'],
+    geoLanguages: req.geo ? req.geo.languages : ['en'],
+  });
+  const T = k => i18n.t(L, k);
+  const dirAttr = i18n.RTL.has(L) ? ' dir="rtl"' : '';
   const feats = p.features.map(([ic,t,d]) => `
       <div class="f-card"><div class="f-ic">${ic}</div><div><div class="f-t">${esc5(t)}</div><p>${esc5(d)}</p></div></div>`).join('');
-  const nav = others.map(o => `<a class="pl" href="/suite/${o.key}">${o.icon} ${esc5(o.name)}</a>`).join('');
-  res.send(`<!DOCTYPE html><html lang="en"><head>
+  const nav = others.map(o => `<a class="pl" href="/suite/${o.key}${req.query.lang ? '?lang='+encodeURIComponent(req.query.lang) : ''}">${o.icon} ${esc5(o.name)}</a>`).join('');
+  const langOpts = i18n.LANGUAGES.map(l => `<option value="${l.code}"${l.code===L?' selected':''}>${l.flag} ${l.name}</option>`).join('');
+  res.send(`<!DOCTYPE html><html lang="${L}"${dirAttr}><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>${esc5(p.name)} — ${esc5(p.short)} | ${esc5(BRAND.NAME)}</title>
 <meta name="description" content="${esc5(p.desc)}"/>
@@ -182,21 +191,27 @@ h1 em{font-style:italic;color:var(--accent)}
 .suite-nav h4{font-family:var(--fd);margin-bottom:14px;color:var(--mut);font-weight:500}
 .pl{display:inline-block;margin:0 8px 8px 0;background:#fff;border:1px solid var(--line);border-radius:99px;padding:8px 16px;font-size:.8rem;transition:transform .25s}
 .pl:hover{transform:translateY(-2px);border-color:var(--accent)}
+.lang-pill{background:transparent;border:1px solid var(--line);border-radius:99px;padding:7px 12px;font-family:var(--fb);font-size:.8rem;cursor:pointer;color:var(--ink)}
+[dir="rtl"] .hero,[dir="rtl"] .f-card{text-align:right;direction:rtl}
 footer{border-top:1px solid var(--line);padding:24px 0;font-size:.78rem;color:var(--mut)}
 @media(max-width:760px){.f-grid{grid-template-columns:1fr}.btn-line{margin-left:0;margin-top:10px}}
 </style></head><body>
 <div class="wrap">
-<nav><a class="logo" href="/"><div class="logo-mark"><span>λ</span></div>Japa<span class="logo-quest">Quest</span></a><a class="top-link" href="/#suite">← All eight products</a></nav>
+<nav><a class="logo" href="/"><div class="logo-mark"><span>λ</span></div>Japa<span class="logo-quest">Quest</span></a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <select class="lang-pill" onchange="location.search='?lang='+this.value" aria-label="Language">${langOpts}</select>
+    <a class="top-link" href="/#suite">${esc5(T('suite_all'))}</a>
+  </div></nav>
 <section class="hero">
   <div class="kick">${p.icon} ${esc5(BRAND.NAME)} suite · ${esc5(p.name)}</div>
-  <h1>${esc5(p.short.replace(/\s*&\s*/,' & '))}, <em>handled.</em></h1>
+  <h1>${esc5(p.short.replace(/\s*&\s*/,' & '))}, <em>${esc5(T('suite_handled'))}</em></h1>
   <p class="sub">${esc5(p.desc)}</p>
-  <a class="btn btn-acc" href="/">${esc5(p.cta)} →</a><a class="btn btn-line" href="/#suite">Compare all lines</a>
+  <a class="btn btn-acc" href="/">${esc5(p.cta)} →</a><a class="btn btn-line" href="/#suite">${esc5(T('suite_compare'))}</a>
   <div class="f-grid">${feats}
   </div>
-  <div class="suite-nav"><h4>Continue through the suite</h4>${nav}</div>
+  <div class="suite-nav"><h4>${esc5(T('suite_continue'))}</h4>${nav}</div>
 </section>
-<footer>© 2026 ${esc5(BRAND.NAME)} — ${esc5(BRAND.TAGLINE)} Not a substitute for official embassy advice.</footer>
+<footer>© 2026 ${esc5(BRAND.NAME)} — ${esc5(BRAND.TAGLINE)} ${esc5(T('suite_disclaimer'))}</footer>
 </div></body></html>`);
 });
 
