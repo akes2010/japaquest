@@ -307,6 +307,16 @@ router.get('/cases', requireAuth, (req, res) => {
   res.json({ cases: Q.getOpenCases(req.user.id) || [] });
 });
 
+// Reminder email preference (profile)
+router.get('/reminders/pref', requireAuth, (req, res) => {
+  res.json({ email_opt_out: !!req.user.email_opt_out, admin_enabled: Q.getSetting('notif_email_reminders') !== '0' });
+});
+
+router.post('/reminders/pref', requireAuth, (req, res) => {
+  Q.setEmailOptOut(req.user.id, !!(req.body && req.body.email_opt_out));
+  res.json({ message: 'Preference saved', email_opt_out: !!(req.body && req.body.email_opt_out) });
+});
+
 router.post('/cases/:id/report', requireAuth, (req, res) => {
   const c = Q.getCase(parseInt(req.params.id), req.user.id);
   if (!c) return res.status(404).json({ error: 'Case not found' });

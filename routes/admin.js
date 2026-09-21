@@ -17,6 +17,11 @@ router.use(requireAdmin);
 // ── STATS ─────────────────────────────────────────────────────────────────────
 router.get('/stats', (req, res) => res.json(Q.getAdminStats()));
 
+// ── JOURNEY & BRAIN BASE ANALYTICS ─────────────────────────────────────────
+router.get('/journey-insights', (req, res) => {
+  res.json({ journeys: Q.getJourneyStats(), cases: Q.getCaseStats() });
+});
+
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
 router.get('/settings/:group', (req, res) => {
   const settings = Q.getSettingsByGroup(req.params.group);

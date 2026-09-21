@@ -26,6 +26,7 @@ const SCHEMA = [
     travel_purpose TEXT DEFAULT 'Tourism',
     avatar TEXT DEFAULT '', status TEXT DEFAULT 'active',
     email_verified INTEGER DEFAULT 1,
+    email_opt_out INTEGER DEFAULT 0,
     last_login TEXT, created_at TEXT DEFAULT(datetime('now')),
     updated_at TEXT DEFAULT(datetime('now')))`,
   `CREATE TABLE IF NOT EXISTS conversations(
@@ -353,6 +354,7 @@ function seedDefaults() {
     ['notif_welcome_email','1','notifications'],['notif_new_user_alert','1','notifications'],
     ['notif_usage_alert','1','notifications'],['notif_usage_threshold','80','notifications'],
     ['notif_system_alerts','1','notifications'],
+    ['notif_email_reminders','0','notifications'],
   ];
   DEFAULTS.forEach(([k,v,g]) => exec(`INSERT OR IGNORE INTO settings(key,value,grp) VALUES(?,?,?)`, [k,v,g]));
 
@@ -490,6 +492,7 @@ function seedVisaData() {
 // Column additions for databases created before Journey OS v2 (Brain Base).
 function migrateJourneyOS() {
   const alters = [
+    ['users', "ALTER TABLE users ADD COLUMN email_opt_out INTEGER DEFAULT 0"],
     ['journeys', "ALTER TABLE journeys ADD COLUMN dossier_json TEXT"],
     ['journeys', "ALTER TABLE journeys ADD COLUMN risk_json TEXT"],
     ['journeys', "ALTER TABLE journeys ADD COLUMN fee_confidence_usd REAL"],
@@ -497,6 +500,7 @@ function migrateJourneyOS() {
     ['passport_wallet', "ALTER TABLE passport_wallet ADD COLUMN file_path TEXT DEFAULT ''"],
     ['passport_wallet', "ALTER TABLE passport_wallet ADD COLUMN file_size INTEGER DEFAULT 0"],
     ['passport_wallet', "ALTER TABLE passport_wallet ADD COLUMN file_mime TEXT DEFAULT ''"],
+    ['journey_tasks', "ALTER TABLE journey_tasks ADD COLUMN remind_sent INTEGER DEFAULT 0"],
   ];
   for (const [tbl, sql] of alters) {
     const exists = queryOne(`SELECT 1 FROM pragma_table_info('${tbl}') WHERE name=?`,
@@ -857,6 +861,44 @@ const Q = {
      FROM journey_cases WHERE status='resolved' ORDER BY resolved_at DESC LIMIT ?`,[limit]),
   saveJourneyDossier: (id,userId,json) => exec('UPDATE journeys SET dossier_json=?, updated_at=datetime(\'now\') WHERE id=? AND user_id=?',[json,id,userId]),
   saveJourneyRisk: (id,userId,json) => exec('UPDATE journeys SET risk_json=?, updated_at=datetime(\'now\') WHERE id=? AND user_id=?',[json,id,userId]),
+  setTaskRemindSent: (id,sent) => exec('UPDATE journey_tasks SET remind_sent=? WHERE id=?',[sent?1:0,id]),
+  setEmailOptOut: (userId,optOut) => exec('UPDATE users SET email_opt_out=?,updated_at=datetime(\'now\') WHERE id=?',[optOut?1:0,userId]),
+
+  // ── ADMIN: Journey/Brain analytics ──────────────────────────────────────
+  getJourneyStats: () => {
+    const byStatus = queryAll('SELECT status, COUNT(*) as count FROM journeys GROUP BY status ORDER BY count DESC');
+    const byDestination = queryAll(`SELECT j.destination_code as code, d.name as name, d.flag as flag, COUNT(*) as journeys,
+      SUM(CASE WHEN j.status='completed' THEN 1 ELSE 0 END) as completed
+      FROM journeys j LEFT JOIN destinations d ON d.code=j.destination_code
+      GROUP BY j.destination_code ORDER BY journeys DESC LIMIT 10`);
+    const byPurpose = queryAll('SELECT purpose, COUNT(*) as count FROM journeys GROUP BY purpose ORDER BY count DESC');
+    const total = queryScalar('SELECT COUNT(*) FROM journeys');
+    const active = queryScalar("SELECT COUNT(*) FROM journeys WHERE status NOT IN ('completed','cancelled')");
+    const upcoming = queryScalar("SELECT COUNT(*) FROM journeys WHERE departure_date IS NOT NULL AND departure_date >= date('now') AND status != 'cancelled'");
+    return { total, active, upcoming, byStatus, byDestination, byPurpose };
+  },
+  getCaseStats: () => {
+    const byKind = queryAll(`SELECT kind, status, COUNT(*) as count FROM journey_cases GROUP BY kind, status ORDER BY kind, count DESC`);
+    const openByKind = queryAll("SELECT kind, COUNT(*) as count FROM journey_cases WHERE status='open' GROUP BY kind ORDER BY count DESC");
+    const recent = queryAll(`SELECT jc.*, d.name as dest_name, d.flag as dest_flag, u.name as user_name, u.email as user_email
+      FROM journey_cases jc
+      LEFT JOIN journeys j ON j.id=jc.journey_id
+      LEFT JOIN destinations d ON d.code=j.destination_code
+      LEFT JOIN users u ON u.id=jc.user_id
+      ORDER BY jc.detected_at DESC LIMIT 40`);
+    const resolvedReports = queryAll(`SELECT jc.kind, jc.insight_key, jc.resolution_notes, jc.action_taken_json, jc.detected_at, jc.resolved_at,
+      d.name as dest_name, u.email as user_email
+      FROM journey_cases jc
+      LEFT JOIN journeys j ON j.id=jc.journey_id
+      LEFT JOIN destinations d ON d.code=j.destination_code
+      LEFT JOIN users u ON u.id=jc.user_id
+      WHERE jc.status='resolved' ORDER BY jc.resolved_at DESC LIMIT 30`);
+    const topInsights = queryAll(`SELECT insight_key, COUNT(*) as uses FROM journey_cases WHERE insight_key IS NOT NULL GROUP BY insight_key ORDER BY uses DESC LIMIT 8`);
+    const total = queryScalar('SELECT COUNT(*) FROM journey_cases');
+    const open = queryScalar("SELECT COUNT(*) FROM journey_cases WHERE status='open'");
+    const reported = queryScalar("SELECT COUNT(*) FROM journey_cases WHERE resolution_notes LIKE 'REPORTED:%'");
+    return { total, open, reported, byKind, openByKind, recent, resolvedReports, topInsights };
+  },
 };
 
 module.exports = { initDB, Q, persist, exec };

@@ -367,6 +367,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <div class="nav-sec">Tools</div>
     <button class="sb-btn" id="snav-broadcast" onclick="sw('broadcast')">📢 Broadcast</button>
     <button class="sb-btn" id="snav-social" onclick="sw('social')">📣 Social Posts</button>
+    <button class="sb-btn" id="snav-brain" onclick="sw('brain')">🧠 Journey & Brain</button>
     <button class="sb-btn" onclick="window.open('/dashboard','_blank')">👁️ View App</button>
   </div>
   <div class="sb-footer">
@@ -620,6 +621,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
         <div class="tgl-row"><div><div class="tgl-lbl">Usage Limit Alerts to Users</div></div><label class="toggle"><input type="checkbox" id="notif_usage_alert"/><span class="toggle-sl"></span></label></div>
         <div class="form-group" style="margin-top:12px"><label class="form-label">Alert Threshold (%)</label><input class="input" id="notif_usage_threshold" type="number" min="50" max="99" placeholder="80"/><div class="form-hint">Alert fires at this % of daily limit</div></div>
         <div class="tgl-row"><div><div class="tgl-lbl">System Notifications (in-app)</div></div><label class="toggle"><input type="checkbox" id="notif_system_alerts"/><span class="toggle-sl"></span></label></div>
+        <div class="tgl-row"><div><div class="tgl-lbl">Journey Reminder Emails</div><div class="tgl-sub">Email travellers about due/overdue tasks, departures (T-30/14/7/1) and expiring documents. Needs working SMTP. Travellers can opt out in their profile.</div></div><label class="toggle"><input type="checkbox" id="notif_email_reminders"/><span class="toggle-sl"></span></label></div>
       </div>
       <button class="btn btn-primary" onclick="saveNotifs()">💾 Save Settings</button>
     </div>
@@ -671,6 +673,29 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" onclick="openPartnerModal()">➕ Add Partner</button>
       <span style="font-size:.7rem;color:var(--t4)">Keywords are comma-separated words/phrases from traveller messages that trigger this partner in chat.</span>
+    </div>
+  </div>
+
+  <!-- JOURNEY & BRAIN BASE -->
+  <div class="view" id="view-brain">
+    <div style="margin-bottom:16px">
+      <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">🧠 Journey & Brain Base Analytics</div>
+      <div style="font-size:.78rem;color:var(--t4)">How travellers are executing trips, which patterns the brain keeps detecting, and what travellers report back — use it to tune forecasts and editorial priorities.</div>
+    </div>
+    <div class="stats-grid" id="brain-stats" style="margin-bottom:16px"></div>
+    <div class="chart-row">
+      <div class="chart-card"><div class="cc-title">🗂️ Journeys by status</div><div id="brain-jstatus"></div></div>
+      <div class="chart-card"><div class="cc-title">🌍 Top journey destinations</div><div id="brain-jdest"></div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card"><div class="cc-title">🚨 Open cases by kind</div><div id="brain-casekinds"></div></div>
+      <div class="chart-card"><div class="cc-title">💡 Insights most often matched</div><div id="brain-insights"></div></div>
+    </div>
+    <div class="tbl-card"><div class="tbl-head"><div class="tbl-title">📋 Recent cases (all travellers)</div><button class="btn btn-ghost btn-sm" onclick="loadBrain()">↻ Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Detected</th><th>Kind</th><th>Traveller</th><th>Trip</th><th>Status</th><th>Notes / report</th></tr></thead><tbody id="brain-cases"></tbody></table></div>
+    </div>
+    <div class="tbl-card"><div class="tbl-head"><div class="tbl-title">🗣️ Traveller reports & resolutions (brain feedback)</div></div>
+      <div class="table-wrap"><table><thead><tr><th>Resolved</th><th>Kind</th><th>Traveller</th><th>Trip</th><th>What they said / did</th></tr></thead><tbody id="brain-reports"></tbody></table></div>
     </div>
   </div>
 
@@ -797,10 +822,45 @@ function sw(v){
   document.querySelectorAll('.sb-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v)?.classList.add('active');
   document.getElementById('snav-'+v)?.classList.add('active');
-  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',broadcast:'Broadcast',social:'Social Posts & Promotion'};
+  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base'};
   document.getElementById('tb-title').textContent=T[v]||v;
-  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();
+  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();
   if(v==='overview')loadClicks();
+  history.replaceState(null,'','#'+v);
+}
+function swFromHash(){const v=(location.hash||'').slice(1);if(v&&document.getElementById('view-'+v))sw(v);}
+window.addEventListener('hashchange',swFromHash);
+window.addEventListener('load',swFromHash);
+
+/* ── JOURNEY & BRAIN BASE ANALYTICS ── */
+const CASE_LABELS={task_overdue:'⚠️ Overdue task',appointment_scarcity:'⏰ Appointment scarcity',passport_validity:'🛂 Passport validity',user_report:'🗣️ Traveller report'};
+function caseLabel(k){return CASE_LABELS[k]||k;}
+async function loadBrain(){
+  try{
+    const r=await api('/api/admin/journey-insights');const d=await r.json();if(!r.ok)throw new Error(d.error||'Failed');
+    const J=d.journeys||{},C=d.cases||{};
+    document.getElementById('brain-stats').innerHTML=`
+      <div class="stat-card"><div class="sc-lbl">Total journeys</div><div class="sc-val">${J.total||0}</div><div class="sc-sub">${J.active||0} active · ${J.upcoming||0} upcoming</div></div>
+      <div class="stat-card"><div class="sc-lbl">Total cases</div><div class="sc-val">${C.total||0}</div><div class="sc-sub">${C.open||0} open now</div></div>
+      <div class="stat-card"><div class="sc-lbl">Traveller reports</div><div class="sc-val">${C.reported||0}</div><div class="sc-sub">ground truth for tuning</div></div>
+      <div class="stat-card"><div class="sc-lbl">Case kinds</div><div class="sc-val">${(C.openByKind||[]).length}</div><div class="sc-sub">distinct patterns</div></div>`;
+    const bar=(label,val,max,color)=>`<div class="mb-row"><div class="mb-name" style="width:130px" title="${label}">${label}</div><div class="mb-bar-w"><div class="mb-bar" style="width:${max?Math.round((val/max)*100):0}%;${color?`background:${color}`:''}"></div></div><div class="mb-count">${val}</div></div>`;
+    const js=J.byStatus||[];const jsMax=Math.max(...js.map(x=>x.count),1);
+    document.getElementById('brain-jstatus').innerHTML=js.length?js.map(x=>bar(x.status,x.count,jsMax)).join(''):'<div class="pg" style="justify-content:flex-start;padding:6px 0">No journeys yet</div>';
+    const jd=J.byDestination||[];const jdMax=Math.max(...jd.map(x=>x.journeys),1);
+    document.getElementById('brain-jdest').innerHTML=jd.length?jd.map(x=>bar(`${x.flag||''} ${x.name||x.code}`,x.journeys,jdMax)).join(''):'<div class="pg" style="justify-content:flex-start;padding:6px 0">No data yet</div>';
+    const ck=C.openByKind||[];const ckMax=Math.max(...ck.map(x=>x.count),1);
+    document.getElementById('brain-casekinds').innerHTML=ck.length?ck.map(x=>bar(caseLabel(x.kind),x.count,ckMax,'#B3282D')).join(''):'<div class="pg" style="justify-content:flex-start;padding:6px 0">No open cases 🎉</div>';
+    const ti=C.topInsights||[];const tiMax=Math.max(...ti.map(x=>x.uses),1);
+    document.getElementById('brain-insights').innerHTML=ti.length?ti.map(x=>bar((x.insight_key||'').split('::')[1]||x.insight_key,x.uses,tiMax)).join(''):'<div class="pg" style="justify-content:flex-start;padding:6px 0">No insight matches yet</div>';
+    document.getElementById('brain-cases').innerHTML=(C.recent||[]).map(c=>{
+      const statusPill=c.status==='open'?'<span class="badge badge-red">open</span>':c.status==='resolved'?'<span class="badge badge-green">resolved</span>':'<span class="badge badge-gray">dismissed</span>';
+      const notes=(c.resolution_notes||'').replace(/^REPORTED:/,'🗣️').slice(0,140);
+      return `<tr><td style="white-space:nowrap">${String(c.detected_at||'').slice(0,10)}</td><td><b>${caseLabel(c.kind)}</b></td><td>${esc(c.user_name||c.user_email||'—')}</td><td>${c.dest_flag||''} ${esc(c.dest_name||'—')}</td><td>${statusPill}</td><td style="font-size:.72rem;color:var(--t4)">${esc(notes)||'—'}</td></tr>`;}).join('')||'<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--t4)">No cases yet</td></tr>';
+    document.getElementById('brain-reports').innerHTML=(C.resolvedReports||[]).map(c=>{
+      let action='';try{const a=JSON.parse(c.action_taken_json||'{}');action=a.reported?c.resolution_notes.replace(/^REPORTED:\s*/,''):[a.slot,a.applied?'applied':null,a.notes].filter(Boolean).join(' · ')||JSON.stringify(a).slice(0,120);}catch{action=(c.action_taken_json||'').slice(0,120);}
+      return `<tr><td style="white-space:nowrap">${String(c.resolved_at||'').slice(0,10)}</td><td><b>${caseLabel(c.kind)}</b></td><td>${esc(c.user_email||'—')}</td><td>${esc(c.dest_name||'—')}</td><td style="font-size:.74rem;color:var(--t2);max-width:420px">${esc(action||c.resolution_notes||'—')}</td></tr>`;}).join('')||'<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--t4)">No resolutions yet — traveller feedback will appear here</td></tr>';
+  }catch(e){showToast('Could not load brain analytics: '+e.message);}
 }
 
 function renderStats(d){
@@ -1086,8 +1146,8 @@ async function saveEmail(){const fields=['smtp_host','smtp_port','smtp_user','sm
 async function testEmail(){const to=document.getElementById('test-email-to').value;if(!to)return showToast('Enter recipient email','error');showToast('Sending test…');const r=await apiFetch('/api/admin/settings/test-email',{method:'POST',body:JSON.stringify({to})});const d=await r.json();r.ok?showToast(d.message):showToast(d.error,'error');}
 
 // ── NOTIF SETTINGS ────────────────────────────────────────────────────────────
-async function loadNotifS(){const r=await apiFetch('/api/admin/settings/notifications');const d=await r.json();const s=d.settings||{};['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts'].forEach(k=>{const el=document.getElementById(k);if(el)el.checked=s[k]==='1';});document.getElementById('notif_usage_threshold').value=s.notif_usage_threshold||'80';}
-async function saveNotifs(){const tgls=['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts'];const settings=tgls.reduce((a,k)=>({...a,[k]:document.getElementById(k).checked?'1':'0'}),{});settings.notif_usage_threshold=document.getElementById('notif_usage_threshold').value;const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});const d=await r.json();r.ok?showToast('Notification settings saved ✅'):showToast(d.error,'error');}
+async function loadNotifS(){const r=await apiFetch('/api/admin/settings/notifications');const d=await r.json();const s=d.settings||{};['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts','notif_email_reminders'].forEach(k=>{const el=document.getElementById(k);if(el)el.checked=s[k]==='1';});document.getElementById('notif_usage_threshold').value=s.notif_usage_threshold||'80';}
+async function saveNotifs(){const tgls=['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts','notif_email_reminders'];const settings=tgls.reduce((a,k)=>({...a,[k]:document.getElementById(k).checked?'1':'0'}),{});settings.notif_usage_threshold=document.getElementById('notif_usage_threshold').value;const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});const d=await r.json();r.ok?showToast('Notification settings saved ✅'):showToast(d.error,'error');}
 
 // ── GENERAL SETTINGS ──────────────────────────────────────────────────────────
 async function loadGeneral(){

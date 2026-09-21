@@ -41,6 +41,35 @@ function notifyOnce(dedupKey, userId, title, message, type = 'info') {
   return true;
 }
 
+// ── Email delivery (best-effort, in-app notification is the primary channel) ─
+async function emailReminder(user, subject, heading, lines) {
+  const settings = Q.getSettingsByGroup('notifications') || {};
+  if (String(settings.notif_email_reminders) === '0') return false;
+  if (user.email_opt_out) return false;
+  if (!user.email) return false;
+  try {
+    const { sendEmail } = require('../utils/mailer');
+    const appName = Q.getSetting('app_name') || 'Japa+';
+    const appUrl = (Q.getSetting('app_url') || '').replace(/\/$/, '');
+    await sendEmail({
+      to: user.email,
+      subject: `${appName} · ${subject}`,
+      html: `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #eee;border-radius:14px;overflow:hidden">
+  <div style="background:#0A1428;color:#F7F3EA;padding:18px 24px;font-size:15px;font-weight:600">${appName} · ${heading}</div>
+  <div style="padding:20px 24px;color:#222;line-height:1.7">
+    ${lines.map(l => `<p style="margin:0 0 10px">${l}</p>`).join('')}
+    <p style="margin:16px 0 0"><a href="${appUrl}/dashboard" style="background:#0A1428;color:#F7F3EA;text-decoration:none;padding:10px 22px;border-radius:99px;font-weight:600;display:inline-block">Open my Journey →</a></p>
+    <p style="margin:18px 0 0;font-size:12px;color:#999">You get this because journey reminders are on. Manage it in Profile → Preferences.</p>
+  </div>
+</div>`,
+    });
+    return true;
+  } catch (e) {
+    if (!emailReminder._warned) { console.warn('[journey-reminders] email skipped:', e.message); emailReminder._warned = true; }
+    return false;
+  }
+}
+
 async function runOnce() {
   try {
     await initDB();
@@ -54,9 +83,12 @@ async function runOnce() {
       } catch { return []; }
     })();
 
-    let notifications = 0, casesOpened = 0;
+    let notifications = 0, casesOpened = 0, emails = 0;
 
     for (const j of journeys) {
+      const user = Q.getUserById(j.user_id);
+      if (!user || user.status === 'banned') continue;
+
       // ── Task reminders ──────────────────────────────────────────────────
       const tasks = Q.getJourneyTasks(j.id) || [];
       for (const t of tasks) {
@@ -65,12 +97,21 @@ async function runOnce() {
         if (days === 0 || days === 1 || days === 2 || days === 3) {
           if (notifyOnce(`rem:task:${t.id}`, j.user_id,
             `⏰ ${j.dest_flag || ''} ${j.dest_name || j.destination_code}: task due ${days === 0 ? 'today' : 'in ' + days + ' day(s)'}`,
-            `${t.title}\n${t.detail || ''}\n\nOpen My Journey to tick it off.`)) notifications++;
+            `${t.title}\n${t.detail || ''}\n\nOpen My Journey to tick it off.`)) {
+            notifications++;
+            if (await emailReminder(user, `Task due ${days === 0 ? 'today' : 'in ' + days + ' day(s)'}`,
+              'A checklist task is due',
+              [`<b>${t.title}</b>`, t.detail || '', `Trip: ${j.dest_name || j.destination_code} · deadline ${t.deadline}`])) emails++;
+          }
         } else if (days < 0) {
           // overdue: weekly nag with ISO-week key
           if (notifyOnce(`rem:overdue:${t.id}:${isoWeek(new Date())}`, j.user_id,
             `⚠️ Overdue: ${j.dest_name || j.destination_code} — ${t.title}`,
-            `This task was due ${t.deadline} and is still open. ${t.detail || ''}`)) notifications++;
+            `This task was due ${t.deadline} and is still open. ${t.detail || ''}`)) {
+            notifications++;
+            if (await emailReminder(user, 'Overdue task', 'A checklist task is overdue',
+              [`<b>${t.title}</b> was due ${t.deadline} and is still open.`, t.detail || ''])) emails++;
+          }
         }
       }
 
@@ -81,7 +122,14 @@ async function runOnce() {
           if (notifyOnce(`rem:dep:${j.id}:${depDays}`, j.user_id,
             `🛫 ${j.dep_flag || j.dest_flag || ''} ${j.dest_name || j.destination_code} — ${depDays} day(s) to departure`,
             depDays === 1 ? 'Final checks: online check-in, printed documents, money split. Safe travels!'
-              : `Check your Journey readiness and clear any overdue tasks this week.`)) notifications++;
+              : `Check your Journey readiness and clear any overdue tasks this week.`)) {
+            notifications++;
+            if (await emailReminder(user, `${depDays} days to departure`,
+              `${j.dest_name || j.destination_code} is getting close`,
+              depDays === 1
+                ? ['Final checks: online check-in, printed documents, money split.', 'Safe travels! 🌍']
+                : [`Your trip departs in <b>${depDays} days</b>.`, 'Clear any overdue checklist tasks this week so readiness stays on track.'])) emails++;
+          }
         }
       }
 
@@ -114,7 +162,7 @@ async function runOnce() {
 
     if (notifications || casesOpened) {
       persist();
-      console.log(`[journey-reminders] ${notifications} reminder(s), ${casesOpened} case(s) opened`);
+      console.log(`[journey-reminders] ${notifications} reminder(s), ${casesOpened} case(s) opened${emails ? ', ' + emails + ' email(s)' : ''}`);
     }
   } catch (e) {
     console.error('[journey-reminders] scan failed:', e.message);

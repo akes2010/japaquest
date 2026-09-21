@@ -806,6 +806,10 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
           </div>
           <div id="ts-hint" style="margin-top:10px;font-size:.72rem;color:var(--t4)"></div>
         </div>
+        <div class="ps-card" id="reminders-card" style="display:none"><div class="ps-title">⏰ Journey Reminders</div>
+          <div class="tgl-row"><div><div class="tgl-lbl">Reminder emails</div><div class="tgl-sub">Due/overdue tasks, departure countdowns (T-30/14/7/1) and expiring documents. In-app notifications always stay on.</div></div>
+            <label class="toggle"><input type="checkbox" id="pref-email-rem" onchange="saveReminderPref(this.checked)"/><span class="toggle-sl"></span></label></div>
+        </div>
         <div class="ps-card"><div class="ps-title">Personal Information</div>
           <div class="form-group"><label class="form-label">Full Name</label><input class="input" id="p-name" tabindex="1"/></div>
           <div class="form-group"><label class="form-label">Email</label><input class="input" id="p-email" disabled style="opacity:.5"/></div>
@@ -917,7 +921,11 @@ function sw(v){
   if(v==='profile')loadTravellerScore();
   if(v==='chat')document.getElementById('msg-ta').focus();
   document.body.classList.remove('sb-open');
+  history.replaceState(null,'','#'+v);
 }
+function swFromHash(){const v=(location.hash||'').slice(1);if(v&&document.getElementById('view-'+v))sw(v);}
+window.addEventListener('hashchange',swFromHash);
+window.addEventListener('load',swFromHash);
 
 function setUsage(used,limit){
   const pct=Math.min(100,limit>=99999?0:Math.round((used/limit)*100));
@@ -1170,7 +1178,16 @@ async function loadTravellerScore(){
     if(!c.completed_trips)hints.push('Complete your first journey checklist to start earning trip points');
     if(c.tasks_total&&c.tasks_done_total<c.tasks_total)hints.push(`${c.tasks_total-c.tasks_done_total} checklist task(s) left across your journeys`);
     document.getElementById('ts-hint').textContent=hints[0]||'Keep your journeys on track to grow your score.';
+    // Reminder preference (visible only when admin has email reminders enabled)
+    try{
+      const pr=await api('/api/journey/reminders/pref');const pd=await pr.json();
+      if(pd.admin_enabled){document.getElementById('reminders-card').style.display='block';document.getElementById('pref-email-rem').checked=!pd.email_opt_out;}
+    }catch(e){}
   }catch(e){}
+}
+async function saveReminderPref(on){
+  const r=await api('/api/journey/reminders/pref',{method:'POST',body:JSON.stringify({email_opt_out:!on})});
+  const d=await r.json();showToast(d.message||d.error||'Saved');
 }
 
 /* ═══════════════ JOURNEY OS ═══════════════ */
