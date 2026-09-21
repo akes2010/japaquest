@@ -5,7 +5,7 @@
  * lazily so a missing/stub provider file can never crash the whole app.
  * See the provider shape documented below before adding one.
  */
-const PROVIDER_NAMES = ['stripe', 'paystack', 'flutterwave', 'opay', 'payoneer'];
+const PROVIDER_NAMES = ['stripe', 'paystack', 'flutterwave', 'opay', 'payoneer', 'crypto'];
 
 const PROVIDERS = {};
 for (const name of PROVIDER_NAMES) {
@@ -42,6 +42,7 @@ const WEBHOOK_SECRET_ENV = {
   flutterwave: "FLUTTERWAVE_WEBHOOK_SECRET_HASH",
   opay: "OPAY_SECRET_KEY",
   payoneer: null,
+  crypto: null, // manual confirmation, no webhooks
 };
 
 function getWebhookSecret(key) {

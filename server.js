@@ -7,6 +7,7 @@ const helmet   = require('helmet');
 const morgan   = require('morgan');
 const compress = require('compression');
 const rateLimit= require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 const { initDB, Q, persist } = require('./db');
 const BRAND = require('./config/brand');
 const geo = require('./utils/geo');
@@ -22,6 +23,27 @@ const app = express();
 app.use((req, _res, next) => {
   req.geo = geo.detectSync(req);
   req.lang = i18n.negotiate({ acceptLanguage: req.headers['accept-language'], geoLanguages: req.geo.languages });
+  next();
+});
+
+// ── AFFILIATE REF TRACKING ─────────────────────────────────────────────────
+// /r/CODE → landing with ?ref=CODE + 30-day cookie. Also honours ?ref= on any
+// page so marketers can share plain links. Never blocks the request.
+app.get('/r/:code', (req, res) => {
+  const code = String(req.params.code || '').toUpperCase().slice(0, 24);
+  if (/^JQ[0-9A-Z]{4,12}$/.test(code)) {
+    res.cookie('refcookie', code, { maxAge: 30 * 24 * 3600 * 1000, sameSite: 'lax', path: '/' });
+    try { require('./db').Q.getAffiliateByCode(code) && require('./db').Q.bumpAffiliate(require('./db').Q.getAffiliateByCode(code).id, 'clicks'); } catch {}
+    return res.redirect('/?ref=' + encodeURIComponent(code));
+  }
+  res.redirect('/');
+});
+app.use((req, res, next) => {
+  const ref = String(req.query.ref || '').toUpperCase().slice(0, 24);
+  if (/^JQ[0-9A-Z]{4,12}$/.test(ref) && !req.cookies?.refcookie) {
+    res.cookie('refcookie', ref, { maxAge: 30 * 24 * 3600 * 1000, sameSite: 'lax', path: '/' });
+    try { const a = require('./db').Q.getAffiliateByCode(ref); if (a) require('./db').Q.bumpAffiliate(a.id, 'clicks'); } catch {}
+  }
   next();
 });
 
@@ -55,6 +77,7 @@ app.set('trust proxy', 1);
 app.use(compress());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '2mb' }));
+app.use(cookieParser());
 app.use('/api', rateLimit({ windowMs:15*60*1000, max:300, standardHeaders:true, legacyHeaders:false }));
 
 // ── STATIC FILES ──────────────────────────────────────────────────────────────
@@ -121,6 +144,8 @@ app.use('/api/visa',   require('./routes/visa-db'));
 app.use('/api/chat',   require('./routes/chat'));
 app.use('/api/concierge', require('./routes/concierge'));
 app.use('/api/geo', require('./routes/geo'));
+app.use('/api/affiliate', require('./routes/affiliate'));
+app.use('/api/payments', require('./routes/payments'));
 
 // ── CRON TICK (for shared hosting without persistent workers) ────────────────
 // Truehost-style cPanel cron: curl -s "https://yourdomain.com/api/cron/tick?key=CRON_SECRET"

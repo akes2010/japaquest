@@ -45,4 +45,17 @@ function requireAdmin(req, res, next) {
   });
 }
 
-module.exports = { signToken, verifyToken, requireAuth, requireAdmin };
+// Attaches req.user when a valid token is present; never blocks.
+function optionalAuth(req, res, next) {
+  const auth = req.headers.authorization || '';
+  if (auth.startsWith('Bearer ')) {
+    const payload = verifyToken(auth.slice(7));
+    if (payload) {
+      const user = Q.getUserByUUID(payload.uuid);
+      if (user && user.status !== 'banned') req.user = user;
+    }
+  }
+  next();
+}
+
+module.exports = { signToken, verifyToken, requireAuth, requireAdmin, optionalAuth };

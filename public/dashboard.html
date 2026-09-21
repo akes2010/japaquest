@@ -553,6 +553,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <button class="sb-btn" id="nbtn-notif" onclick="sw('notif')"><span class="ni">🔔</span><span data-i18n="nav_notifs">Notifications</span><span class="nb-badge" id="notif-badge">0</span></button>
     <button class="sb-btn" id="nbtn-concierge" onclick="sw('concierge')"><span class="ni">🤝</span><span data-i18n="nav_concierge">Human Help</span></button>
     <button class="sb-btn" id="nbtn-sub" onclick="sw('sub')"><span class="ni">💳</span><span data-i18n="nav_sub">Subscription</span></button>
+    <button class="sb-btn" id="nbtn-earnings" onclick="sw('earnings')"><span class="ni">💰</span><span>Earnings</span></button>
     <button class="sb-btn" id="nbtn-profile" onclick="sw('profile')"><span class="ni">👤</span><span data-i18n="nav_profile">Profile</span></button>
   </div>
   <div class="sb-history">
@@ -795,8 +796,27 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px" id="plan-grid"></div>
         <div style="padding:14px;background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);font-size:.76rem;color:var(--t4)">
-          💡 Contact <span id="support-email">support@japaplus.app</span> to upgrade your plan.
+          💡 Contact <span id="support-email">support@japaplus.app</span> for help with upgrading your plan.
         </div>
+      </div>
+    </div>
+
+    <!-- AFFILIATE EARNINGS -->
+    <div class="view" id="view-earnings">
+      <div class="view-wrap">
+        <div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300);margin-bottom:18px">💰 Affiliate Earnings</div>
+        <div id="earn-body" style="font-size:.85rem;color:var(--t3)">Loading…</div>
+      </div>
+    </div>
+
+    <!-- CHECKOUT MODAL (provider picker / crypto instructions) -->
+    <div class="m-ov" id="pay-modal">
+      <div class="m-box" style="max-width:440px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div id="pm-title" style="font-family:var(--fd);font-size:1.05rem;color:var(--a300)">Upgrade plan</div>
+          <button class="btn-ghost" style="padding:4px 10px" onclick="closeM('pay-modal')">✕</button>
+        </div>
+        <div id="pm-body"></div>
       </div>
     </div>
 
@@ -958,7 +978,7 @@ function sw(v){
   document.querySelectorAll('.sb-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v)?.classList.add('active');
   document.getElementById('nbtn-'+v)?.classList.add('active');
-  const T={chat:'AI Travel Chat',journey:'My Journey',explore:'Explore Destinations',book:'Book Travel',tools:'Visa Tools',saved:'Saved Documents',history:'Chat History',notif:'Notifications',concierge:'Human Help',sub:'Subscription',profile:'My Profile'};
+  const T={chat:'AI Travel Chat',journey:'My Journey',explore:'Explore Destinations',book:'Book Travel',tools:'Visa Tools',saved:'Saved Documents',history:'Chat History',notif:'Notifications',concierge:'Human Help',sub:'Subscription',earnings:'Affiliate Earnings',profile:'My Profile'};
   document.getElementById('tb-title').textContent=T[v]||v;
   if(v==='notif'){loadNotifs();markAllRead();}
   if(v==='history')loadAllConvs();
@@ -966,6 +986,7 @@ function sw(v){
   if(v==='saved')loadSaved();
   if(v==='sub')loadPlans();
   if(v==='journey')loadJourneys();
+  if(v==='earnings')loadEarnings();
   if(v==='concierge')loadConcierge();
   if(v==='profile')loadTravellerScore();
   if(v==='chat')document.getElementById('msg-ta').focus();
@@ -1612,6 +1633,163 @@ async function deleteJourney(id){
 }
 
 init();
+
+// ── AFFILIATE EARNINGS ──────────────────────────────────────────────────────
+const CC={USD:'$',EUR:'€',GBP:'£',NGN:'₦',GHS:'₵',KES:'KSh',ZAR:'R',XOF:'CFA',XAF:'FCFA',TZS:'TSh',UGX:'USh',EGP:'E£',MAD:'DH',INR:'₹',BRL:'R$',CAD:'C$',AUD:'A$'};
+function cSym(c){return CC[c]||c+' ';}
+// ── AFFILIATE EARNINGS ──────────────────────────────────────────────────────
+async function loadEarnings(){
+  const body=document.getElementById('earn-body');if(!body)return;
+  try{
+    const r=await fetch('/api/affiliate/me',{headers:{Authorization:'Bearer '+(localStorage.getItem('vg_token')||'')}});
+    const d=await r.json();
+    if(!r.ok)return body.textContent=d.error||'Failed to load';
+    if(!d.enrolled){
+      body.innerHTML=`
+        <div style="max-width:640px">
+          <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-xl);padding:26px">
+            <div style="font-family:var(--fd);font-size:1.15rem;color:var(--o300);margin-bottom:8px">Earn by sharing JapaQuest</div>
+            <p style="color:var(--t3);line-height:1.6;margin:0 0 14px">Refer individuals, groups or organisations. When anyone registers through your link and pays for a plan, you earn <strong style="color:var(--o300)">30% commission</strong> on the payment.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;font-size:.75rem;color:var(--t4)">
+              <div style="background:var(--bg);border-radius:10px;padding:10px">1 · Apply</div>
+              <div style="background:var(--bg);border-radius:10px;padding:10px">2 · Get tracking code</div>
+              <div style="background:var(--bg);border-radius:10px;padding:10px">3 · Share links</div>
+              <div style="background:var(--bg);border-radius:10px;padding:10px">4 · Get paid</div>
+            </div>
+            <label style="display:block;font-size:.72rem;color:var(--t4);margin-bottom:4px">I am applying as</label>
+            <select id="ea-type" style="width:100%;max-width:280px;padding:10px;border-radius:10px;border:1px solid var(--b1);background:var(--bg);color:var(--t2);margin-bottom:12px">
+              <option value="individual">Individual</option><option value="group">Group / Organisation</option>
+            </select>
+            <label style="display:block;font-size:.72rem;color:var(--t4);margin-bottom:4px">Name or organisation name</label>
+            <input id="ea-name" value="${esc(user.name||'')}" style="width:100%;max-width:280px;padding:10px;border-radius:10px;border:1px solid var(--b1);background:var(--bg);color:var(--t2);margin-bottom:12px">
+            <label style="display:block;font-size:.72rem;color:var(--t4);margin-bottom:4px">Organisation (optional, if applying as a group)</label>
+            <input id="ea-org" placeholder="e.g. Lagos Travel Club" style="width:100%;max-width:280px;padding:10px;border-radius:10px;border:1px solid var(--b1);background:var(--bg);color:var(--t2);margin-bottom:12px">
+            <button class="btn btn-primary" onclick="applyAffiliate()">Apply for a tracking code</button>
+            <div id="ea-msg" style="margin-top:10px;font-size:.78rem"></div>
+          </div>
+        </div>`;
+      return;
+    }
+    const cur='$';
+    const links=[
+      ['Referral link',d.link],['Landing page',d.link.replace('/r/'+d.code,'/')],
+      ['Create account',d.link.replace('/r/'+d.code,'/register')],
+      ['JapaQuest Visa',d.link.replace('/r/'+d.code,'/suite/visa')],
+      ['JapaQuest Study',d.link.replace('/r/'+d.code,'/suite/study')],
+      ['JapaQuest Work',d.link.replace('/r/'+d.code,'/suite/work')],
+    ];
+    const shareTxt=encodeURIComponent('Plan your visa, studies, work or relocation abroad with JapaQuest AI — start free:');
+    const linkRows=links.map(([n,u])=>`
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--bg);border:1px solid var(--b1);border-radius:12px;padding:9px 12px;margin-bottom:8px">
+        <span style="min-width:110px;font-size:.72rem;color:var(--t4)">${n}</span>
+        <code style="flex:1;min-width:180px;font-size:.7rem;color:var(--a300);word-break:break-all">${esc(u)}</code>
+        <button class="btn btn-sm btn-ghost" onclick="copyAff('${esc(u)}')">Copy</button>
+        <a class="btn btn-sm btn-ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=${shareTxt}%20${encodeURIComponent(u)}">WhatsApp</a>
+        <a class="btn btn-sm btn-ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=${shareTxt}&url=${encodeURIComponent(u)}">X</a>
+        <a class="btn btn-sm btn-ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(u)}">Facebook</a>
+      </div>`).join('');
+    body.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:18px">
+        <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:14px"><div style="font-family:var(--fd);font-size:1.3rem;color:var(--o300)">${cur}${(d.balance||0).toFixed(2)}</div><div style="font-size:.66rem;color:var(--t4)">Available for payout</div></div>
+        <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:14px"><div style="font-family:var(--fd);font-size:1.3rem;color:var(--t2)">${cur}${(d.earned||0).toFixed(2)}</div><div style="font-size:.66rem;color:var(--t4)">Lifetime earned</div></div>
+        <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:14px"><div style="font-family:var(--fd);font-size:1.3rem;color:var(--t2)">${d.conversions||0}</div><div style="font-size:.66rem;color:var(--t4)">Paid conversions</div></div>
+        <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:14px"><div style="font-family:var(--fd);font-size:1.3rem;color:var(--t2)">${d.clicks||0} / ${d.signups||0}</div><div style="font-size:.66rem;color:var(--t4)">Clicks / signups</div></div>
+      </div>
+      <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:16px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <span style="font-size:.76rem;color:var(--t4)">Your tracking code</span>
+          <code style="background:var(--bg);padding:3px 12px;border-radius:8px;font-family:var(--fd);font-size:1rem;color:var(--o300)">${esc(d.code)}</code>
+          <span style="font-size:.68rem;padding:2px 10px;border-radius:99px;background:${d.status==='approved'?'rgba(14,123,79,.15)':'rgba(180,106,31,.15)'};color:${d.status==='approved'?'#7fbf95':'#e0a45e'}">${d.status}${d.status==='pending'?' — links already track, commissions start on approval':''}</span>
+        </div>
+        ${d.status==='approved'?'':'<div style="font-size:.74rem;color:var(--t4);margin-bottom:8px">⏳ Your application is being reviewed. Your links already work — share away.</div>'}
+        <div style="font-size:.75rem;color:var(--t4);margin-bottom:6px">Share these links — anyone who registers through them is attributed to you for 30 days:</div>
+        ${linkRows}
+      </div>
+      <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:16px;margin-bottom:16px">
+        <div style="font-family:var(--fd);font-size:.95rem;color:var(--t2);margin-bottom:10px">Payout account</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+          <select id="ea-method" style="padding:10px;border-radius:10px;border:1px solid var(--b1);background:var(--bg);color:var(--t2)">
+            ${['payoneer','bank_transfer','crypto_usdt','crypto_btc','opay','mobile_money'].map(m=>`<option ${d.payoutMethod===m?'selected':''} value="${m}">${{payoneer:'Payoneer',bank_transfer:'Bank transfer',crypto_usdt:'Crypto — USDT',crypto_btc:'Crypto — BTC',opay:'OPay',mobile_money:'Mobile money'}[m]}</option>`).join('')}
+          </select>
+          <input id="ea-acct" value="${esc(d.payoutAccount||'')}" placeholder="Wallet address / account number / tag" style="padding:10px;border-radius:10px;border:1px solid var(--b1);background:var(--bg);color:var(--t2)">
+          <button class="btn" onclick="savePayout()">Save payout account</button>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4);margin-top:8px">Payouts are sent manually to the account above once your balance is due.</div>
+      </div>
+      <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-md);padding:16px">
+        <div style="font-family:var(--fd);font-size:.95rem;color:var(--t2);margin-bottom:8px">Commission history</div>
+        ${(d.credits||[]).length?`<table style="width:100%;font-size:.78rem;border-collapse:collapse">
+          <tr style="color:var(--t4);text-align:left"><th style="padding:6px 4px">Date</th><th>Plan payment</th><th>Commission</th><th>Status</th></tr>
+          ${(d.credits||[]).map(c=>`<tr style="border-top:1px solid var(--b1)"><td style="padding:6px 4px">${String(c.at||'').slice(0,10)}</td><td>$${Number(c.amount||0).toFixed(2)}</td><td style="color:#7fbf95">+$${Number(c.commission||0).toFixed(2)}</td><td>${c.status==='paid'?'✅ paid':'⏳ pending'}</td></tr>`).join('')}
+        </table>`:'<div style="font-size:.78rem;color:var(--t4)">No commissions yet — share your links to start earning.</div>'}
+      </div>`;
+  }catch(e){body.textContent='Could not load earnings: '+e.message;}
+}
+async function applyAffiliate(){
+  const msg=document.getElementById('ea-msg');
+  const name=document.getElementById('ea-name').value.trim();
+  if(!name)return msg.innerHTML='<span style="color:#e0a45e">Name or organisation name is required</span>';
+  const r=await fetch('/api/affiliate/apply',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+(localStorage.getItem('vg_token')||'')},body:JSON.stringify({name,org:document.getElementById('ea-org').value.trim()})});
+  const d=await r.json();
+  if(r.ok){msg.innerHTML='<span style="color:#7fbf95">✅ '+esc(d.message||'Application received')+' Your code: <strong>'+esc(d.code)+'</strong></span>';setTimeout(loadEarnings,1500);}
+  else msg.innerHTML='<span style="color:#e0a45e">'+esc(d.error||'Application failed')+'</span>';
+}
+async function savePayout(){
+  const r=await fetch('/api/affiliate/payout',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+(localStorage.getItem('vg_token')||'')},body:JSON.stringify({method:document.getElementById('ea-method').value,account:document.getElementById('ea-acct').value.trim()})});
+  const d=await r.json();
+  if(r.ok)showToast('Payout account saved ✅');else showToast(d.error||'Save failed','error');
+}
+function copyAff(u){navigator.clipboard.writeText(u).then(()=>showToast('Link copied ✅')).catch(()=>showToast('Copy failed','error'));}
+
+// ── SUBSCRIPTION: real checkout ─────────────────────────────────────────────
+let PAYCFG=null;
+async function payConfig(){if(PAYCFG)return PAYCFG;const r=await api('/api/payments/config');PAYCFG=await r.json();return PAYCFG;}
+async function upgradeClick(btn){
+  const planName=btn?.dataset?.plan||'';
+  const plan=(planCache||[]).find(p=>p.name===planName);
+  if(!plan||!plan.price)return showToast('Free plan — nothing to pay','error');
+  const cfg=await payConfig();
+  const autos=(cfg.providers||[]).filter(p=>p.configured);
+  const cryptoOk=cfg.crypto&&cfg.crypto.configured;
+  if(!autos.length&&!cryptoOk)return showToast('Online payment is coming soon — contact '+document.getElementById('support-email').textContent,'error');
+  openM('pay-modal');
+  document.getElementById('pm-title').textContent='Upgrade to '+plan.name;
+  document.getElementById('pm-body').innerHTML=
+    `<div style="font-size:.8rem;color:var(--t4);margin-bottom:12px">${plan.name} — <strong style="color:var(--o300)">$${plan.price}</strong>/month</div>`+
+    `<div style="display:grid;gap:8px">`+
+    autos.map(p=>`<button class="btn" style="justify-content:space-between;display:flex" onclick="startCheckout('${p.key}',${plan.id})"><span>💳 ${p.displayName}</span><span style="font-size:.7rem;opacity:.6">${(p.currencies||[]).slice(0,3).join(' · ')||''}</span></button>`).join('')+
+    (cryptoOk?`<button class="btn" style="justify-content:space-between;display:flex" onclick="startCheckout('crypto',${plan.id})"><span>🪙 Crypto (USDT / BTC)</span><span style="font-size:.7rem;opacity:.6">manual confirmation</span></button>`:'')+
+    `</div><div id="pm-instr" style="margin-top:14px"></div>`;
+}
+async function startCheckout(provider,planId){
+  document.getElementById('pm-instr').innerHTML='<div style="font-size:.78rem;color:var(--t4)">Connecting…</div>';
+  const r=await api('/api/payments/checkout',{method:'POST',body:JSON.stringify({plan_id:planId,provider})});
+  const d=await r.json();
+  if(!r.ok){document.getElementById('pm-instr').innerHTML='<span style="color:#e0a45e">'+esc(d.error||'Failed')+'</span>';return;}
+  if(d.redirectUrl){showToast('Redirecting to '+provider+'…');window.location.href=d.redirectUrl;return;}
+  if(d.instructions){
+    const ins=typeof d.instructions==='string'?{note:d.instructions}:d.instructions;
+    document.getElementById('pm-instr').innerHTML=
+      `<div style="background:var(--bg);border:1px solid var(--b1);border-radius:12px;padding:12px;font-size:.8rem">`+
+      `<div style="font-family:var(--fd);color:var(--o300);margin-bottom:6px">🪙 ${esc(ins.coinLabel||'Crypto payment')}</div>`+
+      (ins.address?`<div style="margin-bottom:6px">Send <strong style="color:var(--o300)">$${ins.amountUsd}</strong> to:</div><code style="display:block;word-break:break-all;background:var(--elev1);padding:8px;border-radius:8px;color:var(--a300);font-size:.75rem">${esc(ins.address)}</code>`:'')+`
+      ${ins.note?`<div style="margin-top:8px;color:var(--t4)">${esc(ins.note)}</div>`:''}
+      ${ins.reference?`<div style="margin-top:6px;font-size:.7rem;opacity:.6">Reference: ${esc(ins.reference)}</div>`:''}
+      </div>
+      <div style="margin-top:12px"><input id="pm-tx" placeholder="Paste your transaction hash after sending" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--b1);background:var(--bg);color:var(--t2)"><button class="btn btn-primary" style="margin-top:8px" onclick="submitTx('${d.reference}')">Submit transaction</button></div>`;
+  }
+}
+async function submitTx(ref){
+  const tx=document.getElementById('pm-tx').value.trim();
+  if(!tx)return showToast('Paste the transaction hash first','error');
+  const r=await api('/api/payments/'+ref+'/tx',{method:'POST',body:JSON.stringify({tx_hash:tx})});
+  const d=await r.json();
+  if(r.ok){showToast(d.message||'Submitted ✅');closeM('pay-modal');}else showToast(d.error||'Failed','error');
+}
+let planCache=null;
+const _origLoadPlans=loadPlans;
+loadPlans=async function(){await _origLoadPlans();try{const r=await fetch('/api/user/plans');const d=await r.json();planCache=d.plans||[];}catch{}};
+
 </script>
 </body>
 </html>

@@ -371,6 +371,8 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <button class="sb-btn" id="snav-email" onclick="sw('email')">📧 Email / SMTP</button>
     <button class="sb-btn" id="snav-notif-s" onclick="sw('notif-s')">🔔 Notifications</button>
     <button class="sb-btn" id="snav-general" onclick="sw('general')">⚙️ System Settings</button>
+    <button class="sb-btn" id="snav-gateways" onclick="sw('gateways')">🏦 Payment Gateways</button>
+    <button class="sb-btn" id="snav-affiliates" onclick="sw('affiliates')">🤝 Affiliates</button>
     <div class="nav-sec">Tools</div>
     <button class="sb-btn" id="snav-broadcast" onclick="sw('broadcast')">📢 Broadcast</button>
     <button class="sb-btn" id="snav-social" onclick="sw('social')">📣 Social Posts</button>
@@ -676,6 +678,37 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     </div>
   </div>
 
+  <!-- PAYMENT GATEWAYS -->
+  <div class="view" id="view-gateways">
+    <div style="margin-bottom:16px">
+      <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">🏦 Payment Gateways &amp; Affiliate Settlement</div>
+      <div style="font-size:.78rem;color:var(--t4)">Collect plan payments and settle affiliate payouts. Keys are stored server-side and shown masked. Values fall back to <code>.env</code> if left empty here.</div>
+    </div>
+    <div class="s-card" style="margin-bottom:14px"><div class="s-title">🤝 Affiliate Commission</div>
+      <div class="form-group" style="max-width:280px"><label class="form-label">Commission rate (0–1, e.g. 0.30 = 30%)</label><input class="input" id="aff-commission-rate" type="number" step="0.01" min="0" max="1"/></div>
+      <button class="btn btn-primary btn-sm" onclick="saveCommissionRate()">💾 Save Rate</button>
+    </div>
+    <div id="gateways-list"><div style="color:var(--t4);font-size:.8rem">Loading gateways…</div></div>
+  </div>
+
+  <!-- AFFILIATES -->
+  <div class="view" id="view-affiliates">
+    <div style="margin-bottom:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">🤝 Affiliate Program</div>
+        <div style="font-size:.78rem;color:var(--t4)">Approve marketers, track performance, settle earnings.</div>
+      </div>
+      <div id="aff-totals" style="font-size:.75rem;color:var(--t3)"></div>
+    </div>
+    <div class="filter-bar" style="margin-bottom:14px">
+      <button class="f-chip on" id="afc-all" onclick="loadAffiliates('')">All</button>
+      <button class="f-chip" id="afc-pending" onclick="loadAffiliates('pending')">Pending</button>
+      <button class="f-chip" id="afc-approved" onclick="loadAffiliates('approved')">Approved</button>
+      <button class="f-chip" id="afc-rejected" onclick="loadAffiliates('rejected')">Rejected</button>
+    </div>
+    <div id="affiliates-list"><div style="color:var(--t4);font-size:.8rem">Loading…</div></div>
+  </div>
+
   <!-- PARTNERS -->
   <div class="view" id="view-partners">
     <div style="margin-bottom:16px">
@@ -872,9 +905,9 @@ function sw(v){
   document.querySelectorAll('.sb-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v)?.classList.add('active');
   document.getElementById('snav-'+v)?.classList.add('active');
-  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base',concierge:'Concierge Queue'};
+  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',gateways:'Payment Gateways',affiliates:'Affiliate Program',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base',concierge:'Concierge Queue'};
   document.getElementById('tb-title').textContent=T[v]||v;
-  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();else if(v==='concierge')loadConciergeQ();
+  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();else if(v==='concierge')loadConciergeQ();else if(v==='gateways')loadGateways();else if(v==='affiliates')loadAffiliates();
   if(v==='overview')loadClicks();
   history.replaceState(null,'','#'+v);
 }
@@ -1182,7 +1215,7 @@ async function loadPartners(){
   const grid=document.getElementById('partners-grid');
   grid.innerHTML='<div style="color:var(--t4);font-size:.8rem">Loading…</div>';
   try{
-    const r=await apiFetch('/api/admin/affiliates');const d=await r.json();
+    const r=await apiFetch('/api/admin/partners');const d=await r.json();
     tpPartners=d.partners||[];
     grid.innerHTML=tpPartners.length?tpPartners.map((p,i)=>`
       <div class="pa-card" style="${p.enabled?'':'opacity:.45'}">
@@ -1227,14 +1260,14 @@ async function savePartner(){
     while(tpPartners.some(p=>p.id===id))id=id+'-x';
   }
   const body={name,icon:document.getElementById('pm2-icon').value.trim()||'🔗',url,tag:document.getElementById('pm2-tag').value.trim()||'Travel',type:document.getElementById('pm2-type').value.trim()||'misc',blurb:document.getElementById('pm2-blurb').value.trim(),keywords:document.getElementById('pm2-keywords').value,enabled:document.getElementById('pm2-enabled').checked};
-  const r=await apiFetch('/api/admin/affiliates/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify(body)});
+  const r=await apiFetch('/api/admin/partners/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify(body)});
   const d=await r.json();
   if(!r.ok)return showToast(d.error||'Save failed','error');
   closeM('partner-modal');loadPartners();showToast('Partner saved ✅ — live in chats now');
 }
 async function togglePartner(i,on){
   const p=tpPartners[i];
-  const r=await apiFetch('/api/admin/affiliates/'+encodeURIComponent(p.id),{method:'PUT',body:JSON.stringify({enabled:on})});
+  const r=await apiFetch('/api/admin/partners/'+encodeURIComponent(p.id),{method:'PUT',body:JSON.stringify({enabled:on})});
   const d=await r.json();
   if(!r.ok){showToast(d.error||'Failed','error');loadPartners();return;}
   showToast(on?p.name+' shown':p.name+' hidden');
@@ -1243,7 +1276,7 @@ async function togglePartner(i,on){
 async function delPartner(i){
   const p=tpPartners[i];
   if(!confirm('Remove "'+p.name+'" from chats and the booking grid?'))return;
-  const r=await apiFetch('/api/admin/affiliates/'+encodeURIComponent(p.id),{method:'DELETE'});
+  const r=await apiFetch('/api/admin/partners/'+encodeURIComponent(p.id),{method:'DELETE'});
   const d=await r.json();
   if(!r.ok)return showToast(d.error||'Failed','error');
   loadPartners();showToast('Partner removed');
@@ -1352,7 +1385,7 @@ async function emailBroadcast(){const subject=document.getElementById('bc-email-
 // ── AFFILIATE CLICK ANALYTICS ────────────────────────────────────────────────
 async function loadClicks(){
   try{
-    const r=await apiFetch('/api/admin/affiliates/stats');const d=await r.json();
+    const r=await apiFetch('/api/admin/partners/stats');const d=await r.json();
     const cc=document.getElementById('clicks-chart');if(!cc)return;
     const daily=d.daily||[];const max=Math.max(...daily.map(x=>x.clicks),1);
     cc.innerHTML=daily.length?daily.map(x=>`<div class="bc-b" style="height:${Math.max(5,Math.round((x.clicks/max)*65))}px" title="${x.date}: ${x.clicks} clicks"></div>`).join(''):'<div style="color:var(--t4);font-size:.75rem;padding:10px">No clicks yet — links appear in chat replies and the user Book view</div>';
@@ -1500,6 +1533,128 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function doLogout(){localStorage.clear();window.location.href='/admin-login';}
 
 init();
+
+// ── PAYMENT GATEWAYS (config + manual crypto confirmations) ─────────────────
+const GW_MASK='••••';
+async function loadGateways(){
+  try{
+    const r=await apiFetch('/api/admin/payment-gateways');const d=await r.json();
+    if(!r.ok)return showToast(d.error||'Failed to load gateways','error');
+    const cr=document.getElementById('aff-commission-rate');if(cr)cr.value=d.commissionRate??0.30;
+    document.getElementById('gateways-list').innerHTML=(d.providers||[]).map(p=>{
+      const fields=(p.fields||[]).map(f=>`
+        <div class="form-group" style="margin:8px 0">
+          <label class="form-label" style="font-size:.72rem">${f.label}${f.secret?' <span style="opacity:.5">(secret)</span>':''}</label>
+          <input class="input" id="gw-${p.key}-${f.field}" type="${f.secret?'password':'text'}" value="${String(f.value||'').replace(/"/g,'&quot;')}" placeholder="${f.hasValue?'configured — leave as-is to keep':'not set'}" style="font-size:.8rem">
+        </div>`).join('');
+      return `<div class="s-card" style="margin-bottom:12px">
+        <div class="s-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          ${p.displayName}
+          <span style="font-size:.66rem;padding:2px 10px;border-radius:99px;background:${p.configured?'rgba(14,123,79,.15)':'rgba(180,106,31,.15)'};color:${p.configured?'#0E7B4F':'#b46a1f'}">${p.configured?'✅ configured':'○ not configured'}</span>
+          ${p.manual?'<span style="font-size:.66rem;opacity:.6">manual confirmation</span>':''}
+          ${p.docsUrl?`<a href="${p.docsUrl}" target="_blank" rel="noopener" style="font-size:.68rem;opacity:.6;margin-left:auto">docs ↗</a>`:''}
+        </div>
+        ${p.currencies&&p.currencies.length?`<div style="font-size:.68rem;opacity:.6;margin-bottom:6px">Currencies: ${p.currencies.join(', ')}${p.coins?' · Coins: '+p.coins.map(c=>c.label||c.id).join(', '):''}</div>`:''}
+        ${fields||'<div style="font-size:.74rem;opacity:.6;margin-bottom:6px">No fields — uses environment variables.</div>'}
+        <button class="btn btn-primary btn-sm" onclick="saveGateway('${p.key}')">💾 Save ${p.displayName}</button>
+      </div>`;
+    }).join('')+'<div class="s-card" style="margin-top:6px"><div class="s-title">🪙 Manual payment confirmations (crypto)</div><div id="manual-pays" style="font-size:.8rem;color:var(--t4)">Loading…</div></div>';
+    loadPendingPays();
+  }catch(e){showToast('Could not load gateways: '+e.message,'error');}
+}
+async function saveGateway(key){
+  const vals={};
+  document.querySelectorAll('[id^="gw-'+key+'-"]').forEach(inp=>{
+    const f=inp.id.slice(key.length+4);
+    if(inp.value&&!inp.value.includes(GW_MASK))vals[f]=inp.value;
+  });
+  const r=await apiFetch('/api/admin/payment-gateways',{method:'POST',body:JSON.stringify({provider:key,values:vals})});
+  const d=await r.json();
+  if(r.ok)showToast(d.message||'Saved ✅');else showToast(d.error||'Save failed','error');
+}
+async function saveCommissionRate(){
+  const v=parseFloat(document.getElementById('aff-commission-rate').value);
+  if(!(v>=0&&v<=1))return showToast('Rate must be between 0 and 1 (e.g. 0.30)','error');
+  const r=await apiFetch('/api/admin/payment-gateways',{method:'POST',body:JSON.stringify({provider:'paystack',commission_rate:v})});
+  const d=await r.json();
+  if(r.ok)showToast('Commission rate saved ✅');else showToast(d.error||'Save failed','error');
+}
+async function loadPendingPays(){
+  try{
+    const el=document.getElementById('manual-pays');if(!el)return;
+    const r=await apiFetch('/api/admin/payments');const d=await r.json();
+    if(!r.ok){el.textContent=d.error||'Failed';return;}
+    const rows=(d.payments||[]).map(p=>{let tx='';try{tx=(JSON.parse(p.meta_json||'{}').tx_hash)||''}catch{}
+      return `<tr>
+        <td style="padding:6px 4px"><code style="font-size:.72rem">${p.reference}</code></td>
+        <td>#${p.user_id}</td>
+        <td><strong>$${Number(p.amount_usd).toFixed(2)}</strong></td>
+        <td>${p.provider}${tx?`<br><span style="opacity:.6;font-size:.66rem">tx: ${String(tx).slice(0,18)}…</span>`:''}</td>
+        <td>${p.affiliate_code?'🤝 '+esc(p.affiliate_code):'—'}</td>
+        <td>${String(p.created_at||'').slice(0,10)}</td>
+        <td>${p.status==='pending'?`<button class="btn btn-primary btn-sm" onclick="payConfirm(${p.id})">Confirm</button> <button class="btn btn-ghost btn-sm" onclick="payReject(${p.id})">Reject</button>`:`<span style="font-size:.7rem;opacity:.7">${p.status}</span>`}</td>
+      </tr>`;}).join('');
+    el.innerHTML=rows?`<table style="width:100%;font-size:.76rem;border-collapse:collapse">
+      <tr style="color:var(--t4);text-align:left"><th style="padding:6px 4px">Reference</th><th>User</th><th>Amount</th><th>Gateway</th><th>Affiliate</th><th>Date</th><th></th></tr>${rows}</table>`
+      :'No payments yet. Travellers see checkout options once a gateway is configured.';
+  }catch(e){showToast('Could not load payments: '+e.message,'error');}
+}
+async function payConfirm(id){
+  if(!confirm('Confirm you received this payment? The plan activates and the affiliate is credited.'))return;
+  const r=await apiFetch('/api/admin/payments/'+id+'/confirm',{method:'POST'});const d=await r.json();
+  if(r.ok){showToast(d.message||'Confirmed ✅');loadPendingPays();}else showToast(d.error||'Failed','error');
+}
+async function payReject(id){
+  if(!confirm('Reject this payment?'))return;
+  const r=await apiFetch('/api/admin/payments/'+id+'/reject',{method:'POST'});const d=await r.json();
+  if(r.ok){showToast(d.message||'Rejected');loadPendingPays();}else showToast(d.error||'Failed','error');
+}
+
+// ── AFFILIATES (moderation + payouts) ───────────────────────────────────────
+async function loadAffiliates(status){
+  status=status||'';
+  document.querySelectorAll('[id^="afc-"]').forEach(b=>b.classList.remove('on'));
+  const chip=document.getElementById('afc-'+(status||'all'));if(chip)chip.classList.add('on');
+  try{
+    const r=await apiFetch('/api/admin/affiliates'+(status?'?status='+status:''));const d=await r.json();
+    if(!r.ok)return showToast(d.error||'Failed','error');
+    const t=d.totals||{};
+    const tot=document.getElementById('aff-totals');
+    if(tot)tot.innerHTML=`${t.count||0} affiliate(s) · ${t.pending||0} pending · <strong>$${(t.owed||0).toFixed(2)}</strong> owed`;
+    const rows=(d.affiliates||[]).map(a=>`
+      <tr>
+        <td style="padding:8px 6px"><strong>${esc(a.name)}</strong>${a.org?`<br><span style="opacity:.6;font-size:.7rem">🏢 ${esc(a.org)}</span>`:''}<br><span style="opacity:.6;font-size:.7rem">${esc(a.email)}</span></td>
+        <td><code style="background:rgba(255,255,255,.06);padding:2px 8px;border-radius:6px;font-size:.75rem">${a.code}</code></td>
+        <td style="text-align:center">${a.clicks||0} / <strong>${a.signups||0}</strong> / <strong>${a.conversions||0}</strong></td>
+        <td><strong>$${(a.earned||0).toFixed(2)}</strong></td>
+        <td><strong style="color:#0E7B4F">$${(a.balance||0).toFixed(2)}</strong></td>
+        <td style="font-size:.72rem">${esc(a.payoutAccount||'—')}<br><span style="opacity:.55">${esc(a.payoutMethod||'method not set')}</span></td>
+        <td><span style="font-size:.68rem;padding:2px 10px;border-radius:99px;background:${a.status==='approved'?'rgba(14,123,79,.15)':a.status==='rejected'?'rgba(200,45,45,.12)':'rgba(180,106,31,.15)'};color:${a.status==='approved'?'#0E7B4F':a.status==='rejected'?'#B3282D':'#b46a1f'}">${a.status}</span></td>
+        <td style="white-space:nowrap">
+          ${a.status==='pending'?`<button class="btn btn-primary btn-sm" onclick="afStatus(${a.id},'approved')">Approve</button> <button class="btn btn-ghost btn-sm" onclick="afStatus(${a.id},'rejected')">Reject</button>`:''}
+          ${a.status==='approved'&&a.balance>0?`<button class="btn btn-primary btn-sm" onclick="afPay(${a.id})">Pay $${a.balance.toFixed(2)}</button>`:''}
+        </td>
+      </tr>`).join('');
+    document.getElementById('affiliates-list').innerHTML=rows?`
+      <div style="overflow-x:auto"><table style="width:100%;font-size:.78rem;border-collapse:collapse">
+      <tr style="color:var(--t4);text-align:left"><th style="padding:6px">Affiliate</th><th>Code</th><th>Clicks/Signups/Paid</th><th>Earned</th><th>Balance</th><th>Payout account</th><th>Status</th><th></th></tr>
+      ${rows}</table></div>`
+      :`<div style="opacity:.5;padding:18px;font-size:.8rem">No affiliates ${status?'with this status':'yet'}.</div>`;
+  }catch(e){showToast('Could not load affiliates: '+e.message,'error');}
+}
+async function afStatus(id,status){
+  const r=await apiFetch('/api/admin/affiliates/'+id+'/status',{method:'POST',body:JSON.stringify({status})});
+  const d=await r.json();
+  if(r.ok){showToast(d.message||'Updated ✅');loadAffiliates('');}
+  else showToast(d.error||'Failed','error');
+}
+async function afPay(id){
+  if(!confirm('Mark ALL earned credits of this affiliate as PAID? Do this only after sending the money via Payoneer / bank / crypto.'))return;
+  const r=await apiFetch('/api/admin/affiliates/'+id+'/pay',{method:'POST',body:JSON.stringify({})});
+  const d=await r.json();
+  if(r.ok){showToast(d.message||'Payout recorded ✅');loadAffiliates('');}else showToast(d.error||'Failed','error');
+}
+
 </script>
 </body>
 </html>

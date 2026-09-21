@@ -43,6 +43,17 @@ router.post('/register', async (req, res) => {
     const user   = Q.getUserById(userId);
     const plan   = Q.getPlanById(user.plan_id);
 
+    // Affiliate attribution: ?ref=CODE or refcookie (set by /r/:code) — bumps
+    // the affiliate's signup counter; commission happens only on paid plans.
+    const affCode = String(req.body.aff_ref || req.query.ref || req.cookies?.refcookie || '').toUpperCase().slice(0, 24);
+    if (affCode) {
+      const aff = Q.getAffiliateByCode(affCode);
+      if (aff && aff.status === 'approved') {
+        Q.bumpAffiliate(aff.id, 'signups');
+        try { Q.execRaw('UPDATE users SET referred_by=? WHERE id=?', [aff.code, userId]); } catch {}
+      }
+    }
+
     Q.createNotification(userId, '🎉 Welcome to JapaQuest!',
       `Hi ${name}! Your account is ready. Start by asking about any visa you need.`, 'success');
 

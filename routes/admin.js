@@ -4,7 +4,7 @@ const bcrypt  = require('bcryptjs');
 const path    = require('path');
 const fs      = require('fs');
 const { requireAdmin } = require('../middleware/auth');
-const { Q } = require('../db');
+const { Q, persist } = require('../db');
 const { sendEmail, testSmtp } = require('../utils/mailer');
 const { getOverrides, getEffectivePartners, clearPartnerCache } = require('../ai/affiliates');
 const { PLATFORMS, shareLinks } = require('../utils/social');
@@ -55,7 +55,7 @@ function saveAffiliateOverride(id, data) {
   Q.setSetting(`aff_partner_${id}`, data === null ? null : JSON.stringify(data), AFFILIATE_GROUP);
 }
 
-router.get('/affiliates', (_req, res) => {
+router.get("/partners", (_req, res) => {
   const partners = Object.values(getEffectivePartners()).map(p => ({
     id: p.id,
     name: p.name,
@@ -70,7 +70,7 @@ router.get('/affiliates', (_req, res) => {
   res.json({ partners });
 });
 
-router.put('/affiliates/:id', (req, res) => {
+router.put("/partners/:id", (req, res) => {
   try {
     const id = String(req.params.id || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
     if (!id) return res.status(400).json({ error: 'Partner id required' });
@@ -102,11 +102,11 @@ router.put('/affiliates/:id', (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/affiliates/stats', (_req, res) => {
+router.get("/partners/stats", (_req, res) => {
   res.json(Q.getAffiliateClickStats(30));
 });
 
-router.delete('/affiliates/:id', (req, res) => {
+router.delete("/partners/:id", (req, res) => {
   const id = String(req.params.id || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
   if (!id) return res.status(400).json({ error: 'Partner id required' });
   if (!getEffectivePartners()[id]) return res.status(404).json({ error: 'Partner not found' });
@@ -557,6 +557,101 @@ router.post('/concierge/tickets/:id/status', (req, res) => {
     Q.createNotification(t.user_id, '🤝 Concierge ticket closed', `Your request "${String(t.subject).slice(0, 80)}" was closed. Reply again any time.`, 'concierge');
   }
   res.json({ message: `Ticket marked ${status}`, ticket: Q.getConciergeTicket(t.id, null) });
+});
+
+// ── AFFILIATES: moderation, stats, payouts ──────────────────────────────────
+const registry = require('../payments/registry');
+const { settlePayment } = require('./payments');
+
+router.get('/affiliates', requireAdmin, (req, res) => {
+  const status = req.query.status && ['pending','approved','rejected'].includes(req.query.status) ? req.query.status : null;
+  const list = Q.getAffiliates(status).map(a => ({
+    id: a.id, name: a.name, email: a.email, org: a.org, code: a.code, status: a.status,
+    clicks: a.clicks, signups: a.signups, conversions: a.conversions,
+    earned: a.earned_minor / 100, paid: a.paid_minor / 100,
+    balance: Q.affiliateBalanceMinor(a.id) / 100,
+    payoutMethod: a.payout_method, payoutAccount: a.payout_account,
+    createdAt: a.created_at,
+  }));
+  res.json({ affiliates: list,
+    totals: { count: list.length, pending: list.filter(a=>a.status==='pending').length,
+      owed: Math.round(list.reduce((s,a)=>s+a.balance,0)*100)/100 } });
+});
+
+router.post('/affiliates/:id/status', requireAdmin, (req, res) => {
+  const status = String((req.body || {}).status || '');
+  if (!['approved','rejected','pending'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  const aff = Q.getAffiliateById(parseInt(req.params.id));
+  if (!aff) return res.status(404).json({ error: 'Affiliate not found' });
+  Q.setAffiliateStatus(aff.id, status);
+  res.json({ message: `Affiliate ${status}`, affiliate: Q.getAffiliateById(aff.id) });
+});
+
+// Mark selected earned credits as paid (after sending money via Payoneer/bank/crypto).
+router.post('/affiliates/:id/pay', requireAdmin, (req, res) => {
+  const aff = Q.getAffiliateById(parseInt(req.params.id));
+  if (!aff) return res.status(404).json({ error: 'Affiliate not found' });
+  const ids = (req.body || {}).credit_ids || Q.getAffiliateCredits(aff.id).filter(c => c.status === 'earned').map(c => c.id);
+  if (!ids.length) return res.status(400).json({ error: 'No earned credits to pay' });
+  Q.markAffiliateCreditsPaid(aff.id, ids);
+  res.json({ message: `Marked ${ids.length} credit(s) paid — balance now ₦0 / $${Q.affiliateBalanceMinor(aff.id)/100}`, balance: Q.affiliateBalanceMinor(aff.id) / 100 });
+});
+
+// ── PAYMENT GATEWAYS: configuration (secrets masked) + manual confirmations ──
+const mask = s => !s ? '' : (s.length > 8 ? s.slice(0, 4) + '••••' + s.slice(-4) : '••••');
+
+router.get('/payment-gateways', requireAdmin, (_req, res) => {
+  const providers = registry.listProviders().map(p => ({
+    key: p.key, displayName: p.displayName, docsUrl: p.docsUrl, manual: !!p.manual,
+    configured: p.isConfigured(), currencies: p.currencies || [], coins: p.coins || undefined,
+    fields: (p.fields || []).map(([f, label, secret]) => ({
+      field: f, label, secret: !!secret,
+      value: mask(require('../payments/base').cfg(p.key, f, (p.envMap || {})[f] || '')),
+      hasValue: !!require('../payments/base').cfg(p.key, f, (p.envMap || {})[f] || ''),
+    })),
+  }));
+  res.json({ providers, commissionRate: parseFloat(Q.getSetting('affiliate_commission_rate')) || 0.30 });
+});
+
+router.post('/payment-gateways', requireAdmin, (req, res) => {
+  const { provider, values, commission_rate } = req.body || {};
+  let p = null;
+  try { p = registry.getProvider(String(provider)); } catch { return res.status(400).json({ error: 'Unknown provider' }); }
+  if (values && typeof values === 'object') {
+    for (const [field, value] of Object.entries(values)) {
+      if (!(p.fields || []).some(([f]) => f === field)) return res.status(400).json({ error: `Unknown field ${field}` });
+      if (String(value).includes('••••')) continue; // masked value untouched
+      Q.setSetting(`gw_${p.key}_${field}`, String(value).trim().slice(0, 300));
+    }
+  }
+  if (commission_rate !== undefined) {
+    const r = parseFloat(commission_rate);
+    if (Number.isFinite(r) && r >= 0 && r <= 1) Q.setSetting('affiliate_commission_rate', String(r));
+  }
+  res.json({ message: `${p.displayName} configuration saved` });
+});
+
+// Manual payments (crypto) — admin confirms after verifying on-chain.
+router.get('/payments', requireAdmin, (req, res) => {
+  const status = req.query.status && ['pending','paid','failed'].includes(req.query.status) ? req.query.status : null;
+  res.json({ payments: status ? Q.getPayments(200).filter(p => p.status === status) : Q.getPayments(200) });
+});
+
+router.post('/payments/:id/confirm', requireAdmin, (req, res) => {
+  const row = Q.queryAllSafe('SELECT * FROM payments WHERE id=?', [parseInt(req.params.id)])[0];
+  if (!row) return res.status(404).json({ error: 'Payment not found' });
+  if (row.status !== 'pending') return res.status(400).json({ error: `Payment already ${row.status}` });
+  settlePayment(row);
+  persist();
+  res.json({ message: `Payment ${row.reference} confirmed — plan activated, affiliate credited` });
+});
+
+router.post('/payments/:id/reject', requireAdmin, (req, res) => {
+  const row = Q.queryAllSafe('SELECT * FROM payments WHERE id=?', [parseInt(req.params.id)])[0];
+  if (!row) return res.status(404).json({ error: 'Payment not found' });
+  Q.markPaymentFailed(row.id);
+  persist();
+  res.json({ message: `Payment ${row.reference} rejected` });
 });
 
 module.exports = router;

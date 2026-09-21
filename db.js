@@ -55,6 +55,48 @@ const SCHEMA = [
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
     token TEXT UNIQUE NOT NULL, expires_at TEXT NOT NULL,
     used INTEGER DEFAULT 0, created_at TEXT DEFAULT(datetime('now')))`,
+  // ── Affiliate program — marketers earn commission on paid plans ─────────
+  `CREATE TABLE IF NOT EXISTS affiliates(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    org TEXT DEFAULT '',
+    code TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+    payout_method TEXT DEFAULT '',
+    payout_account TEXT DEFAULT '',
+    clicks INTEGER DEFAULT 0,
+    signups INTEGER DEFAULT 0,
+    conversions INTEGER DEFAULT 0,
+    earned_minor INTEGER DEFAULT 0,
+    paid_minor INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT(datetime('now')),
+    updated_at TEXT DEFAULT(datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS affiliate_credits(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    affiliate_id INTEGER NOT NULL REFERENCES affiliates(id) ON DELETE CASCADE,
+    user_id INTEGER,
+    payment_id INTEGER,
+    amount_usd REAL NOT NULL,
+    commission_usd REAL NOT NULL,
+    status TEXT NOT NULL DEFAULT 'earned' CHECK(status IN ('earned','reversed','paid')),
+    note TEXT DEFAULT '',
+    created_at TEXT DEFAULT(datetime('now')))`,
+  // ── Payments — plan checkout + gateway records + affiliate attribution ──
+  `CREATE TABLE IF NOT EXISTS payments(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id INTEGER,
+    provider TEXT NOT NULL,
+    amount_usd REAL NOT NULL,
+    currency TEXT DEFAULT 'USD',
+    reference TEXT UNIQUE,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','paid','failed')),
+    affiliate_code TEXT DEFAULT '',
+    meta_json TEXT DEFAULT '{}',
+    created_at TEXT DEFAULT(datetime('now')),
+    paid_at TEXT)`,
   `CREATE TABLE IF NOT EXISTS tool_results(
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
     tool_type TEXT NOT NULL, title TEXT DEFAULT '',
@@ -527,6 +569,7 @@ function migrateJourneyOS() {
     ['users', "ALTER TABLE users ADD COLUMN geo_country TEXT"],
     ['users', "ALTER TABLE users ADD COLUMN geo_currency TEXT"],
     ['users', "ALTER TABLE users ADD COLUMN geo_lang TEXT"],
+    ['users', "ALTER TABLE users ADD COLUMN referred_by TEXT DEFAULT ''"],
     ['concierge_tickets', "ALTER TABLE concierge_tickets ADD COLUMN priority TEXT DEFAULT 'normal'"],
     ['concierge_tickets', "ALTER TABLE concierge_tickets ADD COLUMN first_response_at TEXT"],
     ['concierge_replies', "ALTER TABLE concierge_replies ADD COLUMN file_name TEXT DEFAULT ''"],
@@ -551,6 +594,7 @@ function migrateJourneyOS() {
 const Q = {
   // RAW (read-only helper for workers/tools; prefer named helpers below)
   queryAllSafe: (sql, params = []) => queryAll(sql, params),
+  execRaw: (sql, params = []) => exec(sql, params),
 
   // SETTINGS
   getSetting: (k) => queryOne('SELECT value FROM settings WHERE key=?',[k])?.value ?? '',
@@ -911,6 +955,66 @@ const Q = {
     const set = keys.map(k => `${k}=?`).join(',');
     exec(`UPDATE users SET ${set},updated_at=datetime('now') WHERE id=?`, [...keys.map(k => updates[k]), userId]);
   },
+
+  // ── AFFILIATE PROGRAM — marketers, tracking, credits, payouts ───────────
+  createAffiliate: (data) => {
+    // Tracking code: JQ + base36 from email+entropy (unique, collision-checked).
+    const crypto = require('crypto');
+    let code = '';
+    do {
+      code = 'JQ' + crypto.randomBytes(4).toString('hex').toUpperCase();
+    } while (Q.getAffiliateByCode(code));
+    exec(`INSERT INTO affiliates(name,email,org,user_id,code) VALUES(?,?,?,?,?)`,
+      [data.name, String(data.email).toLowerCase(), data.org||'', data.userId||null, code]);
+    return lastId();
+  },
+  getAffiliateByEmail: (email) => queryOne('SELECT * FROM affiliates WHERE email=?',[String(email||'').toLowerCase()]),
+  getAffiliateByUserId: (userId) => queryOne('SELECT * FROM affiliates WHERE user_id=?',[parseInt(userId,10)||0]),
+  getAffiliateByCode: (code) => queryOne('SELECT * FROM affiliates WHERE code=?',[String(code||'').toUpperCase()]),
+  getAffiliateById: (id) => queryOne('SELECT * FROM affiliates WHERE id=?',[id]),
+  setAffiliateStatus: (id, status) => exec('UPDATE affiliates SET status=?,updated_at=datetime(\'now\') WHERE id=?',[status,id]),
+  setAffiliatePayout: (id, method, account) => exec('UPDATE affiliates SET payout_method=?,payout_account=?,updated_at=datetime(\'now\') WHERE id=?',[method,account,id]),
+  bumpAffiliate: (id, field) => {
+    const col = { clicks:1, signups:1, conversions:1 }[field];
+    if (!col) return;
+    exec(`UPDATE affiliates SET ${field}=${field}+1, updated_at=datetime('now') WHERE id=?`,[id]);
+  },
+  getAffiliates: (status) => status
+    ? queryAll('SELECT * FROM affiliates WHERE status=? ORDER BY id DESC',[status])
+    : queryAll('SELECT * FROM affiliates ORDER BY id DESC',[]),
+  // Balance = earned (unpaid) credits only; 'paid' rows are already settled.
+  affiliateBalanceMinor: (id) => Math.round((queryScalar(
+    `SELECT COALESCE(SUM(commission_usd),0)*100 FROM affiliate_credits WHERE affiliate_id=? AND status='earned'`,[id]) || 0)),
+  addAffiliateCredit: (affiliateId, userId, paymentId, amountUsd, commissionUsd, note) => {
+    exec(`INSERT INTO affiliate_credits(affiliate_id,user_id,payment_id,amount_usd,commission_usd,note)
+      VALUES(?,?,?,?,?,?)`,[affiliateId,userId,paymentId,amountUsd,commissionUsd,note||'']);
+    exec('UPDATE affiliates SET earned_minor=earned_minor+?,conversions=conversions+1,updated_at=datetime(\'now\') WHERE id=?',
+      [Math.round(commissionUsd*100), affiliateId]);
+    return lastId();
+  },
+  getAffiliateCredits: (affiliateId, limit=50) => queryAll(
+    'SELECT * FROM affiliate_credits WHERE affiliate_id=? ORDER BY id DESC LIMIT ?',[affiliateId,limit]),
+  markAffiliateCreditsPaid: (affiliateId, ids) => {
+    if (!ids || !ids.length) return;
+    const ph = ids.map(()=>'?').join(',');
+    exec(`UPDATE affiliate_credits SET status='paid' WHERE affiliate_id=? AND id IN (${ph}) AND status='earned'`,[affiliateId,...ids]);
+    const paid = Math.round((queryScalar(`SELECT COALESCE(SUM(commission_usd),0)*100 FROM affiliate_credits WHERE affiliate_id=? AND status='paid'`,[affiliateId]) || 0));
+    exec('UPDATE affiliates SET paid_minor=? WHERE id=?',[paid,affiliateId]);
+  },
+  creditCountForAffiliate: (affiliateId) => queryScalar('SELECT COUNT(*) FROM affiliate_credits WHERE affiliate_id=?',[affiliateId]) || 0,
+
+  // ── PAYMENTS — checkout records ─────────────────────────────────────────
+  createPayment: (userId, planId, provider, amountUsd, reference, affiliateCode) => {
+    exec(`INSERT INTO payments(user_id,plan_id,provider,amount_usd,reference,affiliate_code)
+      VALUES(?,?,?,?,?,?)`,[userId,planId,provider,amountUsd,reference,affiliateCode||'']);
+    return lastId();
+  },
+  getPaymentByReference: (ref) => queryOne('SELECT * FROM payments WHERE reference=?',[ref]),
+  markPaymentPaid: (id) => exec('UPDATE payments SET status=\'paid\',paid_at=datetime(\'now\') WHERE id=? AND status=\'pending\'',[id]),
+  markPaymentFailed: (id) => exec('UPDATE payments SET status=\'failed\' WHERE id=? AND status=\'pending\'',[id]),
+  getUserPayments: (userId, limit=20) => queryAll(
+    'SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT ?',[userId,limit]),
+  getPayments: (limit=100) => queryAll('SELECT * FROM payments ORDER BY id DESC LIMIT ?',[limit]),
 
   // ── CONCIERGE — human assistance tickets ────────────────────────────────
   createConciergeTicket: (userId, data) => {
