@@ -106,6 +106,7 @@ async function start() {
 
   const PORT = parseInt(process.env.PORT)||4001;
   require('./worker/social-scheduler').startSocialScheduler();
+  require('./worker/journey-scheduler').startJourneyScheduler();
   app.listen(PORT, () => {
     const name = Q.getSetting('app_name')||'Japa+';
     console.log(`

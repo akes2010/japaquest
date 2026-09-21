@@ -129,6 +129,27 @@ const SCHEMA = [
     result_json TEXT DEFAULT '[]',
     created_at TEXT DEFAULT(datetime('now')))`,
 
+  // ── Brain Base — pattern memory + traveller case intelligence ──────────
+  `CREATE TABLE IF NOT EXISTS brain_insights(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dedup_key TEXT UNIQUE NOT NULL,
+    payload_json TEXT NOT NULL DEFAULT '{}',
+    source TEXT DEFAULT 'system',
+    active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT(datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS journey_cases(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    journey_id INTEGER NOT NULL REFERENCES journeys(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL,
+    kind TEXT NOT NULL,
+    insight_key TEXT,
+    payload_json TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','resolved','dismissed')),
+    resolution_notes TEXT DEFAULT '',
+    action_taken_json TEXT DEFAULT '{}',
+    detected_at TEXT DEFAULT(datetime('now')),
+    resolved_at TEXT)`,
+
   // ── Japa Journey OS — smart trip execution system ────────────────────────
   `CREATE TABLE IF NOT EXISTS journeys(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -148,6 +169,9 @@ const SCHEMA = [
     processing_days TEXT,
     embassy_url TEXT,
     schema_version INTEGER DEFAULT 1,
+    dossier_json TEXT,
+    risk_json TEXT,
+    fee_confidence_usd REAL,
     created_at TEXT DEFAULT(datetime('now')),
     updated_at TEXT DEFAULT(datetime('now')),
     UNIQUE(user_id, destination_code, purpose))`,
@@ -173,6 +197,10 @@ const SCHEMA = [
     expiry_date TEXT,
     issuing_country TEXT DEFAULT '',
     notes TEXT DEFAULT '',
+    file_name TEXT DEFAULT '',
+    file_path TEXT DEFAULT '',
+    file_size INTEGER DEFAULT 0,
+    file_mime TEXT DEFAULT '',
     created_at TEXT DEFAULT(datetime('now')),
     updated_at TEXT DEFAULT(datetime('now')))`,
   `CREATE INDEX IF NOT EXISTS idx_users_email    ON users(email)`,
@@ -205,6 +233,7 @@ async function initDB() {
   repairData();
   seedDefaults();
   rebrandLegacy();
+  migrateJourneyOS();
   persist();
 }
 
@@ -301,6 +330,7 @@ function seedDefaults() {
     ['app_logo','✈','general'],['app_logo_url','','general'],
     ['support_email','support@japaplus.app','general'],
     ['app_url','http://localhost:4001','general'],
+    ['upload_dir','./data/uploads','general'],
     ['maintenance_mode','0','general'],['registration_open','1','general'],
     ['ai_default_model','claude','ai'],['ai_stream','1','ai'],
     ['ai_max_tokens','1500','ai'],['ai_system_prompt_addon','','ai'],
@@ -457,7 +487,27 @@ function seedVisaData() {
 }
 
 // ── Q — Query helpers ─────────────────────────────────────────────────────────
+// Column additions for databases created before Journey OS v2 (Brain Base).
+function migrateJourneyOS() {
+  const alters = [
+    ['journeys', "ALTER TABLE journeys ADD COLUMN dossier_json TEXT"],
+    ['journeys', "ALTER TABLE journeys ADD COLUMN risk_json TEXT"],
+    ['journeys', "ALTER TABLE journeys ADD COLUMN fee_confidence_usd REAL"],
+    ['passport_wallet', "ALTER TABLE passport_wallet ADD COLUMN file_name TEXT DEFAULT ''"],
+    ['passport_wallet', "ALTER TABLE passport_wallet ADD COLUMN file_path TEXT DEFAULT ''"],
+    ['passport_wallet', "ALTER TABLE passport_wallet ADD COLUMN file_size INTEGER DEFAULT 0"],
+    ['passport_wallet', "ALTER TABLE passport_wallet ADD COLUMN file_mime TEXT DEFAULT ''"],
+  ];
+  for (const [tbl, sql] of alters) {
+    const exists = queryOne(`SELECT 1 FROM pragma_table_info('${tbl}') WHERE name=?`,
+      [sql.match(/ADD COLUMN (\w+)/)[1]]);
+    if (!exists) { try { exec(sql); } catch {} }
+  }
+}
 const Q = {
+  // RAW (read-only helper for workers/tools; prefer named helpers below)
+  queryAllSafe: (sql, params = []) => queryAll(sql, params),
+
   // SETTINGS
   getSetting: (k) => queryOne('SELECT value FROM settings WHERE key=?',[k])?.value ?? '',
   setSetting: (k,v,grp) => {
@@ -775,6 +825,38 @@ const Q = {
     return lastId();
   },
   deleteWalletDoc: (id,userId) => { exec('DELETE FROM passport_wallet WHERE id=? AND user_id=?',[id,userId]); persist(); },
+
+  // ── BRAIN BASE (pattern memory + case intelligence) ────────────────────
+  saveBrainInsight: (dedupKey, payload, source='system') => {
+    try { exec('INSERT OR IGNORE INTO brain_insights(dedup_key,payload_json,source) VALUES(?,?,?)',
+      [String(dedupKey).slice(0,120), JSON.stringify(payload||{}), source]); } catch {}
+  },
+  getBrainInsight: (dedupKey) => queryOne('SELECT * FROM brain_insights WHERE dedup_key=? AND active=1',[dedupKey]),
+  createCase: (journeyId,userId,kind,insightKey,payload) => {
+    const open = queryOne(`SELECT id FROM journey_cases WHERE journey_id=? AND kind=? AND status='open'`,[journeyId,kind]);
+    if (open) return open.id;
+    exec(`INSERT INTO journey_cases(journey_id,user_id,kind,insight_key,payload_json) VALUES(?,?,?,?,?)`,
+      [journeyId,userId,kind,insightKey||null,JSON.stringify(payload||{})]);
+    return lastId();
+  },
+  getOpenCase: (journeyId,kind) => queryOne(
+    `SELECT * FROM journey_cases WHERE journey_id=? AND kind=? AND status='open' ORDER BY id DESC LIMIT 1`,[journeyId,kind]),
+  getOpenCases: (userId) => queryAll(
+    `SELECT jc.*, d.name as dest_name, d.flag as dest_flag
+     FROM journey_cases jc JOIN journeys j ON j.id=jc.journey_id LEFT JOIN destinations d ON d.code=j.destination_code
+     WHERE jc.user_id=? AND jc.status='open' ORDER BY jc.detected_at DESC`,[userId]),
+  getCase: (id,userId) => queryOne('SELECT * FROM journey_cases WHERE id=? AND user_id=?',[id,userId]),
+  resolveCase: (id,userId,notes,action) => exec(
+    `UPDATE journey_cases SET status='resolved', resolution_notes=?, action_taken_json=?, resolved_at=datetime('now') WHERE id=? AND user_id=?`,
+    [String(notes||'').slice(0,1000), JSON.stringify(action||{}), id, userId]),
+  dismissCase: (id,userId,notes) => exec(
+    `UPDATE journey_cases SET status='dismissed', resolution_notes=?, resolved_at=datetime('now') WHERE id=? AND user_id=?`,
+    [String(notes||'').slice(0,1000), id, userId]),
+  getResolvedCases: (limit=50) => queryAll(
+    `SELECT kind, insight_key, resolution_notes, action_taken_json, detected_at, resolved_at
+     FROM journey_cases WHERE status='resolved' ORDER BY resolved_at DESC LIMIT ?`,[limit]),
+  saveJourneyDossier: (id,userId,json) => exec('UPDATE journeys SET dossier_json=?, updated_at=datetime(\'now\') WHERE id=? AND user_id=?',[json,id,userId]),
+  saveJourneyRisk: (id,userId,json) => exec('UPDATE journeys SET risk_json=?, updated_at=datetime(\'now\') WHERE id=? AND user_id=?',[json,id,userId]),
 };
 
-module.exports = { initDB, Q, persist };
+module.exports = { initDB, Q, persist, exec };

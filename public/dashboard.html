@@ -793,6 +793,19 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <div class="view" id="view-profile">
       <div class="view-wrap">
         <div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300);margin-bottom:18px">👤 My Profile</div>
+        <div class="ps-card" id="traveller-score-card" style="display:none"><div class="ps-title">🧭 Traveller Score</div>
+          <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+            <div style="text-align:center;min-width:110px">
+              <div id="ts-score" style="font-family:var(--fd);font-size:2.6rem;font-weight:700;color:#E8613C;line-height:1">—</div>
+              <div id="ts-tier" style="font-size:.7rem;font-weight:700;color:var(--t3);margin-top:4px">—</div>
+            </div>
+            <div style="flex:1;min-width:220px">
+              <div class="progress" style="height:10px;margin-bottom:10px"><div class="progress-fill" id="ts-bar" style="width:0%"></div></div>
+              <div id="ts-breakdown" style="display:flex;flex-direction:column;gap:4px;font-size:.72rem;color:var(--t3)"></div>
+            </div>
+          </div>
+          <div id="ts-hint" style="margin-top:10px;font-size:.72rem;color:var(--t4)"></div>
+        </div>
         <div class="ps-card"><div class="ps-title">Personal Information</div>
           <div class="form-group"><label class="form-label">Full Name</label><input class="input" id="p-name" tabindex="1"/></div>
           <div class="form-group"><label class="form-label">Email</label><input class="input" id="p-email" disabled style="opacity:.5"/></div>
@@ -901,6 +914,7 @@ function sw(v){
   if(v==='saved')loadSaved();
   if(v==='sub')loadPlans();
   if(v==='journey')loadJourneys();
+  if(v==='profile')loadTravellerScore();
   if(v==='chat')document.getElementById('msg-ta').focus();
   document.body.classList.remove('sb-open');
 }
@@ -1140,6 +1154,25 @@ function relTime(d){if(!d)return'';const diff=Math.floor((Date.now()-new Date(d)
 function fmt(t){if(!t)return'';const mkLink=(m,txt,u)=>{txt=String(txt).replace(/[<>"'\\]/g,'');return '<a href="'+u+'" target="_blank" rel="noopener nofollow sponsored" style="color:var(--a300);text-decoration:underline" onclick="logAffClick(\''+txt+'\',\''+u+'\')">'+txt+'</a>';};return t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,mkLink).replace(/(^|\s)(https?:\/\/[^\s<]+)/g,(m,pre,u)=>pre+'<a href="'+u+'" target="_blank" rel="noopener nofollow sponsored" style="color:var(--a300);text-decoration:underline" onclick="logAffClick(\''+u.replace(/^https?:\/\//,'').split('/')[0]+'\',\''+u+'\')">'+u+'</a>').replace(/^###\s(.+)$/gm,'<div style="font-family:var(--fd);color:var(--a300);font-size:.92rem;margin:10px 0 4px;font-weight:600">$1</div>').replace(/^##\s(.+)$/gm,'<div style="font-family:var(--fd);color:var(--a300);font-size:.96rem;margin:12px 0 5px;font-weight:700">$1</div>').replace(/🔗\s\*\*([^*]+)\*\*:\s*([^\n]+)/g,'<div class="aff-card"><div><strong style="color:var(--o300)">🔗 $1</strong><br/><span style="font-size:.75rem;color:var(--t3)">$2</span></div></div>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code style="font-family:monospace;font-size:.79rem;background:rgba(217,90,35,.12);padding:1px 5px;border-radius:4px;color:var(--o300)">$1</code>').replace(/^✅\s(.+)$/gm,'<div class="ck"><span>✅</span><span>$1</span></div>').replace(/^⚠️\s(.+)$/gm,'<div class="ck"><span>⚠️</span><span>$1</span></div>').replace(/^❌\s(.+)$/gm,'<div class="ck"><span>❌</span><span>$1</span></div>').replace(/^[-•]\s(.+)$/gm,'<div class="bl">• $1</div>').replace(/^(\d+)\.\s(.+)$/gm,'<div class="bl"><strong>$1.</strong> $2</div>').replace(/^💡\s(.+)$/gm,'<div class="ibox">💡 $1</div>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');}
 document.getElementById('msg-ta').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}});
 document.getElementById('msg-ta').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
+/* ═══════════════ TRAVELLER SCORE (profile) ═══════════════ */
+async function loadTravellerScore(){
+  try{
+    const r=await api('/api/journey/score');const d=await r.json();if(!r.ok)return;
+    document.getElementById('traveller-score-card').style.display='block';
+    document.getElementById('ts-score').textContent=d.score;
+    document.getElementById('ts-tier').textContent=d.tier;
+    document.getElementById('ts-bar').style.width=d.score+'%';
+    document.getElementById('ts-breakdown').innerHTML=(d.breakdown||[]).map(b=>
+      `<div style="display:flex;justify-content:space-between"><span>${b.label} <span style="color:var(--t4)">(${b.weight})</span></span><b>${b.value}</b></div>`).join('');
+    const c=d.components||{};
+    const hints=[];
+    if(!c.passport_ready)hints.push('Add a valid passport (6+ months) to your Journey wallet for +10 points');
+    if(!c.completed_trips)hints.push('Complete your first journey checklist to start earning trip points');
+    if(c.tasks_total&&c.tasks_done_total<c.tasks_total)hints.push(`${c.tasks_total-c.tasks_done_total} checklist task(s) left across your journeys`);
+    document.getElementById('ts-hint').textContent=hints[0]||'Keep your journeys on track to grow your score.';
+  }catch(e){}
+}
+
 /* ═══════════════ JOURNEY OS ═══════════════ */
 let curJourneyId=null;
 const PHASE_META={research:{l:'Research',i:'🔎'},documents:{l:'Documents',i:'📄'},money:{l:'Money',i:'💳'},apply:{l:'Apply',i:'🛂'},book:{l:'Book',i:'✈️'},'pre-departure':{l:'Final week',i:'🎒'},'on arrival':{l:'On arrival',i:'🛬'}};
@@ -1238,6 +1271,51 @@ function renderJourneyDetail(d){
       ${d.briefing.tips.map(t=>`<div style="font-size:.74rem;color:var(--t3);margin-bottom:5px;line-height:1.6">💡 ${esc(t)}</div>`).join('')}
     </div>
   </div>
+  ${d.brain?`
+  <div class="card" style="margin-bottom:14px;background:#FFFDF8">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <div style="font-size:.8rem;font-weight:700;color:var(--t1)">🧠 Brain Base forecast</div>
+      <span style="font-size:.62rem;color:var(--t4)">${esc(d.brain.risk.confidence_note||'')}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
+      <div style="text-align:center;background:#fff;border:1px solid var(--b1);border-radius:14px;padding:10px">
+        <div style="font-family:var(--fd);font-size:1.5rem;font-weight:700;color:${d.brain.risk.risk_level==='high'?'#B3282D':d.brain.risk.risk_level==='medium'?'#8A6420':'#0E7B4F'}">${d.brain.risk.delay_risk_pct==null?'—':d.brain.risk.delay_risk_pct+'%'}</div>
+        <div style="font-size:.6rem;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.06em">delay risk${d.brain.risk.delay_risk_pct!=null?' · '+d.brain.risk.risk_level:''}</div>
+      </div>
+      <div style="text-align:center;background:#fff;border:1px solid var(--b1);border-radius:14px;padding:10px">
+        <div style="font-family:var(--fd);font-size:1.5rem;font-weight:700;color:#E8613C">${d.brain.pace.forecast_score==null?'—':d.brain.pace.forecast_score+'%'}</div>
+        <div style="font-size:.6rem;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.06em">forecast readiness</div>
+      </div>
+      <div style="text-align:center;background:#fff;border:1px solid var(--b1);border-radius:14px;padding:10px">
+        <div style="font-family:var(--fd);font-size:1.5rem;font-weight:700;color:var(--t1)">$${d.brain.fees.at_stake_usd}</div>
+        <div style="font-size:.6rem;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.06em">at stake · ${d.brain.fees.travellers} pax</div>
+      </div>
+    </div>
+    ${d.brain.risk.headline?`<div style="font-size:.76rem;color:var(--t2);margin-bottom:6px"><b>Forecast:</b> ${esc(d.brain.risk.headline)}${d.brain.risk.decision_by?` · decision by <b>${d.brain.risk.decision_by}</b>`:''}</div>`:''}
+    ${d.brain.pace.verdict?`<div style="font-size:.76rem;color:var(--t3);margin-bottom:6px"><b>Pace:</b> ${esc(d.brain.pace.verdict)}</div>`:''}
+    ${(d.brain.risk.actions||[]).map(a=>`<div style="font-size:.74rem;color:#8A6420;margin-bottom:3px">→ ${esc(a)}</div>`).join('')}
+    ${d.brain.insights&&d.brain.insights.length?`<details style="margin-top:8px"><summary style="font-size:.72rem;font-weight:600;color:var(--t3);cursor:pointer">📚 Pattern insights the brain matched to this trip (${d.brain.insights.length})</summary>
+      ${d.brain.insights.map(i=>`<div style="margin-top:8px;font-size:.74rem;color:var(--t3)"><b style="color:var(--t1)">${esc(i.title)}</b> <span style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:${i.severity==='high'?'#B3282D':i.severity==='medium'?'#8A6420':'var(--t4)'}">${i.severity||''}</span><br/>${esc(i.advice)}</div>`).join('')}
+    </details>`:''}
+  </div>`:''}
+  ${(d.cases||[]).length?`
+  <div class="card" style="margin-bottom:14px;border-color:rgba(200,45,45,.3)">
+    <div style="font-size:.8rem;font-weight:700;color:var(--t1);margin-bottom:8px">🚨 Open cases on this trip</div>
+    ${d.cases.map(c=>`
+      <div style="background:#fff;border:1px solid var(--b1);border-radius:12px;padding:12px;margin-bottom:8px">
+        <div style="font-size:.78rem;font-weight:700;color:var(--t1)">${c.kind==='appointment_scarcity'?'⏰ Appointment scarcity window':c.kind==='task_overdue'?'⚠️ Overdue task(s)':c.kind==='passport_validity'?'🛂 Passport validity risk':'📋 '+esc(c.kind)}</div>
+        ${c.payload&&c.payload.insight?`<div style="font-size:.72rem;color:var(--t3);margin-top:4px;line-height:1.6">${esc(c.payload.insight.advice||'')}</div>`:c.payload&&c.payload.worst_task?`<div style="font-size:.72rem;color:var(--t3);margin-top:4px">${c.payload.overdue_count} task(s) overdue — oldest: ${esc(c.payload.worst_task.title)}</div>`:''}
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" style="font-size:.68rem;padding:5px 12px" onclick="resolveCase(${c.id})">✓ Resolved</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:.68rem;padding:5px 12px" onclick="reportCase(${c.id})">📣 Report what actually happened</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:.68rem;padding:5px 12px" onclick="dismissCase(${c.id})">Dismiss</button>
+        </div>
+      </div>`).join('')}
+  </div>`:''}
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <button class="btn btn-primary btn-sm" onclick="downloadDossier(${j.id})">⬇️ Download trip dossier</button>
+    <button class="btn btn-ghost btn-sm" onclick="window.open('/api/journey/${j.id}/dossier?format=json','_blank')">{ } JSON</button>
+  </div>
   <div style="font-size:.8rem;font-weight:600;color:var(--t1);margin:16px 0 8px">Execution checklist</div>`;
   // Group tasks by phase preserving phase order
   const phases=[...new Set(d.tasks.map(t=>t.phase))];
@@ -1269,6 +1347,31 @@ async function tickTask(jid,tid,done){
     const b=document.getElementById('jy-detail');if(b&&b.style.display!=='none')openJourney(jid);else loadJourneys();
   }catch(e){showToast('Could not update task');}
 }
+
+/* ── Brain Base case actions ── */
+async function resolveCase(id){
+  const notes=prompt('How did you resolve it? (e.g. "appointment booked for Dec 5")');
+  if(notes===null)return;
+  const r=await api(`/api/journey/cases/${id}/resolve`,{method:'POST',body:JSON.stringify({notes})});
+  const d=await r.json();showToast(d.message||d.error||'Done');openJourney(curJourneyId);
+}
+async function reportCase(id){
+  const description=prompt('Tell the brain what actually happened (it will use this to improve forecasts for everyone):');
+  if(!description)return;
+  const r=await api(`/api/journey/cases/${id}/report`,{method:'POST',body:JSON.stringify({description})});
+  const d=await r.json();showToast(d.message||d.error||'Report filed');openJourney(curJourneyId);
+}
+async function dismissCase(id){
+  await api(`/api/journey/cases/${id}/dismiss`,{method:'POST',body:JSON.stringify({})});
+  showToast('Case dismissed');openJourney(curJourneyId);
+}
+
+/* ── Dossier download ── */
+function downloadDossier(id){
+  window.location.href='/api/journey/'+id+'/dossier';
+  showToast('Dossier downloading — keep a printed copy with your documents');
+}
+
 async function updateJourneyDate(){
   const dep=document.getElementById('jy-dep-edit').value;
   try{
