@@ -605,6 +605,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
           <div style="display:flex;gap:7px">
             <input class="input" id="test-email-to" placeholder="Test recipient email" style="flex:1"/>
             <button class="btn btn-ghost btn-sm" onclick="testEmail()" style="white-space:nowrap;flex-shrink:0">📤 Test</button>
+            <button class="btn btn-ghost btn-sm" onclick="testDigest()" style="white-space:nowrap;flex-shrink:0">📅 Sample digest</button>
           </div>
         </div>
       </div>
@@ -622,6 +623,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
         <div class="form-group" style="margin-top:12px"><label class="form-label">Alert Threshold (%)</label><input class="input" id="notif_usage_threshold" type="number" min="50" max="99" placeholder="80"/><div class="form-hint">Alert fires at this % of daily limit</div></div>
         <div class="tgl-row"><div><div class="tgl-lbl">System Notifications (in-app)</div></div><label class="toggle"><input type="checkbox" id="notif_system_alerts"/><span class="toggle-sl"></span></label></div>
         <div class="tgl-row"><div><div class="tgl-lbl">Journey Reminder Emails</div><div class="tgl-sub">Email travellers about due/overdue tasks, departures (T-30/14/7/1) and expiring documents. Needs working SMTP. Travellers can opt out in their profile.</div></div><label class="toggle"><input type="checkbox" id="notif_email_reminders"/><span class="toggle-sl"></span></label></div>
+        <div class="tgl-row"><div><div class="tgl-lbl">Weekly Digest Email</div><div class="tgl-sub">Every Monday: readiness per trip, next deadlines, open cases and departure countdowns. Needs working SMTP. Travellers can opt out separately in their profile.</div></div><label class="toggle"><input type="checkbox" id="notif_email_digest"/><span class="toggle-sl"></span></label></div>
       </div>
       <button class="btn btn-primary" onclick="saveNotifs()">💾 Save Settings</button>
     </div>
@@ -681,6 +683,27 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <div style="margin-bottom:16px">
       <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">🧠 Journey & Brain Base Analytics</div>
       <div style="font-size:.78rem;color:var(--t4)">How travellers are executing trips, which patterns the brain keeps detecting, and what travellers report back — use it to tune forecasts and editorial priorities.</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:var(--glass2);border:1px solid var(--line);border-radius:12px">
+      <div><div style="font-size:.68rem;color:var(--t4);margin-bottom:4px">Traveller (email/name)</div><input id="bf-user" class="input" placeholder="e.g. amaka@…" style="width:200px;padding:7px 10px"/></div>
+      <div><div style="font-size:.68rem;color:var(--t4);margin-bottom:4px">Case kind</div>
+        <select id="bf-kind" class="input" style="width:190px;padding:7px 10px">
+          <option value="">All kinds</option>
+          <option value="task_overdue">⚠️ Overdue task</option>
+          <option value="appointment_scarcity">⏰ Appointment scarcity</option>
+          <option value="passport_validity">🛂 Passport validity</option>
+          <option value="user_report">🗣️ Traveller report</option>
+        </select></div>
+      <div><div style="font-size:.68rem;color:var(--t4);margin-bottom:4px">Case status</div>
+        <select id="bf-status" class="input" style="width:150px;padding:7px 10px">
+          <option value="">All statuses</option>
+          <option value="open">Open</option>
+          <option value="resolved">Resolved</option>
+          <option value="dismissed">Dismissed</option>
+        </select></div>
+      <button class="btn-primary" onclick="loadBrain()" style="padding:8px 18px">Apply</button>
+      <button class="btn-ghost" onclick="document.getElementById('bf-user').value='';document.getElementById('bf-kind').value='';document.getElementById('bf-status').value='';loadBrain()" style="padding:8px 14px">Reset</button>
+      <span id="bf-active" style="font-size:.72rem;color:var(--t3)"></span>
     </div>
     <div class="stats-grid" id="brain-stats" style="margin-bottom:16px"></div>
     <div class="chart-row">
@@ -835,9 +858,19 @@ window.addEventListener('load',swFromHash);
 /* ── JOURNEY & BRAIN BASE ANALYTICS ── */
 const CASE_LABELS={task_overdue:'⚠️ Overdue task',appointment_scarcity:'⏰ Appointment scarcity',passport_validity:'🛂 Passport validity',user_report:'🗣️ Traveller report'};
 function caseLabel(k){return CASE_LABELS[k]||k;}
+function brainFilterQS(){
+  const p=new URLSearchParams();
+  const u=document.getElementById('bf-user')?.value.trim();
+  const k=document.getElementById('bf-kind')?.value;
+  const s=document.getElementById('bf-status')?.value;
+  if(u)p.set('user',u);if(k)p.set('kind',k);if(s)p.set('status',s);
+  return p.toString();
+}
 async function loadBrain(){
   try{
-    const r=await api('/api/admin/journey-insights');const d=await r.json();if(!r.ok)throw new Error(d.error||'Failed');
+    const qs=brainFilterQS();
+    document.getElementById('bf-active').textContent=qs?`filtered by: ${qs.replace(/user=/,'traveller ').replace(/kind=/,'').replace(/status=/,'· ')}`:'';
+    const r=await api('/api/admin/journey-insights'+(qs?'?'+qs:''));const d=await r.json();if(!r.ok)throw new Error(d.error||'Failed');
     const J=d.journeys||{},C=d.cases||{};
     document.getElementById('brain-stats').innerHTML=`
       <div class="stat-card"><div class="sc-lbl">Total journeys</div><div class="sc-val">${J.total||0}</div><div class="sc-sub">${J.active||0} active · ${J.upcoming||0} upcoming</div></div>
@@ -1144,10 +1177,11 @@ async function testAI(model){showToast('Testing…');const r=await apiFetch('/ap
 async function loadEmail(){const r=await apiFetch('/api/admin/settings/email');const d=await r.json();const s=d.settings||{};['smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from_name','smtp_from_email','smtp_secure'].forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k]||'';});}
 async function saveEmail(){const fields=['smtp_host','smtp_port','smtp_user','smtp_from_name','smtp_from_email','smtp_secure'];const settings=fields.reduce((a,k)=>({...a,[k]:document.getElementById(k)?.value||''}),{});const pass=document.getElementById('smtp_pass').value;if(pass&&!pass.startsWith('••••'))settings.smtp_pass=pass;const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});const d=await r.json();r.ok?showToast('Email settings saved ✅'):showToast(d.error,'error');}
 async function testEmail(){const to=document.getElementById('test-email-to').value;if(!to)return showToast('Enter recipient email','error');showToast('Sending test…');const r=await apiFetch('/api/admin/settings/test-email',{method:'POST',body:JSON.stringify({to})});const d=await r.json();r.ok?showToast(d.message):showToast(d.error,'error');}
+async function testDigest(){const to=document.getElementById('test-email-to').value;if(!to)return showToast('Enter recipient email','error');showToast('Sending sample digest…');const r=await apiFetch('/api/admin/settings/test-digest',{method:'POST',body:JSON.stringify({to})});const d=await r.json();r.ok?showToast(d.message):showToast(d.error,'error');}
 
 // ── NOTIF SETTINGS ────────────────────────────────────────────────────────────
-async function loadNotifS(){const r=await apiFetch('/api/admin/settings/notifications');const d=await r.json();const s=d.settings||{};['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts','notif_email_reminders'].forEach(k=>{const el=document.getElementById(k);if(el)el.checked=s[k]==='1';});document.getElementById('notif_usage_threshold').value=s.notif_usage_threshold||'80';}
-async function saveNotifs(){const tgls=['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts','notif_email_reminders'];const settings=tgls.reduce((a,k)=>({...a,[k]:document.getElementById(k).checked?'1':'0'}),{});settings.notif_usage_threshold=document.getElementById('notif_usage_threshold').value;const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});const d=await r.json();r.ok?showToast('Notification settings saved ✅'):showToast(d.error,'error');}
+async function loadNotifS(){const r=await apiFetch('/api/admin/settings/notifications');const d=await r.json();const s=d.settings||{};['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts','notif_email_reminders','notif_email_digest'].forEach(k=>{const el=document.getElementById(k);if(el)el.checked=s[k]==='1';});document.getElementById('notif_usage_threshold').value=s.notif_usage_threshold||'80';}
+async function saveNotifs(){const tgls=['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts','notif_email_reminders','notif_email_digest'];const settings=tgls.reduce((a,k)=>({...a,[k]:document.getElementById(k).checked?'1':'0'}),{});settings.notif_usage_threshold=document.getElementById('notif_usage_threshold').value;const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});const d=await r.json();r.ok?showToast('Notification settings saved ✅'):showToast(d.error,'error');}
 
 // ── GENERAL SETTINGS ──────────────────────────────────────────────────────────
 async function loadGeneral(){

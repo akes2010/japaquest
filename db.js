@@ -27,6 +27,7 @@ const SCHEMA = [
     avatar TEXT DEFAULT '', status TEXT DEFAULT 'active',
     email_verified INTEGER DEFAULT 1,
     email_opt_out INTEGER DEFAULT 0,
+    digest_opt_out INTEGER DEFAULT 0,
     last_login TEXT, created_at TEXT DEFAULT(datetime('now')),
     updated_at TEXT DEFAULT(datetime('now')))`,
   `CREATE TABLE IF NOT EXISTS conversations(
@@ -355,6 +356,7 @@ function seedDefaults() {
     ['notif_usage_alert','1','notifications'],['notif_usage_threshold','80','notifications'],
     ['notif_system_alerts','1','notifications'],
     ['notif_email_reminders','0','notifications'],
+    ['notif_email_digest','0','notifications'],
   ];
   DEFAULTS.forEach(([k,v,g]) => exec(`INSERT OR IGNORE INTO settings(key,value,grp) VALUES(?,?,?)`, [k,v,g]));
 
@@ -493,6 +495,7 @@ function seedVisaData() {
 function migrateJourneyOS() {
   const alters = [
     ['users', "ALTER TABLE users ADD COLUMN email_opt_out INTEGER DEFAULT 0"],
+    ['users', "ALTER TABLE users ADD COLUMN digest_opt_out INTEGER DEFAULT 0"],
     ['journeys', "ALTER TABLE journeys ADD COLUMN dossier_json TEXT"],
     ['journeys', "ALTER TABLE journeys ADD COLUMN risk_json TEXT"],
     ['journeys', "ALTER TABLE journeys ADD COLUMN fee_confidence_usd REAL"],
@@ -863,40 +866,53 @@ const Q = {
   saveJourneyRisk: (id,userId,json) => exec('UPDATE journeys SET risk_json=?, updated_at=datetime(\'now\') WHERE id=? AND user_id=?',[json,id,userId]),
   setTaskRemindSent: (id,sent) => exec('UPDATE journey_tasks SET remind_sent=? WHERE id=?',[sent?1:0,id]),
   setEmailOptOut: (userId,optOut) => exec('UPDATE users SET email_opt_out=?,updated_at=datetime(\'now\') WHERE id=?',[optOut?1:0,userId]),
+  setDigestOptOut: (userId,optOut) => exec('UPDATE users SET digest_opt_out=?,updated_at=datetime(\'now\') WHERE id=?',[optOut?1:0,userId]),
 
-  // ── ADMIN: Journey/Brain analytics ──────────────────────────────────────
-  getJourneyStats: () => {
-    const byStatus = queryAll('SELECT status, COUNT(*) as count FROM journeys GROUP BY status ORDER BY count DESC');
+  // ── ADMIN: Journey/Brain analytics (optionally filterable) ──────────────
+  getJourneyStats: (filters = {}) => {
+    const clauses = []; const params = [];
+    if (filters.user) { clauses.push('(u.email LIKE ? OR u.name LIKE ?)'); const like = `%${filters.user}%`; params.push(like, like); }
+    const W = clauses.length ? 'WHERE ' + clauses.join(' AND ') : '';
+    const byStatus = queryAll(`SELECT j.status, COUNT(*) as count FROM journeys j LEFT JOIN users u ON u.id=j.user_id ${W} GROUP BY j.status ORDER BY count DESC`, params);
     const byDestination = queryAll(`SELECT j.destination_code as code, d.name as name, d.flag as flag, COUNT(*) as journeys,
       SUM(CASE WHEN j.status='completed' THEN 1 ELSE 0 END) as completed
-      FROM journeys j LEFT JOIN destinations d ON d.code=j.destination_code
-      GROUP BY j.destination_code ORDER BY journeys DESC LIMIT 10`);
-    const byPurpose = queryAll('SELECT purpose, COUNT(*) as count FROM journeys GROUP BY purpose ORDER BY count DESC');
-    const total = queryScalar('SELECT COUNT(*) FROM journeys');
-    const active = queryScalar("SELECT COUNT(*) FROM journeys WHERE status NOT IN ('completed','cancelled')");
-    const upcoming = queryScalar("SELECT COUNT(*) FROM journeys WHERE departure_date IS NOT NULL AND departure_date >= date('now') AND status != 'cancelled'");
+      FROM journeys j LEFT JOIN destinations d ON d.code=j.destination_code LEFT JOIN users u ON u.id=j.user_id
+      ${W} GROUP BY j.destination_code ORDER BY journeys DESC LIMIT 10`, params);
+    const byPurpose = queryAll(`SELECT j.purpose, COUNT(*) as count FROM journeys j LEFT JOIN users u ON u.id=j.user_id ${W} GROUP BY j.purpose ORDER BY count DESC`, params);
+    const total = queryScalar(`SELECT COUNT(*) FROM journeys j LEFT JOIN users u ON u.id=j.user_id ${W}`, params);
+    const active = queryScalar(`SELECT COUNT(*) FROM journeys j LEFT JOIN users u ON u.id=j.user_id ${W ? W + ' AND' : 'WHERE'} j.status NOT IN ('completed','cancelled')`, params);
+    const upcoming = queryScalar(`SELECT COUNT(*) FROM journeys j LEFT JOIN users u ON u.id=j.user_id ${W ? W + ' AND' : 'WHERE'} j.departure_date IS NOT NULL AND j.departure_date >= date('now') AND j.status != 'cancelled'`, params);
     return { total, active, upcoming, byStatus, byDestination, byPurpose };
   },
-  getCaseStats: () => {
-    const byKind = queryAll(`SELECT kind, status, COUNT(*) as count FROM journey_cases GROUP BY kind, status ORDER BY kind, count DESC`);
-    const openByKind = queryAll("SELECT kind, COUNT(*) as count FROM journey_cases WHERE status='open' GROUP BY kind ORDER BY count DESC");
+  getCaseStats: (filters = {}) => {
+    const clauses = []; const params = [];
+    if (filters.kind) { clauses.push('jc.kind = ?'); params.push(String(filters.kind)); }
+    if (filters.status) { clauses.push('jc.status = ?'); params.push(String(filters.status)); }
+    if (filters.user) { clauses.push('(u.email LIKE ? OR u.name LIKE ?)'); const like = `%${filters.user}%`; params.push(like, like); }
+    const W = clauses.length ? 'WHERE ' + clauses.join(' AND ') : '';
+    const kindUserOnly = [filters.kind ? 'jc.kind = ?' : null, filters.user ? '(u.email LIKE ? OR u.name LIKE ?)' : null].filter(Boolean);
+    const kindUserParams = [...(filters.kind ? [String(filters.kind)] : []), ...(filters.user ? [`%${filters.user}%`, `%${filters.user}%`] : [])];
+    const W2 = kindUserOnly.length ? 'WHERE ' + kindUserOnly.join(' AND ') : '';
+    const byKind = queryAll(`SELECT jc.kind, jc.status, COUNT(*) as count FROM journey_cases jc LEFT JOIN users u ON u.id=jc.user_id ${W} GROUP BY jc.kind, jc.status ORDER BY jc.kind, count DESC`, params);
+    const openByKind = queryAll(`SELECT jc.kind, COUNT(*) as count FROM journey_cases jc LEFT JOIN users u ON u.id=jc.user_id ${W2 ? W2 + ' AND' : 'WHERE'} jc.status='open' GROUP BY jc.kind ORDER BY count DESC`, kindUserParams);
     const recent = queryAll(`SELECT jc.*, d.name as dest_name, d.flag as dest_flag, u.name as user_name, u.email as user_email
       FROM journey_cases jc
       LEFT JOIN journeys j ON j.id=jc.journey_id
       LEFT JOIN destinations d ON d.code=j.destination_code
       LEFT JOIN users u ON u.id=jc.user_id
-      ORDER BY jc.detected_at DESC LIMIT 40`);
+      ${W}
+      ORDER BY jc.detected_at DESC LIMIT 40`, params);
     const resolvedReports = queryAll(`SELECT jc.kind, jc.insight_key, jc.resolution_notes, jc.action_taken_json, jc.detected_at, jc.resolved_at,
       d.name as dest_name, u.email as user_email
       FROM journey_cases jc
       LEFT JOIN journeys j ON j.id=jc.journey_id
       LEFT JOIN destinations d ON d.code=j.destination_code
       LEFT JOIN users u ON u.id=jc.user_id
-      WHERE jc.status='resolved' ORDER BY jc.resolved_at DESC LIMIT 30`);
-    const topInsights = queryAll(`SELECT insight_key, COUNT(*) as uses FROM journey_cases WHERE insight_key IS NOT NULL GROUP BY insight_key ORDER BY uses DESC LIMIT 8`);
-    const total = queryScalar('SELECT COUNT(*) FROM journey_cases');
-    const open = queryScalar("SELECT COUNT(*) FROM journey_cases WHERE status='open'");
-    const reported = queryScalar("SELECT COUNT(*) FROM journey_cases WHERE resolution_notes LIKE 'REPORTED:%'");
+      ${W2 ? W2 + ' AND' : 'WHERE'} jc.status='resolved' ORDER BY jc.resolved_at DESC LIMIT 30`, kindUserParams);
+    const topInsights = queryAll(`SELECT jc.insight_key, COUNT(*) as uses FROM journey_cases jc LEFT JOIN users u ON u.id=jc.user_id ${W ? W + ' AND' : 'WHERE'} jc.insight_key IS NOT NULL GROUP BY jc.insight_key ORDER BY uses DESC LIMIT 8`, params);
+    const total = queryScalar(`SELECT COUNT(*) FROM journey_cases jc LEFT JOIN users u ON u.id=jc.user_id ${W}`, params);
+    const open = queryScalar(`SELECT COUNT(*) FROM journey_cases jc LEFT JOIN users u ON u.id=jc.user_id ${W2 ? W2 + ' AND' : 'WHERE'} jc.status='open'`, kindUserParams);
+    const reported = queryScalar(`SELECT COUNT(*) FROM journey_cases jc LEFT JOIN users u ON u.id=jc.user_id ${W ? W + ' AND' : 'WHERE'} jc.resolution_notes LIKE 'REPORTED:%'`, params);
     return { total, open, reported, byKind, openByKind, recent, resolvedReports, topInsights };
   },
 };

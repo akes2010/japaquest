@@ -19,7 +19,11 @@ router.get('/stats', (req, res) => res.json(Q.getAdminStats()));
 
 // ── JOURNEY & BRAIN BASE ANALYTICS ─────────────────────────────────────────
 router.get('/journey-insights', (req, res) => {
-  res.json({ journeys: Q.getJourneyStats(), cases: Q.getCaseStats() });
+  const filters = {};
+  if (req.query.user) filters.user = String(req.query.user).slice(0, 120);
+  if (req.query.kind) filters.kind = String(req.query.kind).slice(0, 60);
+  if (req.query.status) filters.status = String(req.query.status).slice(0, 20);
+  res.json({ journeys: Q.getJourneyStats(filters), cases: Q.getCaseStats(filters), filters });
 });
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
@@ -151,6 +155,41 @@ router.post('/settings/test-email', async (req, res) => {
     if (!to) return res.status(400).json({ error: 'Recipient required' });
     await testSmtp(to);
     res.json({ message: `Test email sent to ${to} ✅` });
+  } catch(e) { res.status(400).json({ error: 'SMTP failed: '+e.message }); }
+});
+
+// ── TEST SAMPLE DIGEST (verifies SMTP + shows the Monday digest format) ──────
+router.post('/settings/test-digest', async (req, res) => {
+  try {
+    const { to } = req.body;
+    if (!to) return res.status(400).json({ error: 'Recipient required' });
+    const { digestHtmlFor } = require('../worker/journey-scheduler');
+    const admin = Q.getUserByEmail(req.user.email) || Q.queryAllSafe(`SELECT * FROM users WHERE role='admin' ORDER BY id LIMIT 1`)[0];
+    const appName = Q.getSetting('app_name') || 'Japa+';
+    const appUrl = (Q.getSetting('app_url') || '').replace(/\/$/, '');
+    let html = admin ? digestHtmlFor(admin, appName, appUrl) : null;
+    let sample = !html;
+    if (!html) {
+      // No journeys on the admin account yet → render a sample so the format can still be verified
+      html = `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #eee;border-radius:14px;overflow:hidden">
+  <div style="background:#0A1428;color:#F7F3EA;padding:18px 24px;font-size:15px;font-weight:600">🌍 Your week with ${appName}</div>
+  <div style="padding:20px 24px;color:#222;line-height:1.7">
+    <div style="margin:0 0 12px;padding:12px 16px;border:1px solid #eee;border-radius:10px">
+      <div style="font-weight:600">🇬🇧 United Kingdom — readiness 45% <span style="color:#888;font-weight:400">(On track)</span></div>
+      <div style="font-size:13px;color:#555">9/20 tasks done · <span style="color:#B3282D">1 overdue</span></div>
+    </div>
+    <ul style="margin:6px 0 0;padding-left:18px">
+      <li>Next deadline: <b>“Book the appointment slot the day applications open”</b> — ${new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)}</li>
+      <li><b>2 open cases</b> to review — 1 × appointment scarcity, 1 × task overdue</li>
+      <li>Reminder: the <b>6-month passport rule</b> applies to most destinations — check your wallet expiry dates.</li>
+    </ul>
+    <p style="margin:16px 0 0"><a href="${appUrl}/dashboard#journey" style="background:#0A1428;color:#F7F3EA;text-decoration:none;padding:10px 22px;border-radius:99px;font-weight:600;display:inline-block">Open My Journey →</a></p>
+    <p style="margin:18px 0 0;font-size:12px;color:#999">Sample digest — real weekly digests go out on Mondays.</p>
+  </div></div>`;
+    }
+    const { sendEmail } = require('../utils/mailer');
+    await sendEmail({ to, subject: `${appName} · Your week ahead${sample ? ' (sample)' : ''}`, html });
+    res.json({ message: `Sample digest sent to ${to} ✅${sample ? ' (demo data — admin has no journeys yet)' : ''}` });
   } catch(e) { res.status(400).json({ error: 'SMTP failed: '+e.message }); }
 });
 

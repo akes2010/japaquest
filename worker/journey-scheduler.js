@@ -70,6 +70,94 @@ async function emailReminder(user, subject, heading, lines) {
   }
 }
 
+// ── Weekly digest (Mondays) ───────────────────────────────────────────────────
+/** Compose the digest HTML for one user from live readiness + cases. */
+function digestHtmlFor(user, appName, appUrl) {
+  const today = toIso(new Date());
+  const journeys = Q.getJourneys(user.id) || [];
+  if (!journeys.length) return null;
+
+  let nextDeadline = null, nextDeparture = null;
+  const trips = [];
+  for (const j of journeys) {
+    const tasks = Q.getJourneyTasks(j.id) || [];
+    const docs = Q.getWalletDocs(user.id) || [];
+    const r = computeReadiness(j, tasks, docs);
+    const next = tasks.find(t => t.status !== 'done' && t.deadline && t.deadline >= today);
+    if (next && (!nextDeadline || next.deadline < nextDeadline.deadline)) {
+      nextDeadline = { title: next.title, deadline: next.deadline, dest: j.dest_name || j.destination_code };
+    }
+    if (j.departure_date && j.departure_date >= today && (!nextDeparture || j.departure_date < nextDeparture.date)) {
+      nextDeparture = { date: j.departure_date, dest: j.dest_name || j.destination_code };
+    }
+    trips.push({ dest: j.dest_name || j.destination_code, flag: j.dest_flag || '', r });
+  }
+
+  let openCases = 0; const caseKinds = [];
+  try {
+    const rows = Q.queryAllSafe(`SELECT kind, COUNT(*) as count FROM journey_cases WHERE user_id=? AND status='open' GROUP BY kind ORDER BY count DESC`, [user.id]);
+    for (const c of rows) { openCases += c.count; caseKinds.push(`${c.count} × ${String(c.kind).replace(/_/g, ' ')}`); }
+  } catch {}
+
+  // Nothing actionable → no digest at all
+  if (!trips.some(t => t.r.done > 0) && !openCases && !nextDeadline) return null;
+
+  const statusLabel = { ready: 'Ready to fly', on_track: 'On track', needs_attention: 'Needs attention', behind: 'Behind schedule', not_started: 'Just getting started' };
+  const tripBlocks = trips.map(t => `
+    <div style="margin:0 0 12px;padding:12px 16px;border:1px solid #eee;border-radius:10px">
+      <div style="font-weight:600">${t.flag} ${t.dest} — readiness ${t.r.score}% <span style="color:#888;font-weight:400">(${statusLabel[t.r.status] || t.r.status})</span></div>
+      <div style="font-size:13px;color:#555">${t.r.done}/${t.r.total} tasks done${t.r.overdue ? ` · <span style="color:#B3282D">${t.r.overdue} overdue</span>` : ''}</div>
+    </div>`).join('');
+
+  const items = [];
+  if (openCases) items.push(`<li><b>${openCases} open case${openCases === 1 ? '' : 's'}</b> to review — ${caseKinds.slice(0, 3).join(', ')}</li>`);
+  if (nextDeadline) items.push(`<li>Next deadline: <b>“${nextDeadline.title}”</b> — ${nextDeadline.deadline} (${nextDeadline.dest})</li>`);
+  if (nextDeparture) items.push(`<li>Departure <b>${nextDeparture.date}</b> — ${nextDeparture.dest}</li>`);
+  items.push(`<li>Reminder: the <b>6-month passport rule</b> applies to most destinations — check your wallet expiry dates.</li>`);
+
+  return `
+  <div style="font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #eee;border-radius:14px;overflow:hidden">
+    <div style="background:#0A1428;color:#F7F3EA;padding:18px 24px;font-size:15px;font-weight:600">🌍 Your week with ${appName}</div>
+    <div style="padding:20px 24px;color:#222;line-height:1.7">
+      ${tripBlocks}
+      <ul style="margin:6px 0 0;padding-left:18px">${items.join('')}</ul>
+      <p style="margin:16px 0 0"><a href="${appUrl}/dashboard#journey" style="background:#0A1428;color:#F7F3EA;text-decoration:none;padding:10px 22px;border-radius:99px;font-weight:600;display:inline-block">Open My Journey →</a></p>
+      <p style="margin:18px 0 0;font-size:12px;color:#999">Weekly digest — switch it off anytime in Profile → Preferences.</p>
+    </div>
+  </div>`;
+}
+
+/** Monday-only, opt-out aware, once-per-week dedup. Returns {notifs, emails}. */
+async function sendWeeklyDigests() {
+  let notifs = 0, emails = 0;
+  // Runs on Mondays; set JOURNEY_FORCE_DIGEST=1 to test the digest any day
+  const isMonday = new Date().getDay() === 1 || process.env.JOURNEY_FORCE_DIGEST === '1';
+  const digestOn = String((Q.getSettingsByGroup('notifications') || {}).notif_email_digest) === '1';
+  if (!isMonday || !digestOn) return { notifs, emails };
+
+  const users = Q.queryAllSafe(`SELECT * FROM users WHERE status='active'`);
+  const appName = Q.getSetting('app_name') || 'Japa+';
+  const appUrl = (Q.getSetting('app_url') || '').replace(/\/$/, '');
+
+  for (const user of users) {
+    if (user.email_opt_out || user.digest_opt_out) continue;
+    const html = digestHtmlFor(user, appName, appUrl);
+    if (!html) continue;
+    if (notifyOnce(`digest:${user.id}:${isoWeek(new Date())}`, user.id,
+      `🌍 Your week with ${appName}`, 'Your weekly trip readiness digest is ready. Open My Journey to see deadlines and open cases.', 'digest')) {
+      notifs++;
+      try {
+        const { sendEmail } = require('../utils/mailer');
+        await sendEmail({ to: user.email, subject: `${appName} · Your week ahead`, html });
+        emails++;
+      } catch (e) {
+        if (!sendWeeklyDigests._warned) { console.warn('[journey-digest] email skipped:', e.message); sendWeeklyDigests._warned = true; }
+      }
+    }
+  }
+  return { notifs, emails };
+}
+
 async function runOnce() {
   try {
     await initDB();
@@ -144,6 +232,9 @@ async function runOnce() {
       } catch {}
     }
 
+    // ── Weekly digest (Mondays) ────────────────────────────────────────────
+    const digest = await sendWeeklyDigests();
+
     // ── Wallet document expiry reminders ──────────────────────────────────
     try {
       const docs = Q.queryAllSafe(`SELECT w.*, u.id as uid FROM passport_wallet w JOIN users u ON u.id=w.user_id WHERE w.expiry_date IS NOT NULL AND w.expiry_date != ''`);
@@ -160,9 +251,9 @@ async function runOnce() {
       }
     } catch {}
 
-    if (notifications || casesOpened) {
+    if (notifications || casesOpened || digest.emails || digest.notifs) {
       persist();
-      console.log(`[journey-reminders] ${notifications} reminder(s), ${casesOpened} case(s) opened${emails ? ', ' + emails + ' email(s)' : ''}`);
+      console.log(`[journey-reminders] ${notifications} reminder(s), ${casesOpened} case(s) opened${emails ? ', ' + emails + ' email(s)' : ''}${digest.emails ? `, digest: ${digest.notifs} notif(s), ${digest.emails} email(s)` : ''}`);
     }
   } catch (e) {
     console.error('[journey-reminders] scan failed:', e.message);
@@ -177,4 +268,4 @@ function startJourneyScheduler() {
   console.log(`⏰ Journey reminder scheduler running (scans every ${SCAN_INTERVAL / 1000}s)`);
 }
 
-module.exports = { startJourneyScheduler, runOnce };
+module.exports = { startJourneyScheduler, runOnce, digestHtmlFor, sendWeeklyDigests };

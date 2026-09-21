@@ -809,6 +809,8 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
         <div class="ps-card" id="reminders-card" style="display:none"><div class="ps-title">⏰ Journey Reminders</div>
           <div class="tgl-row"><div><div class="tgl-lbl">Reminder emails</div><div class="tgl-sub">Due/overdue tasks, departure countdowns (T-30/14/7/1) and expiring documents. In-app notifications always stay on.</div></div>
             <label class="toggle"><input type="checkbox" id="pref-email-rem" onchange="saveReminderPref(this.checked)"/><span class="toggle-sl"></span></label></div>
+          <div class="tgl-row" id="digest-row" style="display:none"><div><div class="tgl-lbl">Weekly digest email</div><div class="tgl-sub">Every Monday: readiness per trip, next deadlines, open cases and departure countdowns.</div></div>
+            <label class="toggle"><input type="checkbox" id="pref-email-digest" onchange="saveDigestPref(this.checked)"/><span class="toggle-sl"></span></label></div>
         </div>
         <div class="ps-card"><div class="ps-title">Personal Information</div>
           <div class="form-group"><label class="form-label">Full Name</label><input class="input" id="p-name" tabindex="1"/></div>
@@ -1182,11 +1184,16 @@ async function loadTravellerScore(){
     try{
       const pr=await api('/api/journey/reminders/pref');const pd=await pr.json();
       if(pd.admin_enabled){document.getElementById('reminders-card').style.display='block';document.getElementById('pref-email-rem').checked=!pd.email_opt_out;}
+      if(pd.digest_enabled){document.getElementById('digest-row').style.display='flex';document.getElementById('pref-email-digest').checked=!pd.digest_opt_out;}
     }catch(e){}
   }catch(e){}
 }
 async function saveReminderPref(on){
   const r=await api('/api/journey/reminders/pref',{method:'POST',body:JSON.stringify({email_opt_out:!on})});
+  const d=await r.json();showToast(d.message||d.error||'Saved');
+}
+async function saveDigestPref(on){
+  const r=await api('/api/journey/reminders/pref',{method:'POST',body:JSON.stringify({digest_opt_out:!on})});
   const d=await r.json();showToast(d.message||d.error||'Saved');
 }
 
