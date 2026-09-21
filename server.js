@@ -7,7 +7,8 @@ const helmet   = require('helmet');
 const morgan   = require('morgan');
 const compress = require('compression');
 const rateLimit= require('express-rate-limit');
-const { initDB, Q } = require('./db');
+const { initDB, Q, persist } = require('./db');
+const BRAND = require('./config/brand');
 
 const app = express();
 
@@ -50,13 +51,14 @@ app.get('/manifest.json', (_req,res) => { res.setHeader('Cache-Control','public,
 
 // ── APP INFO ──────────────────────────────────────────────────────────────────
 app.get('/api/app-info', (_req,res) => res.json({
-  name:        Q.getSetting('app_name')    || 'Japa+',
-  tagline:     Q.getSetting('app_tagline') || 'Travel smart. Land ready.',
+  name:        Q.getSetting('app_name')    || BRAND.NAME,
+  tagline:     Q.getSetting('app_tagline') || BRAND.TAGLINE,
   logo:        Q.getSetting('app_logo')    || '✈',
   logoUrl:     Q.getSetting('app_logo_url')|| '',
   supportEmail:Q.getSetting('support_email')|| '',
   maintenance: Q.getSetting('maintenance_mode')==='1',
   regOpen:     Q.getSetting('registration_open')!=='0',
+  suite:       BRAND.SUITE,
 }));
 
 // ── MAINTENANCE ───────────────────────────────────────────────────────────────
@@ -77,6 +79,26 @@ app.use('/api/travel', require('./routes/travel'));
 app.use('/api/journey', require('./routes/journey'));
 app.use('/api/visa',   require('./routes/visa-db'));
 app.use('/api/chat',   require('./routes/chat'));
+
+// ── CRON TICK (for shared hosting without persistent workers) ────────────────
+// Truehost-style cPanel cron: curl -s "https://yourdomain.com/api/cron/tick?key=CRON_SECRET"
+// Runs both schedulers on demand instead of relying on long-lived intervals.
+app.get('/api/cron/tick', async (req, res) => {
+  const secret = process.env.CRON_SECRET || Q.getSetting('cron_secret') || '';
+  if (!secret) return res.status(503).json({ error: 'CRON_SECRET not configured' });
+  const provided = req.query.key || String(req.headers['x-cron-key'] || '');
+  if (provided !== secret) return res.status(401).json({ error: 'Invalid cron key' });
+  try {
+    const [social, journey] = await Promise.all([
+      require('./worker/social-scheduler').runOnce(),
+      require('./worker/journey-scheduler').runOnce(),
+    ]);
+    persist();
+    res.json({ ok: true, ran_at: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ error: 'Tick failed: ' + e.message });
+  }
+});
 
 // ── API 404 ───────────────────────────────────────────────────────────────────
 // Unknown API endpoints must return JSON 404, never the SPA fallback below.
@@ -100,7 +122,7 @@ app.use((err,_req,res,next) => {
 
 // ── START ─────────────────────────────────────────────────────────────────────
 async function start() {
-  console.log('\n🗄  Initialising JapaGuru database with sql.js…');
+  console.log('\n🗄  Initialising JapaQuest database with sql.js…');
   await initDB();
   console.log('✅ Database ready\n');
 
@@ -108,10 +130,11 @@ async function start() {
   require('./worker/social-scheduler').startSocialScheduler();
   require('./worker/journey-scheduler').startJourneyScheduler();
   app.listen(PORT, () => {
-    const name = Q.getSetting('app_name')||'Japa+';
+    const name = Q.getSetting('app_name')||BRAND.NAME;
     console.log(`
 ╔══════════════════════════════════════════════════════╗
 ║   ${name.padEnd(50)} ║
+║   ${BRAND.TAGLINE.padEnd(50)} ║
 ╠══════════════════════════════════════════════════════╣
 ║  App:      http://localhost:${PORT}                    ║
 ║  Dashboard:http://localhost:${PORT}/dashboard          ║

@@ -1,7 +1,7 @@
 {
-  "name": "jagaguru-ai",
+  "name": "japaquest",
   "version": "1.0.0",
-  "description": "JapaGuru AI — Unified African Travel Intelligence Platform",
+  "description": "JapaQuest — Your Journey. Our Intelligence.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

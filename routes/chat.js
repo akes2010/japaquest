@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Japa+ landing-page concierge.
+ * JapaQuest landing-page concierge.
  * Answers common travel/visa questions from the verified database — no AI key
  * required, rate-limited, and always points users to sign up for the full AI.
  */
@@ -201,7 +201,7 @@ function answerBestTime(dest) {
 function answerGreeting(name) {
   const n = Q.getDestinations().length;
   const p = Q.getPassports().length;
-  return `Hey${name ? ' ' + name : ''}! 👋 I'm the Japa+ concierge. I can tell you visa requirements for your passport, where you can go visa-free, trip budgets, and the best months to travel — grounded in our verified database of **${n} destinations** across **${p} African passports**.\n\nTry: *"Do I need a visa for Turkey?"* or *"Where can Nigerians go visa-free?"*`;
+  return `Hey${name ? ' ' + name : ''}! 👋 I'm the JapaQuest concierge. I can tell you visa requirements for your passport, where you can go visa-free, trip budgets, and the best months to travel — grounded in our verified database of **${n} destinations** across **${p} African passports**.\n\nTry: *"Do I need a visa for Turkey?"* or *"Where can Nigerians go visa-free?"*`;
 }
 
 function answerHelp() {

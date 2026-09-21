@@ -1,5 +1,6 @@
 'use strict';
 const nodemailer = require('nodemailer');
+const BRAND = require('../config/brand');
 
 function buildTransporter() {
   const { Q } = require('../db');
@@ -17,7 +18,7 @@ function buildTransporter() {
 
 async function sendEmail({ to, subject, html, text }) {
   const { Q } = require('../db');
-  const fromName  = Q.getSetting('smtp_from_name')  || 'Japa+';
+  const fromName  = Q.getSetting('smtp_from_name')  || BRAND.NAME;
   const fromEmail = Q.getSetting('smtp_from_email') || Q.getSetting('smtp_user') || '';
 
   const transporter = buildTransporter();
@@ -31,7 +32,7 @@ async function sendEmail({ to, subject, html, text }) {
 
 async function testSmtp(to) {
   const { Q } = require('../db');
-  const appName = Q.getSetting('app_name') || 'Japa+';
+  const appName = Q.getSetting('app_name') || BRAND.NAME;
   return sendEmail({
     to,
     subject: `✅ SMTP Test — ${appName}`,

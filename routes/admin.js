@@ -165,7 +165,7 @@ router.post('/settings/test-digest', async (req, res) => {
     if (!to) return res.status(400).json({ error: 'Recipient required' });
     const { digestHtmlFor } = require('../worker/journey-scheduler');
     const admin = Q.getUserByEmail(req.user.email) || Q.queryAllSafe(`SELECT * FROM users WHERE role='admin' ORDER BY id LIMIT 1`)[0];
-    const appName = Q.getSetting('app_name') || 'Japa+';
+    const appName = Q.getSetting('app_name') || 'JapaQuest';
     const appUrl = (Q.getSetting('app_url') || '').replace(/\/$/, '');
     let html = admin ? digestHtmlFor(admin, appName, appUrl) : null;
     let sample = !html;

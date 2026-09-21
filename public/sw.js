@@ -1,4 +1,4 @@
-/* Japa+ — Service Worker v2.0 */
+/* JapaQuest — Service Worker v2.0 */
 const CACHE  = 'japaplus-v2';
 const STATIC = ['/', '/style.css', '/manifest.json', '/icons/icon.svg', '/icons/icon-192.png'];
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <meta name="theme-color" content="#F7F3EA"/>
-<title>Admin — Japa+</title>
+<title>Admin — JapaQuest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -348,7 +348,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
   <div class="sb-top">
     <div class="sb-brand">
       <div class="sb-icon" id="sb-icon">✈</div>
-      <div class="sb-name" id="sb-name">Japa+</div>
+      <div class="sb-name" id="sb-name">JapaQuest</div>
       <div class="admin-badge">ADMIN</div>
     </div>
   </div>
@@ -599,7 +599,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
             <div class="key-wrap"><input class="input" id="smtp_pass" type="password" placeholder="App password"/><button class="key-show" onclick="toggleKey('smtp_pass')">Show</button></div></div>
         </div>
         <div class="s-card"><div class="s-title">✉️ Sender Identity</div>
-          <div class="form-group"><label class="form-label">From Name</label><input class="input" id="smtp_from_name" placeholder="Japa+"/></div>
+          <div class="form-group"><label class="form-label">From Name</label><input class="input" id="smtp_from_name" placeholder="JapaQuest"/></div>
           <div class="form-group"><label class="form-label">From Email</label><input class="input" id="smtp_from_email" type="email" placeholder="noreply@yourdomain.com"/></div>
           <div style="background:var(--elev2);border:1px solid var(--b1);border-radius:var(--r-md);padding:12px;margin-bottom:12px;font-size:.72rem;color:var(--t4);line-height:1.8"><strong style="color:var(--t2)">SMTP Guides:</strong><br/>Gmail: smtp.gmail.com:587 → 2FA → App Passwords<br/>Mailgun: smtp.mailgun.org:587<br/>SendGrid: smtp.sendgrid.net:587<br/>Brevo: smtp-relay.brevo.com:587</div>
           <div style="display:flex;gap:7px">
@@ -650,7 +650,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
             <label class="form-label">Logo Emoji (fallback if no image)</label>
             <input class="input" id="app_logo" placeholder="✈" maxlength="4"/>
           </div>
-          <div class="form-group"><label class="form-label">App Name</label><input class="input" id="app_name" placeholder="Japa+"/></div>
+          <div class="form-group"><label class="form-label">App Name</label><input class="input" id="app_name" placeholder="JapaQuest"/></div>
           <div class="form-group"><label class="form-label">Tagline</label><input class="input" id="app_tagline" placeholder="African Visa Intelligence Platform"/></div>
           <div class="form-group"><label class="form-label">Support Email</label><input class="input" id="support_email" type="email"/></div>
           <div class="form-group" style="margin-bottom:0"><label class="form-label">App URL</label><input class="input" id="app_url" placeholder="https://yourdomain.com"/></div>
@@ -726,7 +726,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
   <div class="view" id="view-social">
     <div style="margin-bottom:16px">
       <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">📣 Social Posts & Promotion</div>
-      <div style="font-size:.78rem;color:var(--t4)">Promote Japa+ everywhere. Share to any network with prefilled composer links, or schedule posts with country/region targeting — targeted posts are also delivered in-app to matching travellers when due.</div>
+      <div style="font-size:.78rem;color:var(--t4)">Promote JapaQuest everywhere. Share to any network with prefilled composer links, or schedule posts with country/region targeting — targeted posts are also delivered in-app to matching travellers when due.</div>
     </div>
 
     <div class="bc-card" style="max-width:760px">
@@ -831,8 +831,8 @@ async function init(){
     const sbIcon=document.getElementById('sb-icon');
     if(logoUrl){sbIcon.innerHTML=`<img src="${logoUrl}" alt="logo" style="width:100%;height:100%;object-fit:contain"/>`;document.getElementById('logo-preview-box').innerHTML=`<img src="${logoUrl}" alt="logo" style="width:100%;height:100%;object-fit:contain"/>`;}
     else{sbIcon.textContent=logoEmoji;}
-    document.getElementById('sb-name').textContent=appD.name||'Japa+';
-    document.title='Admin — '+(appD.name||'Japa+');
+    document.getElementById('sb-name').textContent=appD.name||'JapaQuest';
+    document.title='Admin — '+(appD.name||'JapaQuest');
     const u=JSON.parse(localStorage.getItem('vg_user')||'{}');
     document.getElementById('sf-email').textContent=u.email||'admin@visaguru.ai';
     updateMaintBadge(appD.maintenance);

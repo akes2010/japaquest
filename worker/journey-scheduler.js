@@ -19,6 +19,7 @@
 const { initDB, Q, persist } = require('../db');
 const { seedInsights, scanJourneyCases } = require('../utils/brain');
 const { computeReadiness } = require('../utils/journey');
+const BRAND = require('../config/brand');
 
 const SCAN_INTERVAL = parseInt(process.env.JOURNEY_SCAN_INTERVAL || '300') * 1000;
 let timer = null;
@@ -49,7 +50,7 @@ async function emailReminder(user, subject, heading, lines) {
   if (!user.email) return false;
   try {
     const { sendEmail } = require('../utils/mailer');
-    const appName = Q.getSetting('app_name') || 'Japa+';
+    const appName = Q.getSetting('app_name') || BRAND.NAME;
     const appUrl = (Q.getSetting('app_url') || '').replace(/\/$/, '');
     await sendEmail({
       to: user.email,
@@ -136,7 +137,7 @@ async function sendWeeklyDigests() {
   if (!isMonday || !digestOn) return { notifs, emails };
 
   const users = Q.queryAllSafe(`SELECT * FROM users WHERE status='active'`);
-  const appName = Q.getSetting('app_name') || 'Japa+';
+  const appName = Q.getSetting('app_name') || BRAND.NAME;
   const appUrl = (Q.getSetting('app_url') || '').replace(/\/$/, '');
 
   for (const user of users) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <meta name="theme-color" content="#F7F3EA"/>
-<title>Dashboard — Japa+</title>
+<title>Dashboard — JapaQuest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -529,7 +529,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
   <div class="sb-top">
     <div class="sb-brand">
       <div class="sb-logo" id="sb-logo">✈</div>
-      <div class="sb-appname" id="sb-appname">Japa+</div>
+      <div class="sb-appname" id="sb-appname">JapaQuest</div>
     </div>
     <button class="new-chat-btn" onclick="startNewChat()">✏️ New Chat</button>
   </div>
@@ -591,7 +591,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
           <div class="progress"><div class="progress-fill" id="u-fill" style="width:0%"></div></div>
           <span class="usage-lbl" id="u-lbl">0/10 today</span>
         </div>
-        <div style="text-align:center;font-size:.62rem;color:var(--t4);margin-top:4px">Japa+ · Verify visa requirements with official embassy sources before applying</div>
+        <div style="text-align:center;font-size:.62rem;color:var(--t4);margin-top:4px">JapaQuest · Verify visa requirements with official embassy sources before applying</div>
       </div>
     </div>
 
@@ -602,7 +602,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
         <div id="jy-empty">
           <div style="max-width:640px;margin:24px auto 0;text-align:center">
             <div style="font-family:var(--fd);font-size:1.6rem;color:var(--t1);margin-bottom:8px">🧭 Turn your dream trip into a plan</div>
-            <div style="font-size:.9rem;color:var(--t3);line-height:1.7;margin-bottom:24px">Describe the trip you're dreaming about. Japa+ checks the <b>verified visa rule</b> for your passport, then builds a deadline-driven checklist — so a first-timer executes like an experienced traveller.</div>
+            <div style="font-size:.9rem;color:var(--t3);line-height:1.7;margin-bottom:24px">Describe the trip you're dreaming about. JapaQuest checks the <b>verified visa rule</b> for your passport, then builds a deadline-driven checklist — so a first-timer executes like an experienced traveller.</div>
             <div style="background:#fff;border:1px solid var(--b1);border-radius:22px;padding:24px;text-align:left;box-shadow:var(--shadow-sm)">
               <div class="form-group"><label class="form-label">Describe your dream trip</label>
                 <textarea class="input" id="jy-text" rows="3" placeholder="e.g. I want to take my family to London for 10 days next summer"></textarea></div>
@@ -670,7 +670,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
       <div class="view-wrap">
         <div style="margin-bottom:20px">
           <div style="font-family:var(--fd);font-size:1.2rem;color:var(--a300);margin-bottom:5px">✈️ Book Your Travel</div>
-          <div style="font-size:.78rem;color:var(--t4)">Compare and book via our trusted partners. Prices stay the same — we earn a small commission that helps keep Japa+ free.</div>
+          <div style="font-size:.78rem;color:var(--t4)">Compare and book via our trusted partners. Prices stay the same — we earn a small commission that helps keep JapaQuest free.</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
           <input class="input" id="bk-dest" placeholder="Destination (e.g. London)"/>
@@ -878,8 +878,8 @@ async function init(){
     const lEl=document.getElementById('sb-logo');
     if(appD.logoUrl)lEl.innerHTML=`<img src="${appD.logoUrl}" alt="logo"/>`;
     else lEl.textContent=appD.logo||'✈';
-    document.getElementById('sb-appname').textContent=appD.name||'Japa+';
-    document.title='Dashboard — '+(appD.name||'Japa+');
+    document.getElementById('sb-appname').textContent=appD.name||'JapaQuest';
+    document.title='Dashboard — '+(appD.name||'JapaQuest');
     document.getElementById('support-email').textContent=appD.supportEmail||'support@japaplus.app';
     const ini=user.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
     document.getElementById('u-ava').textContent=ini;
@@ -1056,7 +1056,7 @@ async function checkVisa(){
     ${(d.conditions||[]).length?`<div style="font-size:.76rem;color:var(--t2);margin-bottom:8px"><strong>Requirements:</strong><br/>${d.conditions.map(c=>`• ${c}`).join('<br/>')}</div>`:''}
     ${d.fees?.amount?`<div style="font-size:.76rem;color:var(--a300);margin-bottom:6px">💰 Fee: ${d.fees.amount}</div>`:''}
     ${d.processingDays?`<div style="font-size:.76rem;color:var(--t4);margin-bottom:8px">📅 Processing: ${d.processingDays}</div>`:''}
-    <div style="font-size:.66rem;color:var(--t4)">Source: ${d.source?.authority||'Japa+ Database'} · Last verified: ${d.lastVerified||'—'}</div>
+    <div style="font-size:.66rem;color:var(--t4)">Source: ${d.source?.authority||'JapaQuest Database'} · Last verified: ${d.lastVerified||'—'}</div>
     <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="ask('Give me a complete guide on getting a ${purpose.toLowerCase()} visa for ${dest} with a ${passport} passport — step by step, all documents, fees, and tips to maximise approval');closeM('visa-modal')">Get Full Guide →</button>
   </div>`;
 }
@@ -1099,7 +1099,7 @@ function printDoc(){
   const text=lastDocText;
   if(!text)return showToast('Generate a document first');
   const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><title>Document</title><style>body{font-family:Arial,sans-serif;max-width:750px;margin:40px auto;line-height:1.8;font-size:11pt;color:#111}h1{color:#0E1B33;border-bottom:2px solid #D95A23;padding-bottom:8px}.footer{margin-top:32px;font-size:8pt;color:#999;border-top:1px solid #ddd;padding-top:10px}@media print{.no-print{display:none}}</style></head><body><div style="white-space:pre-wrap">${text.replace(/</g,'&lt;')}</div><div class="footer">Generated by Japa+ · Verify all details before submission</div><div class="no-print" style="margin-top:20px"><button onclick="window.print()" style="padding:10px 24px;background:#0E1B33;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨 Print / Save PDF</button></div></body></html>`);
+  w.document.write(`<!DOCTYPE html><html><head><title>Document</title><style>body{font-family:Arial,sans-serif;max-width:750px;margin:40px auto;line-height:1.8;font-size:11pt;color:#111}h1{color:#0E1B33;border-bottom:2px solid #D95A23;padding-bottom:8px}.footer{margin-top:32px;font-size:8pt;color:#999;border-top:1px solid #ddd;padding-top:10px}@media print{.no-print{display:none}}</style></head><body><div style="white-space:pre-wrap">${text.replace(/</g,'&lt;')}</div><div class="footer">Generated by JapaQuest · Verify all details before submission</div><div class="no-print" style="margin-top:20px"><button onclick="window.print()" style="padding:10px 24px;background:#0E1B33;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨 Print / Save PDF</button></div></body></html>`);
   w.document.close();setTimeout(()=>w.print(),500);
 }
 function downloadDoc(){

@@ -1,8 +1,8 @@
 'use strict';
 /**
- * Japa+ Journey OS — the smart trip execution engine.
+ * JapaQuest Journey OS — the smart trip execution engine.
  *
- * This is what separates Japa+ from search engines: it converts a verified
+ * This is what separates JapaQuest from search engines: it converts a verified
  * visa rule into a deadline-driven execution plan (checklist, timeline,
  * readiness score, pre-departure briefing) tailored to the traveller's
  * passport, purpose and dates — including first-trip-failure patterns that

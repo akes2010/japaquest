@@ -16,6 +16,7 @@ const { requireAuth } = require('../middleware/auth');
 const { Q } = require('../db');
 const J = require('../utils/journey');
 const brain = require('../utils/brain');
+const BRAND = require('../config/brand');
 const { buildAffiliateLinks } = require('./travel');
 const fs = require('fs');
 const path = require('path');
@@ -427,7 +428,7 @@ function buildDossier(j, tasks, docs, brainData, briefing, visa) {
   const today = new Date().toISOString().slice(0, 10);
   return {
     generated_at: new Date().toISOString(),
-    app: 'Japa+ — Travel smart. Land ready.',
+    app: BRAND.NAME + ' — ' + BRAND.TAGLINE,
     trip: {
       destination: j.dest_name || j.destination_code, code: j.destination_code,
       purpose: j.purpose, departure: j.departure_date, return: j.return_date,
@@ -439,13 +440,13 @@ function buildDossier(j, tasks, docs, brainData, briefing, visa) {
       source_authority: visa?.source_authority || null, source_tier: visa?.source_tier ?? null,
       confidence: visa?.confidence || j.confidence, official_url: visa?.official_url || j.embassy_url || null,
       conditions: visa?.conditions || [],
-      disclaimer: 'Verify on the official government site before paying anything. Japa+ cites sources and flags confidence, but rules change.',
+      disclaimer: `Verify on the official government site before paying anything. ${BRAND.NAME} cites sources and flags confidence, but rules change.`,
     },
     forecast: brainData ? { delay_risk: brainData.risk, readiness_forecast: brainData.pace, fee_exposure: brainData.fees } : null,
     briefing,
     checklist: tasks.map(t => ({ phase: t.phase, task: t.title, deadline: t.deadline, done: t.status === 'done', detail: t.detail })),
     documents: docs.map(d => ({ type: d.doc_type, number_masked: d.doc_number ? d.doc_number.slice(0, 3) + '***' : '', expiry: d.expiry_date, attached_file: d.file_name || null })),
-    footer: `Generated ${today} by Japa+ Journey OS. Keep a printed copy with your travel documents.`,
+    footer: `Generated ${today} by ${BRAND.NAME} Journey OS. Keep a printed copy with your travel documents.`,
   };
 }
 
@@ -472,7 +473,7 @@ router.get('/:id/dossier', requireAuth, (req, res) => {
   const L = [];
   const add = (s = '') => L.push(s);
   add('════════════════════════════════════════════════');
-  add('  JAPA+ TRAVEL DOSSIER');
+  add(`  ${BRAND.NAME.toUpperCase()} TRAVEL DOSSIER`);
   add('════════════════════════════════════════════════');
   add(`Destination : ${dossier.trip.destination} (${dossier.trip.code})`);
   add(`Purpose     : ${dossier.trip.purpose}`);

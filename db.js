@@ -242,12 +242,12 @@ async function initDB() {
 // Rename legacy brand strings that were never customised via the admin panel.
 function rebrandLegacy() {
   const LEGACY = {
-    app_name:     ['JapaGuru AI', 'VisaGuru AI'],
-    app_tagline:  ['Your African Travel Intelligence Partner'],
-    smtp_from_name: ['JapaGuru AI', 'VisaGuru AI'],
-    support_email: ['support@jagaguru.ai'],
+    app_name:     ['JapaGuru AI', 'VisaGuru AI', 'Japa+'],
+    app_tagline:  ['Your African Travel Intelligence Partner', 'Travel smart. Land ready.'],
+    smtp_from_name: ['JapaGuru AI', 'VisaGuru AI', 'Japa+'],
+    support_email: ['support@jagaguru.ai', 'support@japaplus.app'],
   };
-  const NEW = { app_name: 'Japa+', app_tagline: 'Travel smart. Land ready.', smtp_from_name: 'Japa+', support_email: 'support@japaplus.app' };
+  const NEW = { app_name: 'JapaQuest', app_tagline: 'Your Journey. Our Intelligence.', smtp_from_name: 'JapaQuest', support_email: 'support@japaquest.com' };
   for (const [k, olds] of Object.entries(LEGACY)) {
     const row = queryOne('SELECT value FROM settings WHERE key=?', [k]);
     if (row && olds.includes(row.value)) exec('UPDATE settings SET value=? WHERE key=?', [NEW[k], k]);
@@ -328,7 +328,7 @@ function seedDefaults() {
 
   // Settings
   const DEFAULTS = [
-    ['app_name','Japa+','general'],['app_tagline','Travel smart. Land ready.','general'],
+    ['app_name','JapaQuest','general'],['app_tagline','Your Journey. Our Intelligence.','general'],
     ['app_logo','✈','general'],['app_logo_url','','general'],
     ['support_email','support@japaplus.app','general'],
     ['app_url','http://localhost:4001','general'],
@@ -351,7 +351,7 @@ function seedDefaults() {
     ['stripe_secret_key','','payments'],['stripe_public_key','','payments'],
     ['smtp_host','','email'],['smtp_port','587','email'],['smtp_secure','0','email'],
     ['smtp_user','','email'],['smtp_pass','','email'],
-    ['smtp_from_name','Japa+','email'],['smtp_from_email','','email'],
+    ['smtp_from_name','JapaQuest','email'],['smtp_from_email','','email'],
     ['notif_welcome_email','1','notifications'],['notif_new_user_alert','1','notifications'],
     ['notif_usage_alert','1','notifications'],['notif_usage_threshold','80','notifications'],
     ['notif_system_alerts','1','notifications'],

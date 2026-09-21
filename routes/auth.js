@@ -43,12 +43,12 @@ router.post('/register', async (req, res) => {
     const user   = Q.getUserById(userId);
     const plan   = Q.getPlanById(user.plan_id);
 
-    Q.createNotification(userId, '🎉 Welcome to Japa+!',
+    Q.createNotification(userId, '🎉 Welcome to JapaQuest!',
       `Hi ${name}! Your account is ready. Start by asking about any visa you need.`, 'success');
 
     // Welcome email (best-effort)
     if (Q.getSetting('notif_welcome_email') === '1') {
-      const appName = Q.getSetting('app_name') || 'Japa+';
+      const appName = Q.getSetting('app_name') || 'JapaQuest';
       sendEmail({
         to: email,
         subject: `Welcome to ${appName}! ✈`,

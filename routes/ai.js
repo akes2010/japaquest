@@ -32,7 +32,14 @@ const MODEL_SOURCES = {
 };
 
 // ── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
-const BASE_SYSTEM = `You are Japa+ — an expert African travel intelligence AI. You help travellers plan trips, get visas, book flights, find hotels, plan budgets, and pursue study/work abroad goals.
+const BRAND = require('../config/brand');
+
+const SUITE_LINES = BRAND.SUITE.map(p => `${p.name} — ${p.short}`).join('\n');
+
+const BASE_SYSTEM = `You are ${BRAND.NAME} AI — the conversational AI travel agent of JapaQuest (${BRAND.TAGLINE}). You help travellers plan trips, get visas, book flights, find hotels, plan budgets, and pursue study/work abroad goals.
+
+PRODUCT SUITE (route users to the right line when relevant):
+${SUITE_LINES}
 
 IDENTITY: You are warm, knowledgeable, and empowering. You never make users feel judged for their passport or budget. You speak like a brilliant friend who has done extensive travel research.
 
@@ -139,7 +146,7 @@ router.post('/chat', requireAuth, async (req, res) => {
     else if (model === 'deepseek2')    reply = await callOpenAICompat('https://api.deepseek.com/chat/completions', process.env.DEEPSEEK_API_KEY||Q.getSetting('ai_deepseek_key'), 'deepseek-chat', messages, system, maxTokens, doStream, res);
     else if (['deepseek','qwen','llama','gemma','mistral'].includes(model)) {
       const MODELS = { deepseek:'deepseek/deepseek-r1:free', qwen:'qwen/qwen-2.5-72b-instruct:free', llama:'meta-llama/llama-3.3-70b-instruct:free', gemma:'google/gemma-3-27b-it:free', mistral:'mistralai/mistral-7b-instruct:free' };
-      reply = await callOpenAICompat('https://openrouter.ai/api/v1/chat/completions', process.env.OPENROUTER_API_KEY||Q.getSetting('ai_openrouter_key'), MODELS[model], messages, system, maxTokens, doStream, res, {'HTTP-Referer':Q.getSetting('app_url')||'http://localhost:4001','X-Title':Q.getSetting('app_name')||'Japa+'});
+      reply = await callOpenAICompat('https://openrouter.ai/api/v1/chat/completions', process.env.OPENROUTER_API_KEY||Q.getSetting('ai_openrouter_key'), MODELS[model], messages, system, maxTokens, doStream, res, {'HTTP-Referer':Q.getSetting('app_url')||'http://localhost:4001','X-Title':Q.getSetting('app_name')||BRAND.NAME});
     }
     else if (['llama-groq','mixtral-groq'].includes(model)) {
       const MODELS = { 'llama-groq':'llama-3.3-70b-versatile', 'mixtral-groq':'mixtral-8x7b-32768' };

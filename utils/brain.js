@@ -55,7 +55,7 @@ const INSIGHTS = [
       title: 'Cross-document date mismatches cause quiet refusals',
       matches: {},
       severity: 'medium',
-      advice: 'Itinerary, hotel booking, insurance dates, employment leave letter and cover letter must agree exactly. Build all dates from ONE source of truth (your Japa+ journey) and check them twice before submission.',
+      advice: 'Itinerary, hotel booking, insurance dates, employment leave letter and cover letter must agree exactly. Build all dates from ONE source of truth (your JapaQuest journey) and check them twice before submission.',
       ai_note: 'Tell the traveller to make every document reflect the same dates as the journey plan before applying.',
     },
   },

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <meta name="theme-color" content="#F7F3EA"/>
-<title>Japa Editorial Console — Japa+</title>
+<title>JapaQuest Editorial Console — JapaQuest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -276,7 +276,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
 <div id="app">
 <div id="sb">
   <div class="sb-head">
-    <div class="sb-logo"><div class="sb-icon">✈</div><div class="sb-app" id="sb-app">Japa+</div></div>
+    <div class="sb-logo"><div class="sb-icon">✈</div><div class="sb-app" id="sb-app">JapaQuest</div></div>
     <div class="sb-tag">Japa Editorial Console</div>
   </div>
   <div class="sb-nav">
@@ -432,7 +432,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
       <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:16px">⚙️ System Settings</div>
       <div style="background:var(--elev1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:18px;margin-bottom:14px">
         <div style="font-size:.84rem;font-weight:600;color:var(--t1);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--b0)">App Identity</div>
-        <div class="form-group"><label class="form-label">App Name</label><input class="input" id="g-name" placeholder="Japa+"/></div>
+        <div class="form-group"><label class="form-label">App Name</label><input class="input" id="g-name" placeholder="JapaQuest"/></div>
         <div class="form-group"><label class="form-label">Tagline</label><input class="input" id="g-tagline"/></div>
         <div class="form-group"><label class="form-label">Support Email</label><input class="input" id="g-email" type="email"/></div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">App URL</label><input class="input" id="g-url"/></div>
@@ -471,8 +471,8 @@ async function init(){
   try{
     const[appR,statsR,ppR,dpR,plR]=await Promise.all([fetch('/api/app-info'),api('/api/admin/stats'),api('/api/visa/passports'),api('/api/visa/all-destinations'),api('/api/user/plans')]);
     const[appD,statsD,ppD,dpD,plD]=await Promise.all([appR.json(),statsR.json(),ppR.json(),dpR.json(),plR.json()]);
-    document.getElementById('sb-app').textContent=appD.name||'Japa+';
-    document.title='Japa Console — '+(appD.name||'Japa+');
+    document.getElementById('sb-app').textContent=appD.name||'JapaQuest';
+    document.title='Japa Console — '+(appD.name||'JapaQuest');
     const u=JSON.parse(localStorage.getItem('vg_user')||'{}');
     document.getElementById('sf-email').textContent=u.email||'admin@jagaguru.ai';
     allPassports=ppD.passports||[];allDests=dpD.destinations||[];allPlans=plD.plans||[];
@@ -613,7 +613,7 @@ async function saveRule(){
   const dest=document.getElementById('rm-dest').value.trim().toUpperCase();
   if(!passport||!dest){showToast('Passport and destination codes required','error');return;}
   const conditions=[...document.getElementById('cond-list').querySelectorAll('input')].map(i=>i.value.trim()).filter(Boolean);
-  const data={passport_code:passport,destination_code:dest,purpose:document.getElementById('rm-purpose').value,status:document.getElementById('rm-status').value,max_stay:document.getElementById('rm-maxstay').value,processing_days:document.getElementById('rm-processing').value,fees:{amount:document.getElementById('rm-fee').value||'Varies'},official_url:document.getElementById('rm-url').value,source_authority:document.getElementById('rm-source').value||'Japa+ Editorial',source_tier:parseInt(document.getElementById('rm-tier').value)||1,conditions,change_reason:document.getElementById('rm-reason').value};
+  const data={passport_code:passport,destination_code:dest,purpose:document.getElementById('rm-purpose').value,status:document.getElementById('rm-status').value,max_stay:document.getElementById('rm-maxstay').value,processing_days:document.getElementById('rm-processing').value,fees:{amount:document.getElementById('rm-fee').value||'Varies'},official_url:document.getElementById('rm-url').value,source_authority:document.getElementById('rm-source').value||'JapaQuest Editorial',source_tier:parseInt(document.getElementById('rm-tier').value)||1,conditions,change_reason:document.getElementById('rm-reason').value};
   const r=await api('/api/admin/visa-rules',{method:'POST',body:JSON.stringify(data)});
   const d=await r.json();
   if(!r.ok)return showToast(d.error||'Save failed','error');

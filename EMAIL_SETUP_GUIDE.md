@@ -1,6 +1,6 @@
 # ✉️ Email (SMTP) Setup Guide
 
-Japa+ sends **journey reminders** and the **Monday weekly digest** over SMTP. Everything is configured from inside the app — no code changes needed.
+JapaQuest sends **journey reminders** and the **Monday weekly digest** over SMTP. Everything is configured from inside the app — no code changes needed.
 
 ## Where to configure
 
@@ -12,7 +12,7 @@ Japa+ sends **journey reminders** and the **Monday weekly digest** over SMTP. Ev
 | SMTP Port | `587` (or `465` if the provider requires implicit TLS — then also tick *Secure*) |
 | SMTP User | usually your API key or username |
 | SMTP Password | API key / app password |
-| From Name | `Japa+` (or your brand) |
+| From Name | `JapaQuest` (or your brand) |
 | From Email | a sender on your domain, e.g. `noreply@japaquest.com` |
 
 Then **Save Email Settings**, and verify:
