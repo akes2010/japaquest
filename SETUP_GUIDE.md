@@ -97,7 +97,11 @@ First boot seeds the database and creates the admin account — the log/banner s
 ```
 Admin: admin@jagaguru.ai / Admin@1234!
 ```
-**Change this password immediately** (Dashboard → Profile → Change Password).
+**Change this password immediately** — the admin panel has no self-service password form, so use the reset utility from the app folder:
+```bash
+node reset-admin.js 'you@yourdomain.com' 'YourNewStrongPassword!'
+```
+It updates the existing admin account in place. (Alternatively, sign in to the main app with the admin account and change it under Profile → 🔒 Change Password.)
 
 ### 3.4 Cron jobs (cPanel → Cron Jobs)
 ```cron
@@ -213,7 +217,7 @@ Continue to §5 for first-run setup.
 
 ## 5. First-run setup (both paths)
 
-1. **Log in** at `https://yourdomain.com/admin-login` with the seeded admin credentials and **change the password immediately**.
+1. **Log in** at `https://yourdomain.com/admin-login` with the seeded admin credentials, then rotate them if you haven't already (see §3.3: `node reset-admin.js`, or Profile → 🔒 Change Password in the main app).
 2. **Branding & settings** — Admin → System Settings: app name, tagline, support email (defaults are already JapaQuest-themed).
 3. **Email** — Admin → Email/SMTP: enter your SMTP details and send the **📤 Test** email. All system mail (welcome, password reset, digests, affiliate alerts) depends on this.
 4. **AI engine** — Admin → AI Engine shows provider status; keys come from `.env`. Chat is the core product, so verify a test conversation works.
