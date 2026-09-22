@@ -398,6 +398,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
 
   <!-- OVERVIEW -->
   <div class="view active" id="view-overview">
+    <div id="integrity-banner" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:10px;font-size:.8rem"></div>
     <div class="stats-grid">
       <div class="stat-card"><div class="sc-lbl">Total Users</div><div class="sc-val" id="st-users">—</div><div class="sc-sub" id="st-users-sub">loading…</div></div>
       <div class="stat-card"><div class="sc-lbl">New Today</div><div class="sc-val" id="st-today">—</div><div class="sc-sub">Registered</div></div>
@@ -945,7 +946,7 @@ async function init(){
     const u=JSON.parse(localStorage.getItem('vg_user')||'{}');
     document.getElementById('sf-email').textContent=u.email||'admin@visaguru.ai';
     updateMaintBadge(appD.maintenance);
-    renderStats(statsD);loadPlans();loadClicks();
+    renderStats(statsD);loadPlans();loadClicks();loadIntegrity();
   }catch(e){console.error('Init:',e);}
 }
 
@@ -1579,6 +1580,30 @@ function toggleKey(id){const el=document.getElementById(id);el.type=el.type==='p
 function renderPag(elId,totalPages,current,fn){const el=document.getElementById(elId);if(!el||totalPages<=1){if(el)el.innerHTML='';return;}let h=`<span>Page ${current}/${totalPages}</span>`;if(current>1)h+=`<button class="pg-btn" onclick="${fn.name}(${current-1})">←</button>`;const s=Math.max(1,current-2),e=Math.min(totalPages,current+2);for(let i=s;i<=e;i++)h+=`<button class="pg-btn${i===current?' active':''}" onclick="${fn.name}(${i})">${i}</button>`;if(current<totalPages)h+=`<button class="pg-btn" onclick="${fn.name}(${current+1})">→</button>`;el.innerHTML=h;}
 function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');t.style.borderColor=type==='error'?'rgba(200,16,46,.35)':'rgba(217,90,35,.35)';clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+// DB integrity banner: green/hidden when healthy, amber for suspicious
+// (a core table is empty), red for corrupt or unreachable database.
+async function loadIntegrity(){
+  const el=document.getElementById('integrity-banner');
+  if(!el)return;
+  try{
+    const r=await fetch('/api/health');
+    const d=await r.json();
+    const it=d.integrity||{};
+    if(it.status==='ok'){el.style.display='none';return;}
+    const kb=it.db_bytes?(it.db_bytes/1048576).toFixed(2)+' MB · ':'';
+    const counts=it.row_counts?Object.entries(it.row_counts).map(([k,v])=>k+'='+v).join(', '):'';
+    let msg,color,bg;
+    if(it.status==='suspicious'){
+      msg='⚠️ Database suspicious: a core table is empty ('+counts+'). If users=0 unexpectedly, restore from Admin → Backup & Restore.';
+      color='#8a5a00';bg='rgba(217,146,26,.12)';
+    }else{
+      msg='❌ Database problem: '+(it.quick_check||it.error||'unreachable')+'. '+(kb?kb+'':'')+'Create a snapshot of what works now, then restore from a known-good backup.';
+      color='#B3282D';bg='rgba(179,40,45,.1)';
+    }
+    el.textContent=msg;
+    el.style.cssText='display:block;margin-bottom:14px;padding:10px 14px;border-radius:10px;font-size:.8rem;color:'+color+';background:'+bg+';border:1px solid '+color+'33';
+  }catch{el.style.display='none';}
+}
 function doLogout(){localStorage.clear();window.location.href='/admin-login';}
 
 init();

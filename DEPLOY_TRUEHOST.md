@@ -108,6 +108,17 @@ For one-off copies or an on-server archive, use **Admin → Backup & Restore**: 
 
 Uptime monitors should also watch **`/api/health`**: it now reports an `integrity` block (`status`, `db_bytes`, `row_counts`, `quick_check`). Alert on `integrity.status != "ok"` — `suspicious` means a core table is empty (possible wipe), `corrupt` means the database failed its integrity check.
 
+### Uptime monitoring (free, ~10 minutes to set up)
+
+Use [UptimeRobot](https://uptimerobot.com) (free: 50 monitors, 5-min checks) or Better Stack. Create two HTTP monitors:
+
+| Monitor | URL | Type | Alert when |
+|---|---|---|---|
+| Site up | `https://yourdomain.com/` | HTTP | Status ≠ 200 (uptime) |
+| Health & DB | `https://yourdomain.com/api/health` | HTTP (keyword) | Keyword `"status":"ok"` missing |
+
+The second monitor catches more than downtime: `/api/health` returns a top-level `status` of `ok` **only when the database also passes its integrity check**. If the DB is wiped (`users=0`), corrupt (`quick_check` fails) or unreachable, the response is `"status":"degraded"` — the keyword disappears, your monitor alerts, and you can inspect the `integrity` block in the response body (or **Admin → Dashboard**, which shows the same state as a banner). The app also self-reports degraded state via the amber/red banner on the admin dashboard.
+
 **Testing the digest today:** temporarily set `JOURNEY_FORCE_DIGEST=1` in `.env`, restart, hit the tick URL, remove the flag again.
 
 ---
@@ -143,6 +154,50 @@ Uptime monitors should also watch **`/api/health`**: it now reports an `integrit
 - [ ] SMTP configured + 📤 Test email received
 - [ ] cPanel cron added for `/api/cron/tick`
 - [ ] Register a test account, run the Journey wizard end-to-end
+
+---
+
+## 9b. Go-live runbook (Truehost, start to finish)
+
+A sequenced version of everything above — do the steps in this order; each one is verifiable before you move on.
+
+**Phase 1 — Provision (cPanel, ~20 min)**
+1. Confirm the plan has **Setup Node.js App** (ask Truehost support to enable it if missing).
+2. Point the domain's DNS at the hosting account; wait for propagation (check with `ping yourdomain.com`).
+3. cPanel → **Setup Node.js App** → Add Application: Node 18+, Production mode, your app root, startup file `server.js`.
+4. cPanel → **Terminal**: upload or `git clone` the code into the app root, then `npm install --omit=dev`.
+5. `cp .env.example .env`, then generate secrets and fill in the minimum:
+   ```bash
+   node -e "console.log('JWT_SECRET='+require('crypto').randomBytes(64).toString('hex'))"
+   node -e "console.log('CRON_SECRET='+require('crypto').randomBytes(24).toString('hex'))"
+   ```
+   Set `NODE_ENV=production`, `APP_URL=https://yourdomain.com`, `DB_PATH=./data/jagaguru.db`, at least one AI key. The start script tightens `.env` to 600 on boot.
+6. Click **Start** (or `npm run start:prod`). The banner prints the seeded admin login.
+7. **Verify:** `curl https://yourdomain.com/api/health` → `"status":"ok"`.
+
+**Phase 2 — Lock down (~15 min)**
+1. Log in at `/admin-login` with the seeded credentials and **change the admin password immediately** (Dashboard → Profile).
+2. Admin → System Settings: set your real support email and app branding; keep `registration_open` on unless you're invite-only.
+3. Confirm `data/` is not web-listable (visit `https://yourdomain.com/` routes only; the DB lives under `data/`, which is never served).
+
+**Phase 3 — Email & schedulers (~15 min)**
+1. Admin → Email/SMTP: enter SMTP (Truehost offers built-in email accounts; Gmail needs an app password), send the **📤 Test** email.
+2. Add the two cPanel cron jobs from section 7 (`/api/cron/tick` every 10 min, nightly `/api/cron/backup`). `mkdir -p ~/backups` first.
+3. **Verify:** next morning, `ls -l ~/backups/` shows a file ≈ the size reported in Admin → Backup & Restore; check its `X-Row-Counts`/health counts are non-zero.
+
+**Phase 4 — Backup & monitoring (~10 min)**
+1. In **Admin → Backup & Restore**, click **Create backup now** and download it locally — keep this first off-server copy somewhere safe.
+2. Rehearse a restore once *before* launch: upload the file you just downloaded via **Restore from file**; confirm the app reloads intact (it archives the current DB as `pre-restore-*.db` automatically).
+3. Set up the two UptimeRobot monitors from the **Uptime monitoring** subsection above.
+4. **Verify:** the health monitor shows green; temporarily stop the app in cPanel and confirm you get the alert email, then start it again.
+
+**Phase 5 — Money (section 10, ~30 min)**
+1. Paste gateway keys in **Admin → Payment Gateways** (start with Paystack test keys), set webhooks in each provider dashboard, add crypto addresses if used.
+2. Run one full test loop: register through an affiliate link → pay via test keys → confirm the plan upgraded, commission credited, emails arrived, and the payment shows in **Admin → Finance Ledger**.
+3. Switch gateway keys from test to live only after the test loop passes.
+4. Take one more backup snapshot — that's your pre-launch restore point.
+
+**Rollback plan (keep this bookmarked):** if the site misbehaves after launch, grab **Admin → Backup & Restore → Create backup now** first (snapshot the broken state for later analysis), then restore the most recent known-good `snapshot-*.db` or `~/backups/japaquest-YYYY-MM-DD.db` via **Restore from file**. Restart the Node app from cPanel if anything still looks stale.
 
 ---
 

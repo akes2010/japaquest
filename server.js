@@ -156,7 +156,9 @@ app.get('/api/health', async (_req,res) => {
     }
   }
   res.json({
-    status: db === 'ok' ? 'ok' : 'degraded',
+    // Top-level 'ok' requires integrity too — keyword monitors alerting on
+    // "ok" then catch wiped/corrupt databases without extra configuration.
+    status: db === 'ok' && integrity.status === 'ok' ? 'ok' : 'degraded',
     uptime_sec: Math.floor(process.uptime()),
     db,
     db_latency_ms: Date.now() - t0,
