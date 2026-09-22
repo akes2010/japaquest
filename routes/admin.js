@@ -664,34 +664,50 @@ const mask = s => !s ? '' : (s.length > 8 ? s.slice(0, 4) + '••••' + s.s
 // GET /api/admin/ledger.csv?kind=…&days=…      → CSV for accounting
 const csvCell = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 
-function getLedgerData(kind, days) {
-  const since = `date('now', '-${days} days')`;
+function getLedgerData(kind, since, until) {
   // Money-in date = paid_at (when the gateway actually settled); legacy rows
   // that were marked paid before paid_at existed fall back to created_at.
+  const untilSql = until ? ` AND COALESCE(p.paid_at, p.created_at) < ${until}` : '';
   const ins = Q.queryAllSafe(
     `SELECT p.id, p.reference, p.provider, p.amount_usd, p.status, p.created_at,
             COALESCE(p.paid_at, p.created_at) AS effective_date,
             u.name AS user_name, u.email AS user_email, p.affiliate_code,
             (SELECT c.commission_usd FROM affiliate_credits c WHERE c.payment_id=p.id AND c.status!='reversed' LIMIT 1) AS commission_usd
      FROM payments p LEFT JOIN users u ON u.id=p.user_id
-     WHERE COALESCE(p.paid_at, p.created_at) >= ${since} ORDER BY p.id DESC LIMIT 1000`);
+     WHERE COALESCE(p.paid_at, p.created_at) >= ${since}${untilSql} ORDER BY p.id DESC LIMIT 1000`);
   const payouts = Q.queryAllSafe(
-    `SELECT a.name AS affiliate_name, a.code, a.payout_method, a.payout_account,
+    `SELECT c.affiliate_id AS aff_id, a.name AS affiliate_name, a.code, a.payout_method, a.payout_account,
             SUM(c.commission_usd) AS amount, COUNT(*) AS credits, MAX(c.updated_at) AS paid_at
      FROM affiliate_credits c JOIN affiliates a ON a.id=c.affiliate_id
-     WHERE c.status='paid' AND c.updated_at >= ${since}
+     WHERE c.status='paid' AND c.updated_at >= ${since}${until ? ` AND c.updated_at < ${until}` : ''}
      GROUP BY c.affiliate_id ORDER BY paid_at DESC LIMIT 1000`);
   return { ins, payouts };
 }
 
-const parseLedgerQuery = (req) => ({
-  kind: ['all', 'in', 'out'].includes(req.query.kind) ? req.query.kind : 'all',
-  days: Math.min(365, Math.max(1, parseInt(req.query.days, 10) || 30)),
-});
+// Query params: kind=all|in|out, either days=N (rolling window) or
+// from=YYYY-MM-DD&to=YYYY-MM-DD (inclusive on both ends; overrides days).
+const LEDGER_DATE_RE = /^\d{4}-\d{2}-\d{2}$/; // digits+hyphens only → safe to inline in SQL
+const parseLedgerQuery = (req) => {
+  const days = Math.min(365, Math.max(1, parseInt(req.query.days, 10) || 30));
+  const from = LEDGER_DATE_RE.test(String(req.query.from || '')) ? req.query.from : null;
+  const to   = LEDGER_DATE_RE.test(String(req.query.to   || '')) ? req.query.to   : null;
+  let since, until;
+  if (from || to) {
+    since = `date('${from || '2000-01-01'}')`;
+    until = to ? `date('${to}', '+1 day')` : null; // inclusive end → exclusive next-day bound
+  } else {
+    since = `date('now', '-${days} days')`;
+    until = null;
+  }
+  return {
+    kind: ['all', 'in', 'out'].includes(req.query.kind) ? req.query.kind : 'all',
+    days, from, to, since, until,
+  };
+};
 
 router.get('/ledger', requireAdmin, (req, res) => {
-  const { kind, days } = parseLedgerQuery(req);
-  const { ins, payouts } = getLedgerData(kind, days);
+  const { kind, days, from, to, since, until } = parseLedgerQuery(req);
+  const { ins, payouts } = getLedgerData(kind, since, until);
 
   const paidIn = ins.filter(p => p.status === 'paid');
   const summary = {
@@ -706,7 +722,7 @@ router.get('/ledger', requireAdmin, (req, res) => {
   const inRows = paidIn.map(p => ({ date: p.effective_date, kind: 'payment_in', ref: p.reference,
     detail: `${p.provider} · ${p.user_name || p.user_email || 'user #' + p.user_id}` + (p.affiliate_code ? ` · aff ${p.affiliate_code}` : ''),
     in: p.amount_usd, out: (p.commission_usd || 0), balance: null }));
-  const outRows = payouts.map(p => ({ date: p.paid_at, kind: 'affiliate_payout', ref: p.code,
+  const outRows = payouts.map(p => ({ date: p.paid_at, kind: 'affiliate_payout', ref: p.code, affId: p.aff_id,
     detail: `${p.affiliate_name} · ${p.payout_method || 'method n/a'} · ${p.credits} credit(s)`,
     in: 0, out: p.amount, balance: null }));
   let running = 0;
@@ -714,12 +730,12 @@ router.get('/ledger', requireAdmin, (req, res) => {
     : [...inRows, ...outRows].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   rows.forEach(r => { running += (r.in || 0) - (r.out || 0); r.balance = Math.round(running * 100) / 100; });
 
-  res.json({ summary, rows: rows.slice(0, 500), days });
+  res.json({ summary, rows: rows.slice(0, 500), days, from, to });
 });
 
 router.get('/ledger.csv', requireAdmin, (req, res) => {
-  const { kind, days } = parseLedgerQuery(req);
-  const { ins, payouts } = getLedgerData(kind, days);
+  const { kind, days, from, to, since, until } = parseLedgerQuery(req);
+  const { ins, payouts } = getLedgerData(kind, since, until);
 
   const lines = [['date', 'type', 'reference', 'detail', 'money_in_usd', 'money_out_usd']];
   if (kind !== 'out') ins.filter(p => p.status === 'paid').forEach(p => lines.push([p.effective_date, 'payment_in', p.reference,
@@ -728,9 +744,39 @@ router.get('/ledger.csv', requireAdmin, (req, res) => {
     `${p.affiliate_name} · ${p.payout_method || ''}`, 0, p.amount]));
 
   const csv = lines.map(l => l.map(csvCell).join(',')).join('\r\n');
+  const rangeLabel = (from || to) ? `${from || 'start'}_to_${to || 'today'}` : `${days}d`;
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="japaquest-ledger-${kind}-${days}d-${new Date().toISOString().slice(0, 10)}.csv"`);
+  res.setHeader('Content-Disposition', `attachment; filename="japaquest-ledger-${kind}-${rangeLabel}.csv"`);
   res.send(csv);
+});
+
+// ── PAYOUT DRILL-DOWN: per-credit breakdown for one affiliate payout ───────
+// GET /api/admin/ledger/payout/:affiliateId?from=&to= — same inclusive range
+// semantics as the ledger. The where-clause mirrors the payout aggregation in
+// getLedgerData so drill-down numbers always reconcile with the ledger row.
+router.get('/ledger/payout/:affiliateId', requireAdmin, (req, res) => {
+  const { from, to, since, until } = parseLedgerQuery(req);
+  const affId = parseInt(req.params.affiliateId, 10);
+  if (!Number.isInteger(affId)) return res.status(400).json({ error: 'Invalid affiliate id' });
+  const aff = Q.getAffiliateById(affId);
+  if (!aff) return res.status(404).json({ error: 'Affiliate not found' });
+  const untilSql = until ? ` AND c.updated_at < ${until}` : '';
+  const credits = Q.queryAllSafe(
+    `SELECT c.id, c.amount_usd, c.commission_usd, c.status, c.created_at, c.updated_at,
+            p.reference AS payment_reference, p.provider AS payment_provider, p.paid_at AS payment_paid_at,
+            u.name AS buyer_name, u.email AS buyer_email
+     FROM affiliate_credits c
+     LEFT JOIN payments p ON p.id = c.payment_id
+     LEFT JOIN users u ON u.id = c.user_id
+     WHERE c.affiliate_id = ? AND c.status = 'paid' AND c.updated_at >= ${since}${untilSql}
+     ORDER BY c.updated_at DESC LIMIT 500`, [affId]);
+  const sum = k => Math.round(credits.reduce((s, c) => s + (c[k] || 0), 0) * 100) / 100;
+  res.json({
+    affiliate: { id: aff.id, name: aff.name, code: aff.code, payout_method: aff.payout_method, payout_account: aff.payout_account },
+    totals: { count: credits.length, amount: sum('commission_usd'), payment_volume: sum('amount_usd') },
+    credits,
+    range: { from: from || null, to: to || null },
+  });
 });
 
 router.get('/payment-gateways', requireAdmin, (_req, res) => {

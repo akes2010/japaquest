@@ -1227,4 +1227,4 @@ const Q = {
   },
 };
 
-module.exports = { initDB, Q, persist, exec };
+module.exports = { initDB, Q, persist, exec, DB_PATH };

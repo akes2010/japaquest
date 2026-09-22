@@ -3,13 +3,14 @@ require('dotenv').config();
 const express  = require('express');
 const crypto   = require('crypto');
 const path     = require('path');
+const fs       = require('fs');
 const cors     = require('cors');
 const helmet   = require('helmet');
 const morgan   = require('morgan');
 const compress = require('compression');
 const rateLimit= require('express-rate-limit');
 const cookieParser = require('cookie-parser');
-const { initDB, Q, persist } = require('./db');
+const { initDB, Q, persist, DB_PATH } = require('./db');
 const BRAND = require('./config/brand');
 const geo = require('./utils/geo');
 const fx = require('./utils/fx');
@@ -180,6 +181,34 @@ app.get('/api/cron/tick', async (req, res) => {
     res.json({ ok: true, ran_at: new Date().toISOString() });
   } catch (e) {
     res.status(500).json({ error: 'Tick failed: ' + e.message });
+  }
+});
+
+// ── CRON: DB BACKUP (for shared hosting without shell/sqlite3 access) ──────
+// sql.js keeps the whole DB in memory, so the only corruption-proof snapshot
+// is the exact in-memory state: flush it, then send the file. Point cPanel's
+// Cron Jobs at it — e.g. nightly:
+//   curl -s "https://site.com/api/cron/backup?key=CRON_SECRET" \
+//     -o ~/backups/japaquest-$(date +\%Y\%m\%d).db
+// X-Row-Counts lets the cron log flag a wiped/corrupt DB before it overwrites
+// a good backup (e.g. users=0 means stop and restore).
+app.get('/api/cron/backup', (req, res) => {
+  const secret = process.env.CRON_SECRET || Q.getSetting('cron_secret') || '';
+  if (!secret) return res.status(503).json({ error: 'CRON_SECRET not configured' });
+  const provided = req.query.key || String(req.headers['x-cron-key'] || '');
+  if (provided !== secret) return res.status(401).json({ error: 'Invalid cron key' });
+  try { persist(); } catch (e) { return res.status(500).json({ error: 'Flush failed: ' + e.message }); }
+  try {
+    const buf = fs.readFileSync(DB_PATH);
+    if (!buf || !buf.length) throw new Error('database file is empty');
+    const n = k => (Q.queryAllSafe(`SELECT COUNT(*) AS c FROM ${k}`)[0] || {}).c || 0;
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="jagaguru-${new Date().toISOString().slice(0, 10)}.db"`);
+    res.setHeader('X-DB-Bytes', String(buf.length));
+    res.setHeader('X-Row-Counts', `users=${n('users')};payments=${n('payments')};conversations=${n('conversations')}`);
+    res.send(buf);
+  } catch (e) {
+    res.status(500).json({ error: 'Backup failed: ' + e.message });
   }
 });
 

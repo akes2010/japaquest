@@ -19,3 +19,6 @@ public/uploads/
 npm-debug.log*
 .DS_Store
 Thumbs.db
+
+# Codebuff agent state
+.freebuff/

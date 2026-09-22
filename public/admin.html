@@ -721,11 +721,16 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
         <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">📒 Finance Ledger</div>
         <div style="font-size:.78rem;color:var(--t4)">Money in from plan payments, money out to affiliates. Export CSV for your bookkeeper.</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <select class="input" id="lg-days" onchange="loadLedger()" style="width:auto;padding:7px 10px;font-size:.78rem">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select class="input" id="lg-days" onchange="lgDaysChanged()" style="width:auto;padding:7px 10px;font-size:.78rem">
           <option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option>
-          <option value="90">Last 90 days</option><option value="365">Last year</option>
+          <option value="90">Last 90 days</option><option value="365">Last year</option><option value="range">Date range…</option>
         </select>
+        <span id="lg-range-wrap" style="display:none;align-items:center;gap:6px">
+          <input class="input" type="date" id="lg-from" onchange="lgRangeChanged()" style="width:auto;padding:6px 8px;font-size:.78rem">
+          <span style="font-size:.75rem;color:var(--t4)">→</span>
+          <input class="input" type="date" id="lg-to" onchange="lgRangeChanged()" style="width:auto;padding:6px 8px;font-size:.78rem">
+        </span>
         <select class="input" id="lg-kind" onchange="loadLedger()" style="width:auto;padding:7px 10px;font-size:.78rem">
           <option value="all">All entries</option><option value="in">Money in</option><option value="out">Payouts</option>
         </select>
@@ -1562,17 +1567,39 @@ function doLogout(){localStorage.clear();window.location.href='/admin-login';}
 init();
 
 // ── FINANCE LEDGER ──────────────────────────────────────────────────────────
+// Range controls: preset dropdown (days) or explicit from/to. Explicit dates
+// override the preset; CSV export follows whatever the table shows.
+function lgRangeParams(){
+  const kind=document.getElementById('lg-kind')?.value||'all';
+  const daysSel=document.getElementById('lg-days')?.value||'30';
+  const from=document.getElementById('lg-from')?.value||'';
+  const to=document.getElementById('lg-to')?.value||'';
+  let q='kind='+kind;
+  if(daysSel==='range'&&(from||to)) q+='&from='+from+'&to='+to;
+  else q+='&days='+(parseInt(daysSel)||30);
+  return q;
+}
+function lgDaysChanged(){
+  const sel=document.getElementById('lg-days')?.value||'30';
+  document.getElementById('lg-range-wrap').style.display=sel==='range'?'inline-flex':'none';
+  if(sel!=='range')loadLedger();
+}
+function lgRangeChanged(){
+  const from=document.getElementById('lg-from')?.value||'';
+  const to=document.getElementById('lg-to')?.value||'';
+  if(from&&to&&from>to){showToast('From date must be before to date','error');return;}
+  if(from||to)loadLedger();
+}
 // CSV export goes through apiFetch (Bearer header) — window.open can't auth.
 async function downloadLedgerCsv(){
   try{
-    const kind=document.getElementById('lg-kind')?.value||'all';
-    const days=document.getElementById('lg-days')?.value||30;
-    const r=await apiFetch('/api/admin/ledger.csv?kind='+kind+'&days='+days);
+    const r=await apiFetch('/api/admin/ledger.csv?'+lgRangeParams());
     if(!r.ok){const d=await r.json().catch(()=>({}));return showToast(d.error||'Export failed','error');}
     const blob=await r.blob();
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
-    a.download='japaquest-ledger-'+kind+'-'+days+'d-'+new Date().toISOString().slice(0,10)+'.csv';
+    const cd=(r.headers.get('Content-Disposition')||'');
+    a.download=(cd.match(/filename="([^"]+)"/)||[])[1]||'japaquest-ledger.csv';
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),5000);
     showToast('CSV downloaded','success');
@@ -1580,9 +1607,7 @@ async function downloadLedgerCsv(){
 }
 async function loadLedger(){
   try{
-    const kind=document.getElementById('lg-kind')?.value||'all';
-    const days=document.getElementById('lg-days')?.value||30;
-    const r=await apiFetch('/api/admin/ledger?kind='+kind+'&days='+days);const d=await r.json();
+    const r=await apiFetch('/api/admin/ledger?'+lgRangeParams());const d=await r.json();
     if(!r.ok)return showToast(d.error||'Failed','error');
     const s=d.summary||{};
     document.getElementById('lg-summary').innerHTML=`
@@ -1597,7 +1622,9 @@ async function loadLedger(){
         <td style="padding:7px 6px;font-size:.74rem;white-space:nowrap">${String(x.date||'').replace('T',' ').slice(0,16)}</td>
         <td><span style="font-size:.66rem;padding:2px 10px;border-radius:99px;background:${x.kind==='payment_in'?'rgba(14,123,79,.15)':'rgba(180,106,31,.15)'};color:${x.kind==='payment_in'?'#0E7B4F':'#b46a1f'}">${x.kind==='payment_in'?'▼ in':'▲ payout'}</span></td>
         <td><code style="font-size:.72rem">${esc(x.ref||'')}</code></td>
-        <td style="font-size:.75rem">${esc(x.detail||'')}</td>
+        <td style="font-size:.75rem">${x.kind==='affiliate_payout'
+          ?`<a href="#" onclick="showPayoutDetail(${x.affId||0},'${esc(String(x.date||'').slice(0,10))}');return false" style="color:var(--a300);text-decoration:underline">${esc(x.detail||'')}</a>`
+          :esc(x.detail||'')}</td>
         <td style="color:#0E7B4F;font-size:.75rem">${x.in?'$'+Number(x.in).toFixed(2):''}</td>
         <td style="color:#B3282D;font-size:.75rem">${x.out?'$'+Number(x.out).toFixed(2):''}</td>
         <td style="font-size:.75rem;opacity:.8">$${Number(x.balance||0).toFixed(2)}</td>
@@ -1608,6 +1635,52 @@ async function loadLedger(){
       ${rows}</table></div>`
       :'<div style="opacity:.5;padding:18px;font-size:.8rem">No entries in this period.</div>';
   }catch(e){showToast('Could not load ledger: '+e.message,'error');}
+}
+// ── PAYOUT DRILL-DOWN MODAL ────────────────────────────────────────────────
+async function showPayoutDetail(affId,dateStr){
+  if(!affId)return showToast('Unknown affiliate','error');
+  let modal=document.getElementById('payout-modal');
+  if(!modal){
+    modal=document.createElement('div');modal.id='payout-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(5,10,20,.55);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.onclick=e=>{if(e.target===modal)modal.remove();};
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML=`<div style="background:var(--card,#fff);border-radius:14px;max-width:680px;width:100%;max-height:82vh;overflow:auto;padding:20px">
+    <div style="font-size:.8rem;color:var(--t4)">Loading payout detail…</div></div>`;
+  try{
+    const r=await apiFetch('/api/admin/ledger/payout/'+affId+(dateStr?'?from='+dateStr+'&to='+dateStr:''));
+    const d=await r.json();
+    if(!r.ok){modal.remove();return showToast(d.error||'Failed to load','error');}
+    const a=d.affiliate||{};
+    const t=d.totals||{};
+    const rows=(d.credits||[]).map(c=>`
+      <tr>
+        <td style="padding:6px 4px;font-size:.74rem;white-space:nowrap">${String(c.updated_at||'').replace('T',' ').slice(0,16)}</td>
+        <td style="font-size:.74rem">${esc(c.buyer_name||c.buyer_email||'—')}</td>
+        <td style="font-size:.72rem">${esc(c.payment_reference||'—')}<br/><span style="color:var(--t4)">${esc(c.payment_provider||'')}</span></td>
+        <td style="font-size:.74rem">$${Number(c.amount_usd||0).toFixed(2)}</td>
+        <td style="color:#0E7B4F;font-size:.74rem">$${Number(c.commission_usd||0).toFixed(2)}</td>
+      </tr>`).join('');
+    modal.innerHTML=`<div style="background:var(--card,#fff);border-radius:14px;max-width:680px;width:100%;max-height:82vh;overflow:auto;padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
+        <div>
+          <div style="font-family:var(--fd);font-size:1rem;color:var(--a300)">▲ Payout — ${esc(a.name||'')} <code style="font-size:.72rem">${esc(a.code||'')}</code></div>
+          <div style="font-size:.74rem;color:var(--t4);margin-top:3px">${d.range.from&&d.range.to?'For '+esc(d.range.from)+' → '+esc(d.range.to):'All recorded payouts'} · via ${esc(a.payout_method||'method n/a')} ${a.payout_account?'· '+esc(a.payout_account):''}</div>
+        </div>
+        <button class="btn btn-sm" onclick="document.getElementById('payout-modal').remove()">✕</button>
+      </div>
+      <div style="display:flex;gap:18px;margin-bottom:14px;font-size:.78rem">
+        <div><div style="color:var(--t4);font-size:.68rem">CREDITS</div><b>${t.count||0}</b></div>
+        <div><div style="color:var(--t4);font-size:.68rem">PAYMENT VOLUME</div><b>$${Number(t.payment_volume||0).toFixed(2)}</b></div>
+        <div><div style="color:var(--t4);font-size:.68rem">PAYOUT TOTAL</div><b style="color:#0E7B4F">$${Number(t.amount||0).toFixed(2)}</b></div>
+      </div>
+      <div style="overflow-x:auto"><table style="width:100%;font-size:.76rem;border-collapse:collapse">
+        <tr style="color:var(--t4);text-align:left"><th style="padding:5px 4px">Paid at</th><th>Buyer</th><th>Payment</th><th>Volume</th><th>Commission</th></tr>
+        ${rows||'<tr><td colspan="5" style="opacity:.5;padding:14px;font-size:.78rem">No credits in this window.</td></tr>'}
+      </table></div>
+    </div>`;
+  }catch(e){modal.remove();showToast('Failed: '+e.message,'error');}
 }
 
 // ── PAYMENT GATEWAYS (config + manual crypto confirmations) ─────────────────

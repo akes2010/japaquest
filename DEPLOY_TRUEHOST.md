@@ -76,7 +76,7 @@ First boot creates the database and the admin account — the log/banner shows t
 Admin: admin@jagaguru.ai / Admin@1234!
 ```
 
-**Change that password immediately** (Dashboard → Profile → Change Password) and set your real **Admin → System Settings** (app name, tagline — defaults are already `JapaQuest / Your Journey. Our Intelligence.`).
+**Change that password immediately** (Dashboard → Profile → Change Password) and set your real **Admin → System Settings** (app name, tagline — defaults are already `JapaQuest / Your Journey. Our Intelligence.`). The prod start script (`npm run start:prod`) auto-tightens `.env` to `chmod 600` on boot, and prints the recommended cron lines for schedulers and the nightly DB backup.
 
 ---
 
@@ -86,15 +86,21 @@ The SQLite database and uploaded documents live under `data/` — never serve or
 
 ---
 
-## 7. Cron: reminders & digests on shared hosting
+## 7. Cron: reminders, schedulers & nightly backups on shared hosting
 
-On a VPS the schedulers run inside the app. On shared hosting, sleeping processes or restarts can pause them — so JapaQuest also exposes a **secured tick endpoint**. In cPanel → **Cron Jobs**, add:
+On a VPS the schedulers run inside the app. On shared hosting, sleeping processes or restarts can pause them — so JapaQuest exposes **two secured tick endpoints**. In cPanel → **Cron Jobs**, add:
 
 ```cron
+# Schedulers — social posting + journey reminders, every 10 minutes
 */10 * * * * curl -s "https://japaquest.com/api/cron/tick?key=YOUR_CRON_SECRET" > /dev/null 2>&1
+
+# Nightly database backup — snapshots the live SQLite file to your home dir
+30 3 * * * curl -s "https://japaquest.com/api/cron/backup?key=YOUR_CRON_SECRET" -o ~/backups/japaquest-$(date +\%Y\%m\%d).db
 ```
 
-Every 10 minutes it runs both schedulers (social posting scan + journey reminders/digests). Without the secret the endpoint refuses to run (401/503).
+(For the backup line, run `mkdir -p ~/backups` once first. Both endpoints refuse to run without the secret — 401/503.)
+
+Every 10 minutes the tick endpoint runs both schedulers. The backup endpoint flushes the in-memory database and returns the exact file, with an `X-Row-Counts` header (e.g. `users=42;payments=7;conversations=310`) so a wiped or corrupt database is caught before it overwrites yesterday's good backup — if `users=0` appears in your cron log, restore from the previous night instead of letting it roll on. Without the secret both endpoints refuse to run (401/503).
 
 **Testing the digest today:** temporarily set `JOURNEY_FORCE_DIGEST=1` in `.env`, restart, hit the tick URL, remove the flag again.
 
@@ -125,6 +131,8 @@ Every 10 minutes it runs both schedulers (social posting scan + journey reminder
 - [ ] Domain loads the landing page (all 8 suite cards visible)
 - [ ] `https://yourdomain.com/api/health` returns `{"status":"ok"}` — point an uptime monitor at it
 - [ ] Cron job hitting `/api/cron/tick?key=…` every 10 minutes (section 7)
+- [ ] Nightly DB backup cron added and first backup file verified in `~/backups/` (section 7)
+- [ ] `.env` chmod 600 (the prod start script does this automatically — verify with `ls -l .env`)
 - [ ] Admin password changed from the default
 - [ ] SMTP configured + 📤 Test email received
 - [ ] cPanel cron added for `/api/cron/tick`
