@@ -10,7 +10,7 @@ const morgan   = require('morgan');
 const compress = require('compression');
 const rateLimit= require('express-rate-limit');
 const cookieParser = require('cookie-parser');
-const { initDB, Q, persist, DB_PATH } = require('./db');
+const { initDB, Q, persist, DB_PATH, quickCheck } = require('./db');
 const BRAND = require('./config/brand');
 const geo = require('./utils/geo');
 const fx = require('./utils/fx');
@@ -127,11 +127,40 @@ app.get('/api/health', async (_req,res) => {
   const social  = require('./worker/social-scheduler').status();
   const now = Date.now();
   const stale = ts => !ts || (now - new Date(ts).getTime()) > 10 * 60 * 1000; // >10 min = stale
+  // Integrity: file size, core-table row counts and a PRAGMA quick_check.
+  // Uptime monitors can alert on integrity.status != 'ok' or users dropping
+  // to 0 — that pattern is how a wiped/corrupt database announces itself.
+  let integrity = { status: 'unknown' };
+  if (db === 'ok') {
+    try {
+      const counts = {};
+      let empty = false;
+      for (const k of ['users', 'payments', 'conversations']) {
+        const c = (Q.queryAllSafe(`SELECT COUNT(*) AS c FROM ${k}`)[0] || {}).c || 0;
+        counts[k] = c;
+        // A wiped database always shows users=0 (seed creates an admin on
+        // first boot). Zero payments/conversations is normal on a new install.
+        if (k === 'users' && c === 0) empty = true;
+      }
+      const check = quickCheck();
+      let bytes = null;
+      try { bytes = fs.statSync(DB_PATH).size; } catch {}
+      integrity = {
+        status: check === 'ok' && !empty ? 'ok' : (check === 'ok' ? 'suspicious' : 'corrupt'),
+        db_bytes: bytes,
+        row_counts: counts,
+        quick_check: check,
+      };
+    } catch (e) {
+      integrity = { status: 'corrupt', error: e.message };
+    }
+  }
   res.json({
     status: db === 'ok' ? 'ok' : 'degraded',
     uptime_sec: Math.floor(process.uptime()),
     db,
     db_latency_ms: Date.now() - t0,
+    integrity,
     schedulers: {
       journey: { ...journey, stale: journey.lastRunAt ? stale(journey.lastRunAt) : null },
       social:  { ...social,  stale: social.lastRunAt  ? stale(social.lastRunAt)  : null },

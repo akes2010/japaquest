@@ -102,6 +102,12 @@ On a VPS the schedulers run inside the app. On shared hosting, sleeping processe
 
 Every 10 minutes the tick endpoint runs both schedulers. The backup endpoint flushes the in-memory database and returns the exact file, with an `X-Row-Counts` header (e.g. `users=42;payments=7;conversations=310`) so a wiped or corrupt database is caught before it overwrites yesterday's good backup — if `users=0` appears in your cron log, restore from the previous night instead of letting it roll on. Without the secret both endpoints refuse to run (401/503).
 
+### Admin backup panel & restore
+
+For one-off copies or an on-server archive, use **Admin → Backup & Restore**: create/download/delete snapshots of the live database, or upload a `.db` file to restore it. Restoring archives the pre-restore database to `data/backups/pre-restore-*.db` first, validates the uploaded file (SQLite header + integrity check + required tables), and hot-swaps the running app — no restart needed. For unattended copies the cron above still writes straight to `~/backups/`; the two approaches complement each other.
+
+Uptime monitors should also watch **`/api/health`**: it now reports an `integrity` block (`status`, `db_bytes`, `row_counts`, `quick_check`). Alert on `integrity.status != "ok"` — `suspicious` means a core table is empty (possible wipe), `corrupt` means the database failed its integrity check.
+
 **Testing the digest today:** temporarily set `JOURNEY_FORCE_DIGEST=1` in `.env`, restart, hit the tick URL, remove the flag again.
 
 ---

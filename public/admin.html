@@ -374,6 +374,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <button class="sb-btn" id="snav-gateways" onclick="sw('gateways')">🏦 Payment Gateways</button>
     <button class="sb-btn" id="snav-affiliates" onclick="sw('affiliates')">🤝 Affiliates</button>
     <button class="sb-btn" id="snav-ledger" onclick="sw('ledger')">📒 Finance Ledger</button>
+    <button class="sb-btn" id="snav-backup" onclick="sw('backup')">🗄️ Backup & Restore</button>
     <div class="nav-sec">Tools</div>
     <button class="sb-btn" id="snav-broadcast" onclick="sw('broadcast')">📢 Broadcast</button>
     <button class="sb-btn" id="snav-social" onclick="sw('social')">📣 Social Posts</button>
@@ -741,6 +742,22 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <div id="lg-rows"></div>
   </div>
 
+  <!-- BACKUP & RESTORE -->
+  <div class="view" id="view-backup">
+    <div style="margin-bottom:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">🗄️ Backup &amp; Restore</div>
+        <div style="font-size:.78rem;color:var(--t4)">Snapshots of the live database. For unattended nightly copies, also add the cPanel cron (see DEPLOY_TRUEHOST.md §7).</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="createBackup()">＋ Create backup now</button>
+        <label class="btn btn-sm" style="cursor:pointer">⬆ Restore from file<input type="file" id="bk-file" accept=".db,.sqlite,.sqlite3,application/octet-stream" style="display:none" onchange="restoreBackupInput(this)"></label>
+      </div>
+    </div>
+    <div class="stats-grid" id="bk-summary" style="margin-bottom:16px"></div>
+    <div id="bk-rows"></div>
+  </div>
+
   <!-- PARTNERS -->
   <div class="view" id="view-partners">
     <div style="margin-bottom:16px">
@@ -937,9 +954,9 @@ function sw(v){
   document.querySelectorAll('.sb-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v)?.classList.add('active');
   document.getElementById('snav-'+v)?.classList.add('active');
-  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',gateways:'Payment Gateways',affiliates:'Affiliate Program',ledger:'Finance Ledger',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base',concierge:'Concierge Queue'};
+  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',gateways:'Payment Gateways',affiliates:'Affiliate Program',ledger:'Finance Ledger',backup:'Backup & Restore',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base',concierge:'Concierge Queue'};
   document.getElementById('tb-title').textContent=T[v]||v;
-  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();else if(v==='concierge')loadConciergeQ();else if(v==='gateways')loadGateways();else if(v==='affiliates')loadAffiliates();else if(v==='ledger')loadLedger();
+  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();else if(v==='concierge')loadConciergeQ();else if(v==='gateways')loadGateways();else if(v==='affiliates')loadAffiliates();else if(v==='ledger')loadLedger();else if(v==='backup')loadBackups();
   if(v==='overview')loadClicks();
   history.replaceState(null,'','#'+v);
 }
@@ -1636,6 +1653,77 @@ async function loadLedger(){
       :'<div style="opacity:.5;padding:18px;font-size:.8rem">No entries in this period.</div>';
   }catch(e){showToast('Could not load ledger: '+e.message,'error');}
 }
+// ── BACKUP & RESTORE ────────────────────────────────────────────────────────
+async function loadBackups(){
+  try{
+    const r=await apiFetch('/api/admin/backups');const d=await r.json();
+    if(!r.ok)return showToast(d.error||'Failed','error');
+    document.getElementById('bk-summary').innerHTML=`
+      <div class="stat-c"><div class="stat-n">${(d.backups||[]).length}</div><div class="stat-l">Snapshots stored</div></div>
+      <div class="stat-c"><div class="stat-n">${d.db_bytes?(d.db_bytes/1048576).toFixed(2)+' MB':'—'}</div><div class="stat-l">Live database size</div></div>`;
+    const rows=(d.backups||[]).map(b=>`
+      <tr>
+        <td style="padding:7px 6px;font-size:.75rem"><code>${esc(b.file)}</code></td>
+        <td style="font-size:.74rem">${(b.bytes/1048576).toFixed(2)} MB</td>
+        <td style="font-size:.74rem;white-space:nowrap">${String(b.created_at||'').replace('T',' ').slice(0,16)}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-sm" onclick="downloadBackup('${esc(b.file)}')">⬇</button>
+          <button class="btn btn-sm" style="color:#B3282D" onclick="deleteBackup('${esc(b.file)}')">🗑</button>
+        </td>
+      </tr>`).join('');
+    document.getElementById('bk-rows').innerHTML=rows?`
+      <div style="overflow-x:auto"><table style="width:100%;font-size:.78rem;border-collapse:collapse">
+      <tr style="color:var(--t4);text-align:left"><th style="padding:6px">File</th><th>Size</th><th>Created</th><th></th></tr>${rows}</table></div>`
+      :'<div style="opacity:.5;padding:18px;font-size:.8rem">No snapshots yet — create one before making big changes.</div>';
+  }catch(e){showToast('Could not load backups: '+e.message,'error');}
+}
+async function createBackup(){
+  try{
+    const r=await apiFetch('/api/admin/backups',{method:'POST'});
+    const d=await r.json();
+    if(!r.ok)return showToast(d.error||'Failed','error');
+    showToast('Backup created: '+d.file,'success');loadBackups();
+  }catch(e){showToast('Backup failed: '+e.message,'error');}
+}
+// Download via apiFetch — window.open can't send the Bearer token.
+async function downloadBackup(name){
+  try{
+    const r=await apiFetch('/api/admin/backups/'+encodeURIComponent(name)+'/download');
+    if(!r.ok){const d=await r.json().catch(()=>({}));return showToast(d.error||'Download failed','error');}
+    const blob=await r.blob();
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download=name;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+  }catch(e){showToast('Download failed: '+e.message,'error');}
+}
+async function deleteBackup(name){
+  if(!confirm('Delete snapshot '+name+'? This cannot be undone.'))return;
+  try{
+    const r=await apiFetch('/api/admin/backups/'+encodeURIComponent(name),{method:'DELETE'});
+    const d=await r.json();
+    if(!r.ok)return showToast(d.error||'Failed','error');
+    showToast('Snapshot deleted','success');loadBackups();
+  }catch(e){showToast('Delete failed: '+e.message,'error');}
+}
+// Restore = read the chosen file, POST it as multipart/form-data. apiFetch
+// normally forces a JSON content type, so this passes explicit headers.
+async function restoreBackupInput(input){
+  const file=input.files&&input.files[0];input.value='';
+  if(!file)return;
+  if(!confirm('RESTORE OVERWRITES the live database with '+file.name+'.\n\nThe current database is archived automatically first.\n\nContinue?'))return;
+  try{
+    const fd=new FormData();fd.append('file',file,file.name);
+    const tok=localStorage.getItem('vg_token')||'';
+    const r=await fetch('/api/admin/backups/restore',{method:'POST',headers:{'Authorization':'Bearer '+tok},body:fd});
+    const d=await r.json().catch(()=>({}));
+    if(r.status===401){localStorage.clear();window.location.href='/admin-login';return;}
+    if(!r.ok)return showToast(d.error||'Restore failed','error');
+    showToast('Database restored — reloading…','success');
+    setTimeout(()=>window.location.reload(),1200);
+  }catch(e){showToast('Restore failed: '+e.message,'error');}
+}
+
 // ── PAYOUT DRILL-DOWN MODAL ────────────────────────────────────────────────
 async function showPayoutDetail(affId,dateStr){
   if(!affId)return showToast('Unknown affiliate','error');

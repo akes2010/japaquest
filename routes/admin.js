@@ -4,7 +4,7 @@ const bcrypt  = require('bcryptjs');
 const path    = require('path');
 const fs      = require('fs');
 const { requireAdmin } = require('../middleware/auth');
-const { Q, persist } = require('../db');
+const { Q, persist, reloadDB, DB_PATH } = require('../db');
 const { sendEmail, testSmtp } = require('../utils/mailer');
 const { getOverrides, getEffectivePartners, clearPartnerCache } = require('../ai/affiliates');
 const { PLATFORMS, shareLinks } = require('../utils/social');
@@ -777,6 +777,85 @@ router.get('/ledger/payout/:affiliateId', requireAdmin, (req, res) => {
     credits,
     range: { from: from || null, to: to || null },
   });
+});
+
+// ── DB BACKUP & RESTORE (admin panel) ──────────────────────────────────────
+// On-box snapshots of the sql.js database. Files live in data/backups (inside
+// the gitignored data/ dir) and are downloadable. Restore validates the
+// uploaded file, archives the pre-restore database, then hot-swaps the
+// running DB without a restart. Nightly cron backups (CRON_SECRET) are a
+// separate path — see /api/cron/backup in server.js.
+const BACKUP_DIR = path.join(__dirname, '..', 'data', 'backups');
+const backupList = () => {
+  try {
+    return fs.readdirSync(BACKUP_DIR)
+      .filter(f => f.endsWith('.db'))
+      .map(f => {
+        const st = fs.statSync(path.join(BACKUP_DIR, f));
+        return { file: f, bytes: st.size, created_at: st.mtime.toISOString() };
+      })
+      .sort((a, b) => b.file.localeCompare(a.file));
+  } catch { return []; }
+};
+// Filenames are user-supplied in URL params — restrict to a safe charset.
+const safeBackupPath = name =>
+  /^[A-Za-z0-9._-]+\.db$/.test(String(name)) ? path.join(BACKUP_DIR, name) : null;
+const backupName = () => {
+  const d = new Date(); const pad = n => String(n).padStart(2, '0');
+  return `snapshot-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.db`;
+};
+const uploadBackup = require('multer')({ dest: require('os').tmpdir(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+router.get('/backups', requireAdmin, (_req, res) => {
+  let dbBytes = null;
+  try { dbBytes = fs.statSync(DB_PATH).size; } catch {}
+  res.json({ backups: backupList(), db_bytes: dbBytes });
+});
+
+router.post('/backups', requireAdmin, (_req, res) => {
+  try {
+    persist();
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    const name = backupName();
+    fs.copyFileSync(DB_PATH, path.join(BACKUP_DIR, name));
+    res.json({ message: 'Backup created', file: name, backups: backupList() });
+  } catch (e) { res.status(500).json({ error: 'Backup failed: ' + e.message }); }
+});
+
+router.post('/backups/restore', requireAdmin, uploadBackup.single('file'), async (req, res) => {
+  const tmpPath = req.file && req.file.path;
+  try {
+    if (!tmpPath) return res.status(400).json({ error: 'No file uploaded (field "file")' });
+    const buf = fs.readFileSync(tmpPath);
+    if (!(buf.length > 15 && buf.slice(0, 16).toString('latin1') === 'SQLite format 3\u0000'))
+      return res.status(400).json({ error: 'Not a SQLite database file' });
+    // Archive the current database first so the restore itself is reversible.
+    persist();
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    fs.copyFileSync(DB_PATH, path.join(BACKUP_DIR, 'pre-restore-' + Date.now() + '.db'));
+    await reloadDB(buf);
+    res.json({ message: 'Database restored from ' + (req.file.originalname || 'backup') });
+  } catch (e) {
+    res.status(400).json({ error: 'Restore failed: ' + e.message });
+  } finally {
+    try { if (tmpPath && fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch {}
+  }
+});
+
+router.get('/backups/:name/download', requireAdmin, (req, res) => {
+  const p = safeBackupPath(req.params.name);
+  if (!p) return res.status(400).json({ error: 'Invalid backup name' });
+  if (!fs.existsSync(p)) return res.status(404).json({ error: 'Backup not found' });
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Disposition', `attachment; filename="${path.basename(p)}"`);
+  res.send(fs.readFileSync(p));
+});
+
+router.delete('/backups/:name', requireAdmin, (req, res) => {
+  const p = safeBackupPath(req.params.name);
+  if (!p) return res.status(400).json({ error: 'Invalid backup name' });
+  try { fs.unlinkSync(p); res.json({ message: 'Backup deleted', backups: backupList() }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/payment-gateways', requireAdmin, (_req, res) => {

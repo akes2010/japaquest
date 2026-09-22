@@ -355,6 +355,56 @@ function flushSync() { if (_dirty) persist(); }
 process.on('exit', flushSync);
 ['SIGINT', 'SIGTERM'].forEach(sig => process.on(sig, () => { flushSync(); process.exit(0); }));
 
+// ── HEALTH / RESTORE ─────────────────────────────────────────────────────────
+// PRAGMA quick_check on the live database — 'ok' or a short error summary.
+// Cheap at this app's scale (file-backed memory DB, a few MB at most).
+function quickCheck() {
+  try {
+    const rows = queryAll('PRAGMA quick_check');
+    if (!rows.length) return 'empty result';
+    const vals = rows.map(r => Object.values(r)[0]);
+    return vals.length === 1 && vals[0] === 'ok' ? 'ok' : vals.join('; ').slice(0, 200);
+  } catch (e) { return 'check failed: ' + e.message; }
+}
+
+// Hot-swap the running database with a candidate file buffer (restore path).
+// Validates first — SQLite integrity via quick_check plus a required-table
+// scan — and throws without touching the running DB if anything looks wrong.
+// On success the pre-restore in-memory state is discarded (callers archive the
+// file first), the restored state is written to DB_PATH immediately.
+async function reloadDB(buf) {
+  if (!buf || !buf.length) throw new Error('Backup file is empty');
+  const SQL = await require('sql.js')();
+  let candidate;
+  try { candidate = new SQL.Database(buf); }
+  catch (e) { throw new Error('Not a valid SQLite database: ' + e.message); }
+  try {
+    const check = [];
+    const stmt = candidate.prepare('PRAGMA quick_check');
+    while (stmt.step()) check.push(Object.values(stmt.getAsObject())[0]);
+    stmt.free();
+    if (check.length !== 1 || check[0] !== 'ok')
+      throw new Error('Integrity check failed: ' + check.join('; ').slice(0, 200));
+    const have = new Set();
+    const t = candidate.prepare(`SELECT name FROM sqlite_master WHERE type='table'`);
+    while (t.step()) have.add(t.getAsObject().name);
+    t.free();
+    const missing = ['users', 'settings', 'plans', 'payments'].filter(k => !have.has(k));
+    if (missing.length) throw new Error('Missing required tables: ' + missing.join(', '));
+  } catch (e) {
+    candidate.close();
+    throw e;
+  }
+  const old = _db;
+  _db = candidate;
+  // Force-write the restored state over DB_PATH (which may still hold the old
+  // corrupt file): persist() early-returns unless the dirty flag is set.
+  _dirty = true;
+  if (old) { try { old.close(); } catch {} }
+  persist();
+  _dirty = false;
+}
+
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function exec(sql, params = []) { _db.run(sql, params); markDirty(); }
 function queryAll(sql, params = []) {
@@ -1227,4 +1277,4 @@ const Q = {
   },
 };
 
-module.exports = { initDB, Q, persist, exec, DB_PATH };
+module.exports = { initDB, Q, persist, exec, DB_PATH, quickCheck, reloadDB };
