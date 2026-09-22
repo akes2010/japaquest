@@ -1,5 +1,7 @@
 # 🚀 Deploying JapaQuest on Truehost (shared hosting / cPanel)
 
+> Deploying to a VPS instead, or want the condensed checklist? See **SETUP_GUIDE.md** — it covers both paths plus a phased go-live runbook.
+
 This app is a **Node.js (Express) server** with a file-based SQLite database (sql.js) — it runs fine on shared hosts that support Node.js apps (Truehost cPanel → *Setup Node.js App*). No root, no Docker needed.
 
 ---
