@@ -373,6 +373,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <button class="sb-btn" id="snav-general" onclick="sw('general')">⚙️ System Settings</button>
     <button class="sb-btn" id="snav-gateways" onclick="sw('gateways')">🏦 Payment Gateways</button>
     <button class="sb-btn" id="snav-affiliates" onclick="sw('affiliates')">🤝 Affiliates</button>
+    <button class="sb-btn" id="snav-ledger" onclick="sw('ledger')">📒 Finance Ledger</button>
     <div class="nav-sec">Tools</div>
     <button class="sb-btn" id="snav-broadcast" onclick="sw('broadcast')">📢 Broadcast</button>
     <button class="sb-btn" id="snav-social" onclick="sw('social')">📣 Social Posts</button>
@@ -713,6 +714,28 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <div id="affiliates-list"><div style="color:var(--t4);font-size:.8rem">Loading…</div></div>
   </div>
 
+  <!-- FINANCE LEDGER -->
+  <div class="view" id="view-ledger">
+    <div style="margin-bottom:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">📒 Finance Ledger</div>
+        <div style="font-size:.78rem;color:var(--t4)">Money in from plan payments, money out to affiliates. Export CSV for your bookkeeper.</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="input" id="lg-days" onchange="loadLedger()" style="width:auto;padding:7px 10px;font-size:.78rem">
+          <option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option><option value="365">Last year</option>
+        </select>
+        <select class="input" id="lg-kind" onchange="loadLedger()" style="width:auto;padding:7px 10px;font-size:.78rem">
+          <option value="all">All entries</option><option value="in">Money in</option><option value="out">Payouts</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="downloadLedgerCsv()">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="stats-grid" id="lg-summary" style="margin-bottom:16px"></div>
+    <div id="lg-rows"></div>
+  </div>
+
   <!-- PARTNERS -->
   <div class="view" id="view-partners">
     <div style="margin-bottom:16px">
@@ -909,9 +932,9 @@ function sw(v){
   document.querySelectorAll('.sb-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v)?.classList.add('active');
   document.getElementById('snav-'+v)?.classList.add('active');
-  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',gateways:'Payment Gateways',affiliates:'Affiliate Program',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base',concierge:'Concierge Queue'};
+  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',gateways:'Payment Gateways',affiliates:'Affiliate Program',ledger:'Finance Ledger',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base',concierge:'Concierge Queue'};
   document.getElementById('tb-title').textContent=T[v]||v;
-  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();else if(v==='concierge')loadConciergeQ();else if(v==='gateways')loadGateways();else if(v==='affiliates')loadAffiliates();
+  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();else if(v==='concierge')loadConciergeQ();else if(v==='gateways')loadGateways();else if(v==='affiliates')loadAffiliates();else if(v==='ledger')loadLedger();
   if(v==='overview')loadClicks();
   history.replaceState(null,'','#'+v);
 }
@@ -1537,6 +1560,55 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function doLogout(){localStorage.clear();window.location.href='/admin-login';}
 
 init();
+
+// ── FINANCE LEDGER ──────────────────────────────────────────────────────────
+// CSV export goes through apiFetch (Bearer header) — window.open can't auth.
+async function downloadLedgerCsv(){
+  try{
+    const kind=document.getElementById('lg-kind')?.value||'all';
+    const days=document.getElementById('lg-days')?.value||30;
+    const r=await apiFetch('/api/admin/ledger.csv?kind='+kind+'&days='+days);
+    if(!r.ok){const d=await r.json().catch(()=>({}));return showToast(d.error||'Export failed','error');}
+    const blob=await r.blob();
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='japaquest-ledger-'+kind+'-'+days+'d-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    showToast('CSV downloaded','success');
+  }catch(e){showToast('Export failed: '+e.message,'error');}
+}
+async function loadLedger(){
+  try{
+    const kind=document.getElementById('lg-kind')?.value||'all';
+    const days=document.getElementById('lg-days')?.value||30;
+    const r=await apiFetch('/api/admin/ledger?kind='+kind+'&days='+days);const d=await r.json();
+    if(!r.ok)return showToast(d.error||'Failed','error');
+    const s=d.summary||{};
+    document.getElementById('lg-summary').innerHTML=`
+      <div class="stat-c"><div class="stat-n">$${(s.grossIn||0).toFixed(2)}</div><div class="stat-l">Money in (paid)</div></div>
+      <div class="stat-c"><div class="stat-n">$${(s.pendingIn||0).toFixed(2)}</div><div class="stat-l">Awaiting confirmation</div></div>
+      <div class="stat-c"><div class="stat-n">$${(s.commissions||0).toFixed(2)}</div><div class="stat-l">Commissions accrued</div></div>
+      <div class="stat-c"><div class="stat-n">$${(s.paidOut||0).toFixed(2)}</div><div class="stat-l">Paid to affiliates</div></div>
+      <div class="stat-c"><div class="stat-n" style="color:#0E7B4F">$${(s.net||0).toFixed(2)}</div><div class="stat-l">Net after commissions</div></div>
+      <div class="stat-c"><div class="stat-n">${s.txCount||0}</div><div class="stat-l">Paid transactions</div></div>`;
+    const rows=(d.rows||[]).map(x=>`
+      <tr>
+        <td style="padding:7px 6px;font-size:.74rem;white-space:nowrap">${String(x.date||'').replace('T',' ').slice(0,16)}</td>
+        <td><span style="font-size:.66rem;padding:2px 10px;border-radius:99px;background:${x.kind==='payment_in'?'rgba(14,123,79,.15)':'rgba(180,106,31,.15)'};color:${x.kind==='payment_in'?'#0E7B4F':'#b46a1f'}">${x.kind==='payment_in'?'▼ in':'▲ payout'}</span></td>
+        <td><code style="font-size:.72rem">${esc(x.ref||'')}</code></td>
+        <td style="font-size:.75rem">${esc(x.detail||'')}</td>
+        <td style="color:#0E7B4F;font-size:.75rem">${x.in?'$'+Number(x.in).toFixed(2):''}</td>
+        <td style="color:#B3282D;font-size:.75rem">${x.out?'$'+Number(x.out).toFixed(2):''}</td>
+        <td style="font-size:.75rem;opacity:.8">$${Number(x.balance||0).toFixed(2)}</td>
+      </tr>`).join('');
+    document.getElementById('lg-rows').innerHTML=rows?`
+      <div style="overflow-x:auto"><table style="width:100%;font-size:.78rem;border-collapse:collapse">
+      <tr style="color:var(--t4);text-align:left"><th style="padding:6px">Date</th><th>Type</th><th>Reference</th><th>Detail</th><th>In</th><th>Out</th><th>Running</th></tr>
+      ${rows}</table></div>`
+      :'<div style="opacity:.5;padding:18px;font-size:.8rem">No entries in this period.</div>';
+  }catch(e){showToast('Could not load ledger: '+e.message,'error');}
+}
 
 // ── PAYMENT GATEWAYS (config + manual crypto confirmations) ─────────────────
 const GW_MASK='••••';

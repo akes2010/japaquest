@@ -659,6 +659,80 @@ router.post('/affiliates/:id/pay', requireAdmin, (req, res) => {
 // ── PAYMENT GATEWAYS: configuration (secrets masked) + manual confirmations ──
 const mask = s => !s ? '' : (s.length > 8 ? s.slice(0, 4) + '••••' + s.slice(-4) : '••••');
 
+// ── FINANCE LEDGER: money in (payments) and out (affiliate payouts) ─────────
+// GET /api/admin/ledger?kind=all|in|out&days=30 → rows + summary
+// GET /api/admin/ledger.csv?kind=…&days=…      → CSV for accounting
+const csvCell = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+
+function getLedgerData(kind, days) {
+  const since = `date('now', '-${days} days')`;
+  // Money-in date = paid_at (when the gateway actually settled); legacy rows
+  // that were marked paid before paid_at existed fall back to created_at.
+  const ins = Q.queryAllSafe(
+    `SELECT p.id, p.reference, p.provider, p.amount_usd, p.status, p.created_at,
+            COALESCE(p.paid_at, p.created_at) AS effective_date,
+            u.name AS user_name, u.email AS user_email, p.affiliate_code,
+            (SELECT c.commission_usd FROM affiliate_credits c WHERE c.payment_id=p.id AND c.status!='reversed' LIMIT 1) AS commission_usd
+     FROM payments p LEFT JOIN users u ON u.id=p.user_id
+     WHERE COALESCE(p.paid_at, p.created_at) >= ${since} ORDER BY p.id DESC LIMIT 1000`);
+  const payouts = Q.queryAllSafe(
+    `SELECT a.name AS affiliate_name, a.code, a.payout_method, a.payout_account,
+            SUM(c.commission_usd) AS amount, COUNT(*) AS credits, MAX(c.updated_at) AS paid_at
+     FROM affiliate_credits c JOIN affiliates a ON a.id=c.affiliate_id
+     WHERE c.status='paid' AND c.updated_at >= ${since}
+     GROUP BY c.affiliate_id ORDER BY paid_at DESC LIMIT 1000`);
+  return { ins, payouts };
+}
+
+const parseLedgerQuery = (req) => ({
+  kind: ['all', 'in', 'out'].includes(req.query.kind) ? req.query.kind : 'all',
+  days: Math.min(365, Math.max(1, parseInt(req.query.days, 10) || 30)),
+});
+
+router.get('/ledger', requireAdmin, (req, res) => {
+  const { kind, days } = parseLedgerQuery(req);
+  const { ins, payouts } = getLedgerData(kind, days);
+
+  const paidIn = ins.filter(p => p.status === 'paid');
+  const summary = {
+    grossIn: Math.round(paidIn.reduce((s, p) => s + p.amount_usd, 0) * 100) / 100,
+    pendingIn: Math.round(ins.filter(p => p.status === 'pending').reduce((s, p) => s + p.amount_usd, 0) * 100) / 100,
+    commissions: Math.round(paidIn.reduce((s, p) => s + (p.commission_usd || 0), 0) * 100) / 100,
+    paidOut: Math.round(payouts.reduce((s, p) => s + p.amount, 0) * 100) / 100,
+    txCount: paidIn.length,
+  };
+  summary.net = Math.round((summary.grossIn - summary.commissions) * 100) / 100;
+
+  const inRows = paidIn.map(p => ({ date: p.effective_date, kind: 'payment_in', ref: p.reference,
+    detail: `${p.provider} · ${p.user_name || p.user_email || 'user #' + p.user_id}` + (p.affiliate_code ? ` · aff ${p.affiliate_code}` : ''),
+    in: p.amount_usd, out: (p.commission_usd || 0), balance: null }));
+  const outRows = payouts.map(p => ({ date: p.paid_at, kind: 'affiliate_payout', ref: p.code,
+    detail: `${p.affiliate_name} · ${p.payout_method || 'method n/a'} · ${p.credits} credit(s)`,
+    in: 0, out: p.amount, balance: null }));
+  let running = 0;
+  const rows = kind === 'in' ? inRows : kind === 'out' ? outRows
+    : [...inRows, ...outRows].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  rows.forEach(r => { running += (r.in || 0) - (r.out || 0); r.balance = Math.round(running * 100) / 100; });
+
+  res.json({ summary, rows: rows.slice(0, 500), days });
+});
+
+router.get('/ledger.csv', requireAdmin, (req, res) => {
+  const { kind, days } = parseLedgerQuery(req);
+  const { ins, payouts } = getLedgerData(kind, days);
+
+  const lines = [['date', 'type', 'reference', 'detail', 'money_in_usd', 'money_out_usd']];
+  if (kind !== 'out') ins.filter(p => p.status === 'paid').forEach(p => lines.push([p.effective_date, 'payment_in', p.reference,
+    `${p.provider} · ${p.user_name || p.user_email || ''}` + (p.affiliate_code ? ` · aff ${p.affiliate_code}` : ''), p.amount_usd, p.commission_usd || 0]));
+  if (kind !== 'in') payouts.forEach(p => lines.push([p.paid_at, 'affiliate_payout', p.code,
+    `${p.affiliate_name} · ${p.payout_method || ''}`, 0, p.amount]));
+
+  const csv = lines.map(l => l.map(csvCell).join(',')).join('\r\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="japaquest-ledger-${kind}-${days}d-${new Date().toISOString().slice(0, 10)}.csv"`);
+  res.send(csv);
+});
+
 router.get('/payment-gateways', requireAdmin, (_req, res) => {
   const providers = registry.listProviders().map(p => ({
     key: p.key, displayName: p.displayName, docsUrl: p.docsUrl, manual: !!p.manual,

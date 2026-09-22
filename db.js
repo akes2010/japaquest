@@ -97,14 +97,24 @@ const SCHEMA = [
     meta_json TEXT DEFAULT '{}',
     created_at TEXT DEFAULT(datetime('now')),
     paid_at TEXT)`,
+  // One table serves BOTH click trackers: the affiliate program (affiliate_id,
+  // day, source) and travel partner links (user_id, partner, link_type).
+  // migrateAffiliateClicks() rebuilds databases that only have one shape.
   `CREATE TABLE IF NOT EXISTS affiliate_clicks(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    affiliate_id INTEGER NOT NULL REFERENCES affiliates(id) ON DELETE CASCADE,
-    day TEXT NOT NULL,
+    affiliate_id INTEGER REFERENCES affiliates(id) ON DELETE CASCADE,
+    day TEXT NOT NULL DEFAULT '',
     source TEXT NOT NULL DEFAULT 'direct',
     ip_hash TEXT DEFAULT '',
+    user_id INTEGER,
+    partner TEXT NOT NULL DEFAULT '',
+    link_type TEXT NOT NULL DEFAULT '',
+    destination TEXT,
+    url TEXT,
     created_at TEXT DEFAULT(datetime('now')))`,
-  `CREATE INDEX IF NOT EXISTS idx_aff_clicks_aff_day ON affiliate_clicks(affiliate_id, day)`,
+  // NOTE: idx_aff_clicks_aff_day is created in migrateAffiliateClicks(), after
+  // old single-shape tables have been rebuilt — an index on affiliate_id would
+  // crash SCHEMA init for databases that only had the travel-partner shape.
   `CREATE TABLE IF NOT EXISTS tool_results(
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
     tool_type TEXT NOT NULL, title TEXT DEFAULT '',
@@ -160,11 +170,6 @@ const SCHEMA = [
     query_json TEXT NOT NULL DEFAULT '{}',
     results_json TEXT DEFAULT '[]',
     affiliate_clicks INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT(datetime('now')))`,
-  `CREATE TABLE IF NOT EXISTS affiliate_clicks(
-    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
-    partner TEXT NOT NULL, link_type TEXT NOT NULL,
-    destination TEXT, url TEXT,
     created_at TEXT DEFAULT(datetime('now')))`,
 
   `CREATE TABLE IF NOT EXISTS social_posts(
@@ -307,6 +312,7 @@ async function initDB() {
   }
   SCHEMA.forEach(s => _db.run(s));
   repairData();
+  migrateAffiliateClicks();
   seedDefaults();
   rebrandLegacy();
   migrateJourneyOS();
@@ -385,6 +391,58 @@ function repairData() {
       WHERE current_version_id IS NULL OR current_version_id=0`);
     console.log(`  🔧 Repaired current_version_id on ${broken} visa rule(s)`);
   }
+}
+
+// ── affiliate_clicks shape migration ─────────────────────────────────────────
+// Older databases created this table with only ONE of the two shapes:
+//  - affiliate-program rows: (affiliate_id, day, source, ip_hash)
+//  - travel-partner rows:    (user_id, partner, link_type, destination, url)
+// Rebuild to the superset schema, preserving all existing rows.
+function migrateAffiliateClicks() {
+  const tableCols = t => queryAll(`SELECT name FROM pragma_table_info('${t}')`).map(r => r.name);
+
+  // Copy rows out of affiliate_clicks_old (whatever shape it has) and drop it.
+  function copyOldRows() {
+    const oldCols = new Set(tableCols('affiliate_clicks_old'));
+    const pick = (col, fallback) => oldCols.has(col) ? col : fallback;
+    exec(`INSERT OR IGNORE INTO affiliate_clicks
+      (id, affiliate_id, day, source, ip_hash, user_id, partner, link_type, destination, url, created_at)
+      SELECT id, ${pick('affiliate_id', 'NULL')}, ${pick('day', "''")}, ${pick('source', "'direct'")}, ${pick('ip_hash', "''")},
+             ${pick('user_id', 'NULL')}, ${pick('partner', "''")}, ${pick('link_type', "''")}, ${pick('destination', 'NULL')}, ${pick('url', 'NULL')}, created_at
+      FROM affiliate_clicks_old`);
+    exec(`DROP TABLE affiliate_clicks_old`);
+  }
+
+  // Self-heal: a crash mid-migration can leave affiliate_clicks_old behind
+  // (rename done, copy not) next to an already-unified main table. Recover it.
+  if (queryOne(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='affiliate_clicks_old'`)) {
+    copyOldRows();
+    console.log('  ♻️  Recovered stranded affiliate_clicks_old rows');
+  }
+
+  const cols = tableCols('affiliate_clicks');
+  if (!(cols.includes('affiliate_id') && cols.includes('partner'))) {
+    exec(`ALTER TABLE affiliate_clicks RENAME TO affiliate_clicks_old`);
+    exec(`CREATE TABLE affiliate_clicks(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      affiliate_id INTEGER REFERENCES affiliates(id) ON DELETE CASCADE,
+      day TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT 'direct',
+      ip_hash TEXT DEFAULT '',
+      user_id INTEGER,
+      partner TEXT NOT NULL DEFAULT '',
+      link_type TEXT NOT NULL DEFAULT '',
+      destination TEXT,
+      url TEXT,
+      created_at TEXT DEFAULT(datetime('now')))`);
+    copyOldRows();
+    console.log('  🔧 Migrated affiliate_clicks to unified schema');
+  }
+
+  // Indexes run unconditionally: dropping a rebuilt table drops its indexes,
+  // and IF NOT EXISTS keeps this cheap for already-unified databases.
+  exec(`CREATE INDEX IF NOT EXISTS idx_aff_clicks_aff_day ON affiliate_clicks(affiliate_id, day)`);
+  exec(`CREATE INDEX IF NOT EXISTS idx_affclicks_date ON affiliate_clicks(created_at)`);
 }
 
 function seedDefaults() {
@@ -584,6 +642,7 @@ function migrateJourneyOS() {
     ['concierge_tickets', "ALTER TABLE concierge_tickets ADD COLUMN first_response_at TEXT"],
     ['concierge_replies', "ALTER TABLE concierge_replies ADD COLUMN file_name TEXT DEFAULT ''"],
     ['concierge_replies', "ALTER TABLE concierge_replies ADD COLUMN file_path TEXT DEFAULT ''"],
+    ['affiliate_credits', "ALTER TABLE affiliate_credits ADD COLUMN updated_at TEXT"],
     ['concierge_replies', "ALTER TABLE concierge_replies ADD COLUMN file_size INTEGER DEFAULT 0"],
     ['concierge_replies', "ALTER TABLE concierge_replies ADD COLUMN file_mime TEXT DEFAULT ''"],
     ['journeys', "ALTER TABLE journeys ADD COLUMN dossier_json TEXT"],
@@ -600,6 +659,12 @@ function migrateJourneyOS() {
       [sql.match(/ADD COLUMN (\w+)/)[1]]);
     if (!exists) { try { exec(sql); } catch {} }
   }
+  // Backfill: credits paid before updated_at existed have NULL — approximate
+  // payout time with created_at so the finance ledger keeps historical rows.
+  exec("UPDATE affiliate_credits SET updated_at=created_at WHERE status='paid' AND updated_at IS NULL");
+  // Same heal for payments: rows settled before markPaymentPaid stamped
+  // paid_at get the creation time as the best-known settlement date.
+  exec("UPDATE payments SET paid_at=created_at WHERE status='paid' AND paid_at IS NULL");
 }
 const Q = {
   // RAW (read-only helper for workers/tools; prefer named helpers below)
@@ -808,26 +873,27 @@ const Q = {
     exec('INSERT INTO affiliate_clicks(user_id,partner,link_type,destination,url) VALUES(?,?,?,?,?)',
       [userId,partner,linkType,destination,url]),
 
-  // AFFILIATE CLICK ANALYTICS (admin)
+  // AFFILIATE CLICK ANALYTICS (admin) — travel partner link clicks only
+  // (partner != '' excludes affiliate-program click rows from these stats)
   getAffiliateClickStats: (days=30) => {
     const stats = {};
-    stats.total = queryScalar('SELECT COUNT(*) FROM affiliate_clicks');
-    stats.last7days = queryScalar("SELECT COUNT(*) FROM affiliate_clicks WHERE created_at >= datetime('now','-7 days')");
-    stats.last30days = queryScalar("SELECT COUNT(*) FROM affiliate_clicks WHERE created_at >= datetime('now','-30 days')");
+    stats.total = queryScalar("SELECT COUNT(*) FROM affiliate_clicks WHERE partner != ''");
+    stats.last7days = queryScalar("SELECT COUNT(*) FROM affiliate_clicks WHERE partner != '' AND created_at >= datetime('now','-7 days')");
+    stats.last30days = queryScalar("SELECT COUNT(*) FROM affiliate_clicks WHERE partner != '' AND created_at >= datetime('now','-30 days')");
     stats.byPartner = queryAll(
       `SELECT partner, COUNT(*) as clicks,
               SUM(CASE WHEN created_at >= datetime('now','-7 days') THEN 1 ELSE 0 END) as clicks_7d,
               MAX(created_at) as last_click
-         FROM affiliate_clicks GROUP BY partner ORDER BY clicks DESC`);
+         FROM affiliate_clicks WHERE partner != '' GROUP BY partner ORDER BY clicks DESC`);
     stats.byType = queryAll(
-      'SELECT link_type as type, COUNT(*) as clicks FROM affiliate_clicks GROUP BY link_type ORDER BY clicks DESC');
+      "SELECT link_type as type, COUNT(*) as clicks FROM affiliate_clicks WHERE partner != '' GROUP BY link_type ORDER BY clicks DESC");
     stats.daily = queryAll(
       `SELECT date(created_at) as date, COUNT(*) as clicks FROM affiliate_clicks
-        WHERE created_at >= datetime('now',?) GROUP BY date(created_at) ORDER BY date`,
+        WHERE partner != '' AND created_at >= datetime('now',?) GROUP BY date(created_at) ORDER BY date`,
       [`-${parseInt(days)||30} days`] );
     stats.topDestinations = queryAll(
       `SELECT destination, COUNT(*) as clicks FROM affiliate_clicks
-        WHERE destination IS NOT NULL AND destination != '' AND destination != 'chat'
+        WHERE partner != '' AND destination IS NOT NULL AND destination != '' AND destination != 'chat'
         GROUP BY destination ORDER BY clicks DESC LIMIT 8`);
     return stats;
   },
@@ -1040,7 +1106,7 @@ const Q = {
   markAffiliateCreditsPaid: (affiliateId, ids) => {
     if (!ids || !ids.length) return;
     const ph = ids.map(()=>'?').join(',');
-    exec(`UPDATE affiliate_credits SET status='paid' WHERE affiliate_id=? AND id IN (${ph}) AND status='earned'`,[affiliateId,...ids]);
+    exec(`UPDATE affiliate_credits SET status='paid', updated_at=datetime('now') WHERE affiliate_id=? AND id IN (${ph}) AND status='earned'`,[affiliateId,...ids]);
     const paid = Math.round((queryScalar(`SELECT COALESCE(SUM(commission_usd),0)*100 FROM affiliate_credits WHERE affiliate_id=? AND status='paid'`,[affiliateId]) || 0));
     exec('UPDATE affiliates SET paid_minor=? WHERE id=?',[paid,affiliateId]);
   },
