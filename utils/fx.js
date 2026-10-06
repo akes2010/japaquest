@@ -14,7 +14,9 @@ const SYMBOLS = { USD:'$', EUR:'€', GBP:'£', NGN:'₦', GHS:'GH₵', KES:'KSh
   XOF:'CFA', XAF:'FCFA', TZS:'TSh', UGX:'USh', RWF:'RF', ETB:'Br', GMD:'D', ZMW:'K',
   CAD:'CA$', AUD:'A$', ZWG:'Z$', TRY:'₺', QAR:'QR', KRW:'₩', MXN:'MX$', RUB:'₽',
   ILS:'₪', CHF:'CHF', SEK:'kr', NOK:'kr', DKK:'kr', PLN:'zł', THB:'฿', SGD:'S$',
-  HKD:'HK$', NZD:'NZ$', ZWL:'Z$', SLE:'Le', LRD:'L$', MZN:'MT', BWP:'P', MUR:'₨' };
+  HKD:'HK$', NZD:'NZ$', ZWL:'Z$', SLE:'Le', LRD:'L$', MZN:'MT', BWP:'P', MUR:'₨',
+  IDR:'Rp', MYR:'RM', PHP:'₱', VND:'₫', PKR:'Rs', BDT:'৳', LKR:'Rs', NPR:'Rs',
+  UAH:'₴', RON:'lei', CZK:'Kč', HUF:'Ft', JMD:'J$', TTD:'TT$', BBD:'Bds$', DOP:'RD$', COP:'COL$', PEN:'S/', CLP:'CLP$' };
 
 // Zero-decimal currencies (values are whole units — never show cents).
 const ZERO_DECIMAL = new Set(['JPY','KRW','XOF','XAF','XPF','UGX','RWF','VND','CLP','ISK','CVE','DJF','GNF','KMF','MGA','BIF','TND','IQD','IRR','OMR','LYD','KWD','BHD','JOD','MUR','MVR']);
@@ -24,7 +26,10 @@ const FALLBACK_RATES = { USD:1, EUR:0.92, GBP:0.79, NGN:1480, GHS:15.2, KES:129,
   ZAR:18.2, EGP:48.5, MAD:9.9, AED:3.67, SAR:3.75, INR:83.5, CNY:7.2, JPY:150,
   BRL:5.4, XOF:604, XAF:604, TZS:2600, UGX:3700, RWF:1300, ETB:57, GMD:68,
   ZMW:26, CAD:1.36, AUD:1.5, TRY:34, QAR:3.64, KRW:1340, MXN:19.8, RUB:92,
-  ILS:3.7, CHF:0.88, ZWG:26.5, SLE:22.5, LRD:194, MZN:63.9, BWP:13.7, MUR:46.5 };
+  ILS:3.7, CHF:0.88, ZWG:26.5, SLE:22.5, LRD:194, MZN:63.9, BWP:13.7, MUR:46.5,
+  IDR:15800, MYR:4.4, PHP:58, VND:25400, PKR:278, BDT:118, LKR:300, NPR:133,
+  UAH:41, RON:4.6, CZK:23, HUF:370, COP:4100, PEN:3.8, CLP:950,
+  JMD:157, TTD:6.8, BBD:2, DOP:60 };
 
 let cache = { rates: FALLBACK_RATES, fetchedAt: 0, live: false };
 

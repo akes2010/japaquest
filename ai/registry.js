@@ -10,6 +10,17 @@ function keyAvailable(envVar, settingKey) {
   } catch { return false; }
 }
 
+// Self-hosted AI Engine models — always listed as configured; routes/ai.js
+// shows them with the engine's actual online/offline state so users know
+// whether a reply will come from their own box or a cloud fallback.
+const LOCAL_META = {
+  'llama-local':    { name: 'Llama (Self-hosted Engine)',   tag: 'Local Engine', icon: '🦙', free: true },
+  'qwen-local':     { name: 'Qwen (Self-hosted Engine)',    tag: 'Local Engine', icon: '🧠', free: true },
+  'deepseek-local': { name: 'DeepSeek R1 (Self-hosted Engine)', tag: 'Local Engine', icon: '🔍', free: true },
+  'gemma-local':    { name: 'Gemma (Self-hosted Engine)',   tag: 'Local Engine', icon: '💎', free: true },
+  'mistral-local':  { name: 'Mistral (Self-hosted Engine)', tag: 'Local Engine', icon: '🌪️', free: true },
+};
+
 const PROVIDERS = {
   claude:       { name:'Claude Sonnet 4',      tag:'Anthropic',   icon:'✨', free:false, configured:()=>keyAvailable('ANTHROPIC_API_KEY','ai_anthropic_key') },
   openai:       { name:'GPT-4o',               tag:'OpenAI',      icon:'🧠', free:false, configured:()=>keyAvailable('OPENAI_API_KEY','ai_openai_key') },
@@ -27,10 +38,19 @@ const PROVIDERS = {
   mistral7b:    { name:'Mistral 7B Instruct',  tag:'HuggingFace', icon:'🤗', free:true,  configured:()=>keyAvailable('HUGGINGFACE_API_KEY','ai_huggingface_key') },
   zephyr:       { name:'Zephyr 7B Beta',       tag:'HuggingFace', icon:'🤗', free:true,  configured:()=>keyAvailable('HUGGINGFACE_API_KEY','ai_huggingface_key') },
   ollama:       { name:'Ollama (Local)',       tag:'Local',       icon:'🏠', free:true,  configured:()=>true },
+  auto:         { name:'♾️ Auto — never stops',  tag:'Rotation',    icon:'♾️', free:true,  configured:()=>true },
+  kimi:         { name:'Kimi K2',              tag:'Moonshot AI', icon:'🌙', free:false, configured:()=>keyAvailable('KIMI_API_KEY','ai_kimi_key') },
+  zai:          { name:'GLM-4.6',              tag:'z.ai',        icon:'🧬', free:false, configured:()=>keyAvailable('ZAI_API_KEY','ai_zai_key') },
+  omniroute:    { name:'OmniRoute (free)',     tag:'Free Gateway',icon:'🕸️', free:true,  configured:()=>keyAvailable('OMNIROUTE_API_KEY','ai_omniroute_key')||!!process.env.OMNIROUTE_BASE_URL },
+  cloudflare:   { name:'Workers AI',           tag:'Cloudflare',  icon:'☁️', free:true,  configured:()=>!!(process.env.CLOUDFLARE_ACCOUNT_ID&&process.env.CLOUDFLARE_API_TOKEN) },
+  ...Object.fromEntries(Object.entries(LOCAL_META).map(([id, m]) => [id, { ...m, configured:()=>true }])),
 };
 
-function getModelMeta(id) { return PROVIDERS[id] || { name:id, tag:'Unknown', icon:'🤖', free:false, configured:()=>false }; }
-function listAll() { return Object.entries(PROVIDERS).map(([id,m])=>({id,...m,isConfigured:m.configured()})); }
+function getModelMeta(id) { return PROVIDERS[id] || LOCAL_META[id] || { name:id, tag:'Unknown', icon:'🤖', free:false, configured:()=>false }; }
+function listAll() {
+  return Object.entries(PROVIDERS).map(([id,m])=>({id,...m,isConfigured:m.configured()}));
+}
 function listConfigured() { return listAll().filter(m=>m.isConfigured); }
+function isLocalModel(id) { return !!LOCAL_META[id]; }
 
-module.exports = { getModelMeta, listAll, listConfigured };
+module.exports = { getModelMeta, listAll, listConfigured, isLocalModel, LOCAL_META };

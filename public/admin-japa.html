@@ -414,7 +414,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
         ⚡ Keys activate immediately on save. No test/live mode distinction.
       </div>
       <div id="ai-provider-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px"></div>
-      <div class="form-group"><label class="form-label">Default Model</label><select class="input" id="ai-default-model" style="max-width:300px"><option value="claude">✨ Claude Sonnet 4</option><option value="deepseek">🔍 DeepSeek R1 (Free)</option><option value="llama-groq">⚡ Llama 70B Groq (Free)</option><option value="gemini-flash">🔮 Gemini Flash (Free)</option><option value="qwen">🧠 Qwen 2.5 72B (Free)</option></select></div>
+      <div class="form-group"><label class="form-label">Default Model</label><select class="input" id="ai-default-model" style="max-width:300px"><option value="auto">♾️ Auto — continuous rotation (recommended)</option><option value="llama-local">🦙 Llama — Self-hosted Engine (main AI)</option><option value="qwen-local">🧠 Qwen — Self-hosted Engine (main AI)</option><option value="deepseek-local">🔍 DeepSeek R1 — Self-hosted Engine (main AI)</option><option value="omniroute">🕸️ OmniRoute (Free Gateway)</option><option value="cloudflare">☁️ Cloudflare Workers AI (Free)</option><option value="kimi">🌙 Kimi K2 (Moonshot)</option><option value="zai">🧬 GLM-4.6 (z.ai)</option><option value="claude">✨ Claude Sonnet 4</option><option value="deepseek">🔍 DeepSeek R1 (Free)</option><option value="llama-groq">⚡ Llama 70B Groq (Free)</option><option value="gemini-flash">🔮 Gemini Flash (Free)</option><option value="qwen">🧠 Qwen 2.5 72B (Free)</option></select></div>
       <div class="form-group"><label class="form-label">Max Response Tokens</label><input class="input" id="ai-max-tokens" type="number" style="max-width:200px" placeholder="1500"/></div>
       <button class="btn btn-primary" onclick="saveAI()">💾 Save & Activate</button>
     </div>
@@ -459,6 +459,10 @@ const PROVIDERS=[
   {key:'ai_openai_key',label:'🧠 OpenAI (GPT-4o)',ph:'sk-proj-…',link:'platform.openai.com/api-keys'},
   {key:'ai_huggingface_key',label:'🤗 HuggingFace (Free)',ph:'hf_…',link:'huggingface.co/settings/tokens'},
   {key:'ai_deepseek_key',label:'🔍 DeepSeek (Direct)',ph:'sk-…',link:'platform.deepseek.com'},
+  {key:'ai_kimi_key',label:'🌙 Kimi (Moonshot AI)',ph:'sk-…',link:'platform.moonshot.ai/console/api-keys'},
+  {key:'ai_zai_key',label:'🧬 z.ai (GLM-4.6)',ph:'…',link:'z.ai/model-api'},
+  {key:'ai_omniroute_key',label:'🕸️ OmniRoute (Free Gateway)',ph:'usually empty',link:'github.com/diegosouzapw/OmniRoute'},
+  {key:'ai_cloudflare_token',label:'☁️ Cloudflare Workers AI (Free)',ph:'API token',link:'developers.cloudflare.com/workers-ai/get-started/rest-api/'},
 ];
 
 async function api(path,opts={}){

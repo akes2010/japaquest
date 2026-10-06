@@ -221,6 +221,40 @@ html,body{height:100%;overflow:hidden}
   .view-wrap{padding:14px}
 }
 
+/* ═══ DEVICE-ADAPTIVE LAYER (fluid, safe-area, RTL, touch) ═══
+   Sits on top of the existing responsive rules; never overrides layout
+   logic, only adds fluid sizing and small-screen ergonomics. */
+:root{ --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px); }
+body{ padding-bottom:var(--sab); }
+#topbar{ padding-top:var(--sat); }
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+img,svg,video,canvas{max-width:100%;height:auto}
+button,.btn,a.tb-title,model-pill,.m-opt{ touch-action:manipulation }
+.m-opt{ min-height:40px } /* comfortable touch rows in the model menu */
+@media(max-width:1024px){
+  /* Tablet: sidebar becomes an overlay like on phones, content full-width */
+  #sb{position:fixed;left:0;top:0;height:100%;transform:translateX(-100%);z-index:200;transition:transform var(--ease)}
+  #sb.open{transform:translateX(0)}
+  #sb-backdrop{position:fixed;inset:0;background:rgba(10,20,40,.45);z-index:199;opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
+  #sb-backdrop.show{opacity:1;pointer-events:auto}
+  .quick-grid{grid-template-columns:repeat(2,1fr)}
+  .dest-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:768px){
+  .quick-grid,.dest-grid,.tools-grid{grid-template-columns:1fr}
+  #topbar{padding-left:12px;padding-right:12px}
+  .tb-title{font-size:1rem}
+  .bubble{max-width:92%!important}
+  .model-pill{max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+  .plans-grid{grid-template-columns:1fr}
+}
+@media(max-width:380px){ .hero-h1,.tb-title{font-size:.95rem} }
+/* RTL: keep directional paddings mirrored when Arabic is active */
+[dir="rtl"] .msg-row.user{flex-direction:row-reverse}
+[dir="rtl"] #sb{left:auto;right:0;transform:translateX(100%)}
+[dir="rtl"] #sb.open{transform:translateX(0)}
+@media print{ .no-print{display:none} }
+
 /* ══════════════════════════════════════════════════════════════════════════
    LANDING THEME OVERRIDE — light paper + ink editorial theme from index.html
    (colors: #F7F3EA paper / #0A1428 ink / #E8613C accent; fonts: Fraunces +
@@ -923,8 +957,8 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
 const tok=localStorage.getItem('vg_token');
 if(!tok){window.location.href='/';}
 let user=null,allModels=[],selModel='claude',curConvUUID=null,curMsgs=[],loading=false,usageToday=0,dailyLimit=10,allConvs=[],allDests=[],destFilter='all',savedFilter='';
-const MC={claude:'#F59E0B',deepseek:'#818CF8',qwen:'#38BDF8',llama:'#A78BFA',gemma:'#F472B6',mistral:'#F59E0B','llama-groq':'#00C478','gemini-flash':'#60A5FA','gemini-pro':'#3B82F6','llama-together':'#FB923C',mistral7b:'#E879F9',zephyr:'#C084FC'};
-const MI={claude:'✨',deepseek:'🔍',qwen:'🧠',llama:'🦙',gemma:'💎',mistral:'🌪️','llama-groq':'⚡','gemini-flash':'🔮','gemini-pro':'🔮','llama-together':'🤝',mistral7b:'🤗',zephyr:'🤗',openai:'🧠'};
+const MC={claude:'#F59E0B',deepseek:'#818CF8',qwen:'#38BDF8',llama:'#A78BFA',gemma:'#F472B6',mistral:'#F59E0B','llama-groq':'#00C478','gemini-flash':'#60A5FA','gemini-pro':'#3B82F6','llama-together':'#FB923C',mistral7b:'#E879F9',zephyr:'#C084FC','llama-local':'#10B981','qwen-local':'#22D3EE','deepseek-local':'#34D399','gemma-local':'#F9A8D4','mistral-local':'#FDE68A',auto:'#8B5CF6',kimi:'#A1A1AA',zai:'#38BDF8',omniroute:'#22C55E',cloudflare:'#F6821F'};
+const MI={claude:'✨',deepseek:'🔍',qwen:'🧠',llama:'🦙',gemma:'💎',mistral:'🌪️','llama-groq':'⚡','gemini-flash':'🔮','gemini-pro':'🔮','llama-together':'🤝',mistral7b:'🤗',zephyr:'🤗',openai:'🧠','llama-local':'🦙','qwen-local':'🧠','deepseek-local':'🔍','gemma-local':'💎','mistral-local':'🌪️',auto:'♾️',kimi:'🌙',zai:'🧬',omniroute:'🕸️',cloudflare:'☁️'};
 const STATUS_LBL={visa_free:'Visa-Free',voa:'On Arrival',evisa:'eVisa',eta:'eTA',visa_required:'Visa Required',needs_verification:'Check Embassy'};
 // Locale-aware status label (falls back to English when strings not loaded).
 function stLbl(k){const s=_geoCache&&_geoCache.strings;return (s&&(s['st_'+k]||s['st_check']))||STATUS_LBL[k]||'Check Embassy';}
@@ -965,7 +999,13 @@ async function init(){
 
 function buildMM(){
   const mn=document.getElementById('model-menu');
-  mn.innerHTML=allModels.map(m=>`<div class="m-opt${m.id===selModel?' sel':''}" onclick="pickModel('${m.id}','${m.name}')" id="mopt-${m.id}"><div style="width:7px;height:7px;border-radius:50%;background:${MC[m.id]||'#aaa'};flex-shrink:0"></div><span>${MI[m.id]||'🤖'}</span> ${m.name}${m.free?'<span class="m-free">FREE</span>':''}</div>`).join('');
+  mn.innerHTML=allModels.map(m=>{
+    const isLocal=m.id.endsWith('-local');
+    let warn='';
+    if(isLocal) warn=m.engineOnline===false?' ⚠️ engine offline — replies come from free cloud fallback':' '+(m.familyServed?'· engine live':'· engine: family not loaded');
+    else if(m.id==='auto') warn=' · '+m.rotationTier+' pool: '+m.rotationPool+' provider(s) live';
+    return `<div class="m-opt${m.id===selModel?' sel':''}" onclick="pickModel('${m.id}','${m.name}')" id="mopt-${m.id}"><div style="width:7px;height:7px;border-radius:50%;background:${MC[m.id]||'#aaa'};flex-shrink:0"></div><span>${MI[m.id]||'🤖'}</span> ${m.name}${m.free?'<span class="m-free">FREE</span>':''}${warn}</div>`;
+  }).join('');
   const cur=allModels.find(m=>m.id===selModel)||allModels[0];
   if(cur){document.getElementById('m-name').textContent=cur.name;document.getElementById('m-dot').style.background=MC[cur.id]||'#aaa';}
 }

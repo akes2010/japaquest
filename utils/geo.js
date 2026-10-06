@@ -65,7 +65,27 @@ const COUNTRIES = {
   JP: C('Japan','JPY',['ja']), KR: C('South Korea','KRW',['ko']),
   IL: C('Israel','ILS',['he','ar']), RU: C('Russia','RUB',['ru']),
   MX: C('Mexico','MXN',['es']), AR: C('Argentina','ARS',['es']),
+  // Extended world coverage (2026 build-out)
+  ID: C('Indonesia','IDR',['id','en']), MY: C('Malaysia','MYR',['ms','en']),
+  SG: C('Singapore','SGD',['en','zh','ms']), TH: C('Thailand','THB',['th','en']),
+  VN: C('Vietnam','VND',['vi','en']), PH: C('Philippines','PHP',['en','tl']),
+  PK: C('Pakistan','PKR',['ur','en']), BD: C('Bangladesh','BDT',['bn','en']),
+  LK: C('Sri Lanka','LKR',['si','en']), NP: C('Nepal','NPR',['ne','en']),
+  KE2: undefined, // placeholder removed below
+  NZ2: undefined, // placeholder removed below
+  UA: C('Ukraine','UAH',['uk','en']), PL: C('Poland','PLN',['pl','en']),
+  RO: C('Romania','RON',['ro','en']), CZ: C('Czechia','CZK',['cs','en']),
+  HU: C('Hungary','HUF',['hu','en']), GR: C('Greece','EUR',['el','en']),
+  SE: C('Sweden','SEK',['sv','en']), NO: C('Norway','NOK',['no','en']),
+  DK: C('Denmark','DKK',['da','en']), FI: C('Finland','EUR',['fi','en']),
+  KE: C('Kenya','KES',['en','sw']),
+  JM: C('Jamaica','JMD',['en']), TT: C('Trinidad & Tobago','TTD',['en']),
+  BB: C('Barbados','BBD',['en']), DO: C('Dominican Rep.','DOP',['es','en']),
+  CO: C('Colombia','COP',['es','en']), PE: C('Peru','PEN',['es','en']),
+  CL: C('Chile','CLP',['es','en']), EC: C('Ecuador','USD',['es','en']),
 };
+// Clean up placeholder keys
+delete COUNTRIES.KE2; delete COUNTRIES.NZ2;
 // Currency symbols (Intl handles most; these are the display-critical ones)
 const SYMBOLS = { USD:'$', EUR:'€', GBP:'£', NGN:'₦', GHS:'GH₵', KES:'KSh', ZAR:'R',
   EGP:'E£', MAD:'DH', AED:'د.إ', SAR:'﷼', INR:'₹', CNY:'¥', JPY:'¥', BRL:'R$',

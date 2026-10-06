@@ -106,6 +106,27 @@ html,body{height:100%;overflow:hidden}
 .get-key-link:hover{color:var(--a300)}
 @media(max-width:768px){.chart-row{grid-template-columns:1fr}.settings-grid{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,1fr)}}
 
+/* ═══ DEVICE-ADAPTIVE LAYER — fluid sizing + small-screen ergonomics ═══ */
+:root{ --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px); }
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100% }
+img,svg{max-width:100%;height:auto}
+button,.btn,input,select{ touch-action:manipulation }
+.provider-section .provider-header{flex-wrap:wrap;gap:6px}
+@media(max-width:1024px){
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .plans-admin{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:640px){
+  .stats-grid{grid-template-columns:1fr}
+  .plans-admin{grid-template-columns:1fr}
+  .sb-btn{padding:10px 14px;min-height:42px}
+  .view{padding:12px!important}
+  table{font-size:.72rem}
+  .modal-card{width:94vw!important;max-height:92vh;overflow:auto}
+  #pstatus{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+}
+[dir="rtl"] .sb-btn{padding-right:16px}
+
 .pst-pill{background:var(--glass);border:1px solid var(--b1);border-radius:var(--r-sm);padding:9px 12px;font-size:.72rem;color:var(--t4);line-height:1.7;transition:all var(--ease)}
 .pst-pill .pst-dot{font-size:.7rem;margin-right:3px}
 .pst-pill .pst-tag{font-size:.62rem;color:var(--t4)}
@@ -482,6 +503,11 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
           <div id="pst-gemini" class="pst-pill off"><span class="pst-dot">●</span> Google Gemini<br/><span class="pst-tag">Flash (free) · Pro</span></div>
           <div id="pst-together" class="pst-pill off"><span class="pst-dot">●</span> Together AI<br/><span class="pst-tag">Llama · Mixtral</span></div>
           <div id="pst-huggingface" class="pst-pill off"><span class="pst-dot">●</span> HuggingFace<br/><span class="pst-tag">Mistral · Zephyr</span></div>
+          <div id="pst-kimi" class="pst-pill off"><span class="pst-dot">●</span> Kimi<br/><span class="pst-tag">Moonshot K2</span></div>
+          <div id="pst-zai" class="pst-pill off"><span class="pst-dot">●</span> z.ai<br/><span class="pst-tag">GLM-4.6</span></div>
+          <div id="pst-omniroute" class="pst-pill off"><span class="pst-dot">●</span> OmniRoute<br/><span class="pst-tag">Free gateway</span></div>
+          <div id="pst-cloudflare" class="pst-pill off"><span class="pst-dot">●</span> Cloudflare<br/><span class="pst-tag">Workers AI free</span></div>
+          <div id="pst-engine" class="pst-pill off"><span class="pst-dot">●</span> Self-Hosted<br/><span class="pst-tag">Ollama · vLLM · LMS</span></div>
         </div>
       </div>
 
@@ -556,12 +582,103 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
         <button class="btn btn-ghost btn-sm" onclick="testAI('mistral7b')">🔍 Verify</button>
       </div>
 
+      <!-- Auto-Rotation status -->
+      <div class="s-card" style="margin-bottom:14px;border:1px solid rgba(59,130,246,.35)">
+        <div class="s-title">♾️ Auto-Rotation <span class="provider-badge-free">Always-on</span></div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">When a client's plan picks ♾️ Auto, every message starts at a different provider in the plan's pool and rate-limited/failing providers cool down automatically — the system switches AIs continuously without manual action.</div>
+        <div id="rotation-strip" style="font-size:.75rem;color:var(--t3)">Loading rotation status…</div>
+        <div style="margin-top:8px;font-size:.68rem;color:var(--t4)">Pools: <strong>Free</strong> = engine + free gateways · <strong>Explorer</strong> adds Kimi/z.ai/DeepSeek-direct · <strong>Voyager</strong> adds all premium · <strong>Unlimited</strong> is quality-ordered.</div>
+      </div>
+
+      <!-- Self-Hosted AI Engine -->
+      <div class="s-card" style="margin-bottom:14px;border:1px solid rgba(217,90,35,.35)">
+        <div class="s-title">🏠 Self-Hosted AI Engine <span class="provider-badge-free">Free · Your hardware</span></div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">Runs Llama / Qwen / DeepSeek on your own server as the <strong style="color:var(--t2)">main AI</strong> — cloud providers only follow when the engine can't answer. Auto-detects Ollama, vLLM and LM Studio.</div>
+        <div id="engine-strip" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+          <span style="font-size:.72rem;color:var(--t4)">Scanning for engine runtimes…</span>
+        </div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Engine models (comma-separated, in priority order)</label>
+          <input class="input" id="ai_engine_models" placeholder="llama3.1,qwen2.5:7b,deepseek-r1:8b"/></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Ollama URL</label><input class="input" id="ai_ollama_url" placeholder="http://localhost:11434"/></div>
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">vLLM URL (optional)</label><input class="input" id="ai_vllm_url" placeholder="http://localhost:8000"/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">LM Studio URL (optional)</label><input class="input" id="ai_lmstudio_url" placeholder="http://localhost:1234"/></div>
+          <div class="form-group" style="margin-bottom:0"><label class="form-label">Engine API key (only if behind auth)</label><input class="input" id="ai_ollama_key" type="password" placeholder="usually empty"/></div>
+        </div>
+        <div class="tgl-row" style="margin-top:8px"><div><div class="tgl-lbl">Cloud fallback when engine is down</div><div class="tgl-sub">Engine stays the main AI; free cloud tiers (OpenRouter/Groq) answer only if it can't</div></div><label class="toggle"><input type="checkbox" id="ai_engine_fallback"/><span class="toggle-sl"></span></label></div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="testEngine()">🔍 Test engine now</button>
+          <button class="btn btn-ghost btn-sm" onclick="refreshEngine(true)">🔄 Rescan engine</button>
+        </div>
+        <div id="engine-test-result" style="font-size:.72rem;color:var(--t4);margin-top:8px"></div>
+      </div>
+
+      <!-- Kimi (Moonshot) -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <span>🌙 Kimi (Moonshot AI)</span><span class="provider-badge-free">K2</span>
+          <a href="https://platform.moonshot.ai/console/api-keys" target="_blank" class="get-key-link" style="margin-left:auto">Get API Key →</a>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">Kimi K2/K3 — flagship long-context and agentic models. Very competitive pricing.</div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Kimi API Key</label>
+          <div class="key-wrap"><input class="input" id="ai_kimi_key" type="password" placeholder="sk-…"/><button class="key-show" onclick="toggleKey('ai_kimi_key')">Show</button></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="testAI('kimi')">🔍 Verify</button>
+      </div>
+
+      <!-- z.ai (GLM) -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <span>🧬 z.ai (GLM)</span><span class="provider-badge-free">GLM-4.6</span>
+          <a href="https://z.ai/model-api" target="_blank" class="get-key-link" style="margin-left:auto">Get API Key →</a>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">GLM-4.6/4.7 — top open-source model family. Strong reasoning at low cost; embeds natively in this system.</div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">z.ai API Key</label>
+          <div class="key-wrap"><input class="input" id="ai_zai_key" type="password" placeholder="…"/><button class="key-show" onclick="toggleKey('ai_zai_key')">Show</button></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="testAI('zai')">🔍 Verify</button>
+      </div>
+
+      <!-- OmniRoute (free gateway) -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <span>🕸️ OmniRoute</span><span class="provider-badge-free">Free</span>
+          <a href="https://github.com/diegosouzapw/OmniRoute" target="_blank" class="get-key-link" style="margin-left:auto">Gateway docs →</a>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">Free AI gateway pooling 90+ free-tier providers. Hosted endpoint needs no key; self-host for full control (localhost:20128/v1).</div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Gateway URL</label><input class="input" id="ai_omniroute_url" placeholder="https://omniroute.online/v1"/></div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">API Key (optional)</label>
+          <div class="key-wrap"><input class="input" id="ai_omniroute_key" type="password" placeholder="usually empty"/><button class="key-show" onclick="toggleKey('ai_omniroute_key')">Show</button></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="testAI('omniroute')">🔍 Verify</button>
+      </div>
+
+      <!-- Cloudflare Workers AI -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <span>☁️ Cloudflare Workers AI</span><span class="provider-badge-free">Free tier</span>
+          <a href="https://developers.cloudflare.com/workers-ai/get-started/rest-api/" target="_blank" class="get-key-link" style="margin-left:auto">Get token →</a>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">Runs Llama / Qwen / GLM at Cloudflare's edge — free daily neuron allocation. Needs Account ID + API token.</div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Account ID</label><input class="input" id="ai_cloudflare_account" placeholder="32-char hex…"/></div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">API Token</label>
+          <div class="key-wrap"><input class="input" id="ai_cloudflare_token" type="password" placeholder="Workers AI token"/><button class="key-show" onclick="toggleKey('ai_cloudflare_token')">Show</button></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="testAI('cloudflare')">🔍 Verify</button>
+      </div>
+
       <!-- AI Behaviour -->
       <div class="s-card" style="margin-bottom:14px">
         <div class="s-title">⚙️ AI Behaviour</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="form-group" style="margin-bottom:0"><label class="form-label">Default Model</label>
             <select class="input" id="ai_default_model">
+              <option value="auto">♾️ Auto — continuous rotation (recommended)</option>
+              <option value="llama-local">🦙 Llama — Self-hosted Engine (main AI)</option>
+              <option value="qwen-local">🧠 Qwen — Self-hosted Engine (main AI)</option>
+              <option value="deepseek-local">🔍 DeepSeek R1 — Self-hosted Engine (main AI)</option>
+              <option value="omniroute">🕸️ OmniRoute — Free Gateway</option>
+              <option value="cloudflare">☁️ Cloudflare Workers AI (Free)</option>
+              <option value="kimi">🌙 Kimi K2 (Moonshot)</option>
+              <option value="zai">🧬 GLM-4.6 (z.ai)</option>
               <option value="claude">✨ Claude Sonnet 4 (Anthropic)</option>
               <option value="deepseek">🔍 DeepSeek R1 (OpenRouter/Free)</option>
               <option value="qwen">🧠 Qwen 2.5 72B (OpenRouter/Free)</option>
@@ -1335,11 +1452,44 @@ async function delPartner(i){
 // ── AI SETTINGS ────────────────────────────────────────────────────────────────
 async function loadAI(){
   const r=await apiFetch('/api/admin/settings/ai');const d=await r.json();const s=d.settings||{};
-  const keys=['ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_default_model','ai_max_tokens','ai_system_prompt_addon'];
+  const keys=['ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_default_model','ai_max_tokens','ai_system_prompt_addon','ai_engine_models','ai_ollama_url','ai_vllm_url','ai_lmstudio_url','ai_ollama_key','ai_kimi_key','ai_zai_key','ai_omniroute_url','ai_omniroute_key','ai_cloudflare_account','ai_cloudflare_token'];
   keys.forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k]||'';});
   document.getElementById('ai_stream').checked=s.ai_stream!=='0';
+  document.getElementById('ai_engine_fallback').checked=s.ai_engine_fallback!=='0';
   updateProviderStatus(s);
+  refreshEngine(false);
 }
+
+// ── Self-hosted engine strip ───────────────────────────────────────────────
+async function refreshEngine(showToastOnFail){
+  const strip=document.getElementById('engine-strip');if(!strip)return;
+  try{
+    const r=await apiFetch('/api/ai/engine/status');const d=await r.json();
+    const pills=d.runtimes.map(rt=>{
+      const cls=rt.up?'pst-pill live':'pst-pill off';
+      const extra=rt.up?(rt.families.length?rt.families.join(' · '):(rt.models.length?rt.models.length+' models':'no known families')):(rt.error||'down');
+      return `<div class="${cls}" title="${rt.base}"><span class="pst-dot">●</span> ${rt.icon} ${rt.label}<br/><span class="pst-tag">${extra}</span></div>`;
+    }).join('');
+    const fallbackTag=d.fallback?'<div class="pst-pill live" title="Cloud providers answer when the engine cannot"><span class="pst-dot">●</span> ☁️ Cloud fallback<br/><span class="pst-tag">armed</span></div>':'';
+    strip.innerHTML=pills+fallbackTag;
+  }catch(e){
+    strip.innerHTML='<span style="font-size:.72rem;color:var(--t4)">Engine status unavailable'+(showToastOnFail?' — '+e.message:'')+'</span>';
+    if(showToastOnFail)showToast('Engine scan failed: '+e.message,'error');
+  }
+}
+// Poll the engine strip every 30s while the AI tab is visible
+setInterval(()=>{const v=document.getElementById('view-ai');if(v&&v.classList.contains('active'))refreshEngine(false);},30000);
+
+async function refreshRotation(){
+  const el=document.getElementById('rotation-strip');if(!el)return;
+  try{
+    const r=await apiFetch('/api/admin/settings/test-ai',{method:'POST',body:JSON.stringify({model:'auto'})});
+    const d=await r.json();
+    el.innerHTML=r.ok?('<span style="color:var(--a300)">'+d.message+'</span>'):('<span style="color:var(--o300)">'+(d.error||'Rotation unavailable')+'</span>');
+  }catch(e){el.textContent='Rotation status unavailable — '+e.message;}
+}
+refreshRotation();
+setInterval(()=>{const v=document.getElementById('view-ai');if(v&&v.classList.contains('active'))refreshRotation();},60000);
 function updateProviderStatus(settings){
   const map={
     'pst-anthropic': 'ai_anthropic_key',
@@ -1348,6 +1498,10 @@ function updateProviderStatus(settings){
     'pst-gemini': 'ai_gemini_key',
     'pst-together': 'ai_together_key',
     'pst-huggingface': 'ai_huggingface_key',
+    'pst-kimi': 'ai_kimi_key',
+    'pst-zai': 'ai_zai_key',
+    'pst-omniroute': 'ai_omniroute_key',
+    'pst-cloudflare': 'ai_cloudflare_token',
   };
   for(const [id, key] of Object.entries(map)){
     const el=document.getElementById(id);
@@ -1356,13 +1510,27 @@ function updateProviderStatus(settings){
     el.classList.toggle('live', hasKey);
     el.classList.toggle('off', !hasKey);
   }
+  // OmniRoute is keyless by default: live when a URL is set (or default present)
+  const om=document.getElementById('pst-omniroute');
+  if(om){ const live=!!(settings.ai_omniroute_url||settings.ai_omniroute_key); om.classList.toggle('live',live); om.classList.toggle('off',!live); }
 }
 async function saveAI(){
-  const keyFields=['ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key'];
-  const settings={ai_default_model:document.getElementById('ai_default_model').value,ai_max_tokens:document.getElementById('ai_max_tokens').value,ai_stream:document.getElementById('ai_stream').checked?'1':'0',ai_system_prompt_addon:document.getElementById('ai_system_prompt_addon').value};
+  const keyFields=['ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_ollama_key','ai_kimi_key','ai_zai_key','ai_omniroute_key','ai_cloudflare_token'];
+  const settings={ai_default_model:document.getElementById('ai_default_model').value,ai_max_tokens:document.getElementById('ai_max_tokens').value,ai_stream:document.getElementById('ai_stream').checked?'1':'0',ai_system_prompt_addon:document.getElementById('ai_system_prompt_addon').value,ai_engine_fallback:document.getElementById('ai_engine_fallback').checked?'1':'0'};
   keyFields.forEach(k=>{const v=document.getElementById(k)?.value;if(v&&!v.startsWith('••••'))settings[k]=v;});
+  ['ai_engine_models','ai_ollama_url','ai_vllm_url','ai_lmstudio_url','ai_omniroute_url','ai_cloudflare_account'].forEach(k=>{const el=document.getElementById(k);if(el)settings[k]=el.value.trim();});
   const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});
-  const d=await r.json();r.ok?showToast('AI settings saved ✅'):showToast(d.error,'error');
+  const d=await r.json();
+  if(r.ok){showToast('AI settings saved ✅');refreshEngine(true);}else showToast(d.error,'error');
+}
+
+async function testEngine(){
+  const out=document.getElementById('engine-test-result');if(out)out.textContent='Testing engine…';
+  const r=await apiFetch('/api/admin/settings/test-ai',{method:'POST',body:JSON.stringify({model:'selfhost'})});
+  const d=await r.json();
+  if(out)out.textContent=r.ok?d.message:('❌ '+d.error);
+  showToast(r.ok?d.message:(d.error||'Engine test failed'),r.ok?'success':'error');
+  refreshEngine(false);
 }
 async function testAI(model){showToast('Testing…');const r=await apiFetch('/api/admin/settings/test-ai',{method:'POST',body:JSON.stringify({model})});const d=await r.json();r.ok?showToast(d.message):showToast(d.error,'error');}
 

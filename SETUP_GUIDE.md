@@ -18,6 +18,7 @@ Both paths end at the same place: app running, HTTPS on, backups on a cron, upti
 - **Node.js 18 or newer** (`node --version` to check)
 - A domain (e.g. `japaquest.com`) you can point at the host
 - At least one **AI provider API key** (OpenRouter has free models — get one at openrouter.ai/keys)
+- Optional but recommended: a **self-hosted AI engine** (Ollama) so Llama/Qwen/DeepSeek run on your own server as the main AI — free per message and no data leaves your box. One-liner: `curl -fsSL https://ollama.ai/install.sh | sh && ollama serve & ollama pull llama3.1`
 - An SMTP email account for outgoing mail (Truehost gives you mail accounts; Gmail works via app password — see `EMAIL_SETUP_GUIDE.md`)
 
 ---
@@ -76,6 +77,8 @@ OPENROUTER_API_KEY=sk-or-v1-...
    - **Application URL:** your domain
    - **Application startup file:** `server.js`
 2. Click **Create**, then **Run NPM Install** (or do it in terminal, next step).
+
+> **"Run NPM Install" says package.json not found?** cPanel looks for `package.json` **directly inside the Application root** — so the code from §1 must be uploaded *before* this step, and `package.json` must sit at `~/<application-root>/package.json`. If your zip extracted into a nested folder (`japaquest/japaquest/`), either move the files up one level or change the Application root to the inner folder. Verify in cPanel → **File Manager**.
 
 > Don't see "Setup Node.js App" in cPanel? Open a ticket with Truehost support and ask them to enable Node.js on your plan — most plans support it.
 
@@ -220,7 +223,7 @@ Continue to §5 for first-run setup.
 1. **Log in** at `https://yourdomain.com/admin-login` with the seeded admin credentials, then rotate them if you haven't already (see §3.3: `node reset-admin.js`, or Profile → 🔒 Change Password in the main app).
 2. **Branding & settings** — Admin → System Settings: app name, tagline, support email (defaults are already JapaQuest-themed).
 3. **Email** — Admin → Email/SMTP: enter your SMTP details and send the **📤 Test** email. All system mail (welcome, password reset, digests, affiliate alerts) depends on this.
-4. **AI engine** — Admin → AI Engine shows provider status; keys come from `.env`. Chat is the core product, so verify a test conversation works.
+4. **AI engine** — Admin → AI Engine shows provider status; keys come from `.env`. Set **Default Model: ♾️ Auto — continuous rotation** so every chat spreads across the plan's provider pool: self-hosted engine first, then free gateways (OmniRoute, OpenRouter, Groq, Gemini, Cloudflare Workers AI), with Kimi/z.ai/DeepSeek-direct/OpenAI/Claude joining for paid plans. Rate-limited or failing providers cool down automatically and rejoin — no manual switching. Free plan = free pools only; Voyager/Unlimited unlock premium clouds (pool membership: `utils/ai-rotation.js`). The **Self-Hosted AI Engine** card at the top shows whether Ollama/vLLM/LM Studio is reachable and which model families (llama/qwen/deepseek/…) it serves — "Test engine now" sends a real health-check prompt. Chat is the core product, so verify a test conversation works. If the default model is a self-hosted one (llama-local / qwen-local / deepseek-local), replies come from your own hardware first and fall back to the configured free cloud providers (OpenRouter → Groq → …) whenever the engine is unreachable or can't serve that family.
 5. **Payments** — Admin → Payment Gateways: paste keys for what you actually use (Paystack for NG cards, Stripe for international; crypto addresses for USDT/BTC). Set each provider's webhook URL in its dashboard to `https://yourdomain.com/api/payments/webhooks/<provider>` — without webhooks, card payments need manual confirmation.
 6. **Take a backup** — Admin → Backup & Restore → **Create backup now**, and download the file locally.
 7. **Rehearse a restore once before launch** — upload the file you just downloaded via **Restore from file**. The app archives the pre-restore DB automatically and hot-swaps without a restart. Doing this before you need it is the difference between a 2-minute recovery and a bad night.
@@ -236,6 +239,7 @@ Continue to §5 for first-run setup.
 | Symptom | Fix |
 |---|---|
 | 503 / app won't start (shared) | Check the cPanel app log; usually missing deps — rerun `npm install --omit=dev` |
+| cPanel "Run NPM Install": package.json not found | Code isn't in the Application root yet, or it's nested one level too deep — upload per §1 and confirm `package.json` sits directly in that folder (check in File Manager) |
 | `EADDRINUSE` | Port taken — stop the old instance (cPanel toggle, or `lsof -ti tcp:4001 \| xargs kill` on VPS) or change `PORT` |
 | Domain shows nothing (shared) | Application URL mis-mapped in cPanel — point it at the app root + correct port |
 | 502 on VPS | `systemctl status japaquest` — app down, or nginx `proxy_pass` port ≠ `PORT` in `.env` |

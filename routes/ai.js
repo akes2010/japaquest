@@ -4,7 +4,9 @@ const fetch  = require('node-fetch');
 const { requireAuth } = require('../middleware/auth');
 const { Q } = require('../db');
 const { extractIntent, lookupGroundingFacts, buildGroundedSystemPrompt } = require('../ai/grounding');
-const { listAll } = require('../ai/registry');
+const { listAll, isLocalModel } = require('../ai/registry');
+const { engineStatus, engineStatusCached, engineTarget, engineChat, cloudFallbacksFor, fallbackEnabled, engineModelList } = require('../ai/orchestrator');
+const rotation = require('../utils/ai-rotation');
 const { partnerDirectory, getEffectivePartners, clearPartnerCache } = require('../ai/affiliates');
 const { plannerContext } = require('../utils/journey');
 const { brainContext } = require('../utils/brain');
@@ -29,6 +31,12 @@ const MODEL_SOURCES = {
   mistral7b:       ['HUGGINGFACE_API_KEY','ai_huggingface_key'],
   zephyr:          ['HUGGINGFACE_API_KEY','ai_huggingface_key'],
   ollama:          [null,'ai_ollama_url'],
+  // New providers + auto-rotation
+  auto:            [null,null],            // resolved by utils/ai-rotation
+  kimi:            ['KIMI_API_KEY','ai_kimi_key'],
+  zai:             ['ZAI_API_KEY','ai_zai_key'],
+  omniroute:       ['OMNIROUTE_API_KEY','ai_omniroute_key'],
+  cloudflare:      ['CLOUDFLARE_API_TOKEN','ai_cloudflare_token'], // + account id required
 };
 
 // ── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
@@ -83,12 +91,21 @@ function partnerPromptBlock() {
 }
 
 // ── ROUTE: GET /api/ai/models ─────────────────────────────────────────────────
-router.get('/models', requireAuth, (req, res) => {
+router.get('/models', requireAuth, async (req, res) => {
   const plan = Q.getPlanById(req.user.plan_id);
   const planModels = JSON.parse(plan?.models || '["claude"]');
+  const engine = await engineStatusCached();
   const models = listAll()
-    .filter(m => MODEL_SOURCES[m.id]) // only models the /chat dispatcher can actually serve
+    .filter(m => MODEL_SOURCES[m.id] || isLocalModel(m.id)) // only models the /chat dispatcher can actually serve
     .map(m => {
+      if (isLocalModel(m.id)) {
+        const family = m.id.replace(/-local$/, '');
+        return { ...m, isConfigured: true, engineOnline: engine.online, familyServed: engine.families.includes(family) };
+      }
+      if (m.id === 'auto') {
+        const rs = rotation.rotationStatus(plan, engine);
+        return { ...m, name: '♾️ Auto — never stops', isConfigured: rs.configured.length > 0, rotationTier: rs.tier, rotationPool: rs.configured.length };
+      }
       const [envVar, settingKey] = MODEL_SOURCES[m.id];
       const configured = !!(envVar && process.env[envVar]) || !!Q.getSetting(settingKey);
       return { ...m, isConfigured: configured };
@@ -96,7 +113,7 @@ router.get('/models', requireAuth, (req, res) => {
   const visible = req.user.role === 'admin'
     ? models
     : models.filter(m => planModels.includes(m.id) && m.isConfigured);
-  res.json({ models: visible, default: Q.getSetting('ai_default_model') || 'claude' });
+  res.json({ models: visible, default: Q.getSetting('ai_default_model') || 'claude', engine: { online: engine.online, families: engine.families, fallback: engine.fallback } });
 });
 
 // ── ROUTE: POST /api/ai/chat ──────────────────────────────────────────────────
@@ -141,7 +158,71 @@ router.post('/chat', requireAuth, async (req, res) => {
 
   try {
     let reply = '';
-    if (model === 'claude')            reply = await callAnthropic(messages, system, maxTokens, doStream, res);
+    let servedBy = model;
+
+    // ── ♾️ Auto — plan-based continuous provider rotation ────────────────
+    // The system switches AI providers for the client on every request:
+    // rotating start offset across the plan's pool, cooldowns on failures,
+    // and a walk until someone answers. See utils/ai-rotation.js.
+    if (model === 'auto') {
+      const engine = await engineStatusCached();
+      const chain = rotation.buildChain(plan, { engineOnline: engine.online, engineFamilies: engine.families });
+      if (!chain.length) {
+        // Distinguish "nothing configured" from "everything is cooling down"
+        const configuredCount = rotation.TIER_POOLS[rotation.tierForPlan(plan)].filter(id => rotation.isConfigured(id)).length;
+        if (configuredCount > 0) throw new Error('All AI providers just failed or hit rate limits and are cooling down — retry in a minute; rotation will bring them back automatically.');
+        throw new Error('No AI providers are configured yet. Add at least one key in Admin → AI Engine (the free pools need no card: OpenRouter, Groq, Gemini, Cloudflare, OmniRoute).');
+      }
+      for (const prov of chain) {
+        try {
+          if (prov.endsWith('-local')) {
+            const target = await engineTarget(prov, '');
+            if (!target) { rotation.noteFailure(prov, new Error('engine offline')); continue; }
+            reply = await engineChat({ ...target, messages, system, maxTokens });
+            servedBy = `auto → ${prov}@${target.runtime}`;
+          } else {
+            reply = await dispatchCloudModel(prov, messages, system, maxTokens, doStream, res);
+            servedBy = `auto → ${prov}`;
+          }
+          break; // answered — cooldowns from earlier failures decay on their own
+        } catch (e) {
+          const ms = rotation.noteFailure(prov, e);
+          console.warn(`[AI:auto] ${prov} failed (${ms/1000}s cooldown):`, e.message);
+        }
+      }
+      if (!reply) throw new Error('All AI providers in your plan pool failed. Please try again shortly — rotation will retry the pool automatically.');
+    }
+    // ── Self-hosted AI Engine (explicit local ids; auto never reaches here) ─
+    // Local model ids (llama-local / qwen-local / deepseek-local / …) run on
+    // the user's own hardware. When the engine can't serve that family (or is
+    // offline), fall through the cloud chain — same-family free providers
+    // first — so users never hit a dead end.
+    else if (isLocalModel(model)) {
+      const target = await engineTarget(model, messages.filter(m=>m.role==='user').pop()?.content || '');
+      if (target) {
+        try {
+          reply = await engineChat({ ...target, messages, system, maxTokens });
+          servedBy = `${model}@${target.runtime} (${target.model})`;
+        } catch (e) {
+          console.warn('[AI] engine unavailable for', model, '→ falling back:', e.message);
+        }
+      } else {
+        console.warn('[AI] engine offline for', model, '→ falling back to cloud chain');
+      }
+      if (!reply && fallbackEnabled()) {
+        for (const fb of cloudFallbacksFor(model)) {
+          try {
+            reply = await dispatchCloudModel(fb, messages, system, maxTokens, doStream, res);
+            servedBy = `${model} → ${fb} (cloud fallback)`;
+            break;
+          } catch (e) {
+            console.warn('[AI] fallback', fb, 'failed:', e.message);
+          }
+        }
+      }
+      if (!reply) throw new Error('Self-hosted engine is offline and no cloud fallback could answer. Start your engine (e.g. `ollama serve`) or check Admin → AI Engine.');
+    }
+    else if (model === 'claude')        reply = await callAnthropic(messages, system, maxTokens, doStream, res);
     else if (model === 'openai')       reply = await callOpenAI(messages, system, maxTokens, doStream, res);
     else if (model === 'deepseek2')    reply = await callOpenAICompat('https://api.deepseek.com/chat/completions', process.env.DEEPSEEK_API_KEY||Q.getSetting('ai_deepseek_key'), 'deepseek-chat', messages, system, maxTokens, doStream, res);
     else if (['deepseek','qwen','llama','gemma','mistral'].includes(model)) {
@@ -163,12 +244,37 @@ router.post('/chat', requireAuth, async (req, res) => {
       const URLS = { mistral7b:'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3', zephyr:'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta' };
       reply = await callHuggingFace(URLS[model], messages, system, maxTokens, res);
     }
+    else if (model === 'kimi') {
+      const key = process.env.KIMI_API_KEY || Q.getSetting('ai_kimi_key');
+      reply = await callOpenAICompat((process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1').replace(/\/+$/,'') + '/chat/completions', key, process.env.KIMI_DEFAULT_MODEL || Q.getSetting('ai_kimi_model') || 'kimi-k2-0905-preview', messages, system, maxTokens, doStream, res);
+    }
+    else if (model === 'zai') {
+      const key = process.env.ZAI_API_KEY || Q.getSetting('ai_zai_key');
+      reply = await callOpenAICompat((process.env.ZAI_BASE_URL || 'https://api.z.ai/api/paas/v4').replace(/\/+$/,'') + '/chat/completions', key, process.env.ZAI_DEFAULT_MODEL || Q.getSetting('ai_zai_model') || 'glm-4.6', messages, system, maxTokens, doStream, res);
+    }
+    else if (model === 'omniroute') {
+      const key = process.env.OMNIROUTE_API_KEY || Q.getSetting('ai_omniroute_key') || 'omniroute';
+      const base = (process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || 'https://omniroute.online/v1').replace(/\/+$/,'');
+      reply = await callOpenAICompat(base + '/chat/completions', key, process.env.OMNIROUTE_DEFAULT_MODEL || Q.getSetting('ai_omniroute_model') || 'auto', messages, system, maxTokens, doStream, res);
+    }
+    else if (model === 'cloudflare') {
+      const cf = require('../ai/providers/cloudflare');
+      const d = await cf.chat({ messages, system, model: process.env.CLOUDFLARE_DEFAULT_MODEL || Q.getSetting('ai_cloudflare_model') || undefined, maxTokens });
+      reply = d.text;
+    }
     else if (model === 'ollama') {
-      const base = (process.env.OLLAMA_BASE_URL || Q.getSetting('ai_ollama_url') || 'http://localhost:11434').replace(/\/+$/,'');
-      const om   = process.env.OLLAMA_MODEL || 'llama3.1';
-      reply = await callOpenAICompat(base+'/v1/chat/completions', 'ollama', om, messages, system, maxTokens, doStream, res);
+      // Legacy single-model Ollama id — now routes through the engine so it
+      // benefits from runtime detection and the same fallback chain.
+      const target = await engineTarget('llama-local', '');
+      if (!target) throw new Error('Ollama is not reachable — start it or set OLLAMA_BASE_URL.');
+      reply = await engineChat({ ...target, messages, system, maxTokens });
+      servedBy = `ollama@${target.runtime} (${target.model})`;
     }
     else return res.status(400).json({ error: `Unknown model: ${model}` });
+
+    // Engine-based paths return the text instead of writing the response
+    // themselves (cloud providers write res.json/streamSSE internally).
+    if (!res.headersSent) res.json({ text: reply });
 
     Q.logUsage(req.user.id, model, 0);
     if (conv && reply) {
@@ -187,6 +293,87 @@ router.post('/chat', requireAuth, async (req, res) => {
 });
 
 // ── PROVIDER FUNCTIONS ────────────────────────────────────────────────────────
+// ── ENGINE ENDPOINTS ─────────────────────────────────────────────────────
+// Live view of the self-hosted engine: which runtimes are up, which model
+// families each serves, and whether cloud fallback is armed.
+router.get('/engine/status', requireAuth, async (req, res) => {
+  const status = await engineStatusCached(5000);
+  res.json({
+    online: status.online,
+    runtimes: status.runtimes,
+    families: status.families,
+    modelCount: status.modelCount,
+    fallback: status.fallback,      configuredModels: engineModelList(),
+    checkedAt: status.checkedAt,
+  });
+});
+
+// Force a fresh probe (bypasses the short cache) — used by the admin panel's
+// "Rescan engine" button and right after changing engine settings.
+router.post('/engine/refresh', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const { invalidateEngineCache } = require('../ai/orchestrator');
+  invalidateEngineCache();
+  const status = await engineStatus();
+  res.json({
+    online: status.online,
+    runtimes: status.runtimes,
+    families: status.families,
+    modelCount: status.modelCount,
+    fallback: status.fallback,
+    checkedAt: status.checkedAt,
+  });
+});
+
+/**
+ * Dispatch one cloud model id through the same branches as the main
+ * dispatcher — used by the engine's fallback chain. Throws on failure so
+ * the chain can try the next provider.
+ */
+async function dispatchCloudModel(id, messages, system, maxTokens, doStream, res) {
+  if (id === 'claude')            return callAnthropic(messages, system, maxTokens, doStream, res);
+  if (id === 'openai')            return callOpenAI(messages, system, maxTokens, doStream, res);
+  if (id === 'deepseek2')         return callOpenAICompat('https://api.deepseek.com/chat/completions', process.env.DEEPSEEK_API_KEY||Q.getSetting('ai_deepseek_key'), 'deepseek-chat', messages, system, maxTokens, doStream, res);
+  if (['deepseek','qwen','llama','gemma','mistral'].includes(id)) {
+    const MODELS = { deepseek:'deepseek/deepseek-r1:free', qwen:'qwen/qwen-2.5-72b-instruct:free', llama:'meta-llama/llama-3.3-70b-instruct:free', gemma:'google/gemma-3-27b-it:free', mistral:'mistralai/mistral-7b-instruct:free' };
+    return callOpenAICompat('https://openrouter.ai/api/v1/chat/completions', process.env.OPENROUTER_API_KEY||Q.getSetting('ai_openrouter_key'), MODELS[id], messages, system, maxTokens, doStream, res, {'HTTP-Referer':Q.getSetting('app_url')||'http://localhost:4001','X-Title':Q.getSetting('app_name')||BRAND.NAME});
+  }
+  if (['llama-groq','mixtral-groq'].includes(id)) {
+    const MODELS = { 'llama-groq':'llama-3.3-70b-versatile', 'mixtral-groq':'mixtral-8x7b-32768' };
+    return callOpenAICompat('https://api.groq.com/openai/v1/chat/completions', process.env.GROQ_API_KEY||Q.getSetting('ai_groq_key'), MODELS[id], messages, system, maxTokens, doStream, res);
+  }
+  if (['gemini-flash','gemini-pro'].includes(id)) {
+    const MODELS = { 'gemini-flash':'gemini-1.5-flash-latest', 'gemini-pro':'gemini-1.5-pro-latest' };
+    return callGemini(MODELS[id], messages, system, maxTokens, res);
+  }
+  if (id === 'llama-together') {
+    return callOpenAICompat('https://api.together.xyz/v1/chat/completions', process.env.TOGETHER_API_KEY||Q.getSetting('ai_together_key'), 'meta-llama/Llama-3-70b-chat-hf', messages, system, maxTokens, doStream, res);
+  }
+  if (['mistral7b','zephyr'].includes(id)) {
+    const URLS = { mistral7b:'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3', zephyr:'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta' };
+    return callHuggingFace(URLS[id], messages, system, maxTokens, res);
+  }
+  if (id === 'kimi') {
+    const key = process.env.KIMI_API_KEY || Q.getSetting('ai_kimi_key');
+    return callOpenAICompat((process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1').replace(/\/+$/,'') + '/chat/completions', key, process.env.KIMI_DEFAULT_MODEL || Q.getSetting('ai_kimi_model') || 'kimi-k2-0905-preview', messages, system, maxTokens, doStream, res);
+  }
+  if (id === 'zai') {
+    const key = process.env.ZAI_API_KEY || Q.getSetting('ai_zai_key');
+    return callOpenAICompat((process.env.ZAI_BASE_URL || 'https://api.z.ai/api/paas/v4').replace(/\/+$/,'') + '/chat/completions', key, process.env.ZAI_DEFAULT_MODEL || Q.getSetting('ai_zai_model') || 'glm-4.6', messages, system, maxTokens, doStream, res);
+  }
+  if (id === 'omniroute') {
+    const key = process.env.OMNIROUTE_API_KEY || Q.getSetting('ai_omniroute_key') || 'omniroute';
+    const base = (process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || 'https://omniroute.online/v1').replace(/\/+$/,'');
+    return callOpenAICompat(base + '/chat/completions', key, process.env.OMNIROUTE_DEFAULT_MODEL || Q.getSetting('ai_omniroute_model') || 'auto', messages, system, maxTokens, doStream, res);
+  }
+  if (id === 'cloudflare') {
+    const cf = require('../ai/providers/cloudflare');
+    const d = await cf.chat({ messages, system, model: process.env.CLOUDFLARE_DEFAULT_MODEL || Q.getSetting('ai_cloudflare_model') || undefined, maxTokens });
+    return d.text;
+  }
+  throw new Error(`Unknown fallback model: ${id}`);
+}
+
 async function callAnthropic(messages, system, maxTokens, stream, res) {
   const key = process.env.ANTHROPIC_API_KEY || Q.getSetting('ai_anthropic_key');
   if (!key) throw new Error('Anthropic key not configured. Admin → AI Engine.');

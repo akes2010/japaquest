@@ -259,6 +259,63 @@ router.post('/settings/test-ai', async (req, res) => {
       if (!key) return res.status(400).json({ error: 'HuggingFace token not set' });
       return res.json({ message: '✅ HuggingFace token saved (tested on first use)' });
     }
+    if (model === 'selfhost' || model === 'ollama') {
+      const { engineStatus, engineTarget, engineChat } = require('../ai/orchestrator');
+      const st = await engineStatus();
+      if (!st.online) {
+        const tried = st.runtimes.map(r => `${r.label} (${r.base}): ${r.error || 'down'}`).join('; ');
+        throw new Error(`No engine runtime reachable — ${tried}. Start Ollama (\`ollama serve\`) or set the runtime URL in .env.`);
+      }
+      const target = await engineTarget('llama-local', '');
+      if (!target) throw new Error(`Engine is up (${st.runtimes.filter(r=>r.up).map(r=>r.label).join(', ')}) but serves none of the known model families (llama/qwen/deepseek/gemma/mistral). Pull a model, e.g. \`ollama pull llama3.1\`.`);
+      const reply = await engineChat({ ...target, messages:[{role:'user',content:'Reply with exactly: OK'}], system:'You are a health check.', maxTokens: 10 });
+      const ups = st.runtimes.filter(r=>r.up).map(r=>`${r.icon} ${r.label}`).join(' + ');
+      return res.json({ message: `✅ Self-hosted engine via ${ups} — model "${target.model}" answered: ${String(reply).slice(0,40).trim()}` });
+    }
+    if (model === 'kimi') {
+      const key = process.env.KIMI_API_KEY || Q.getSetting('ai_kimi_key');
+      if (!key) return res.status(400).json({ error: 'Kimi (Moonshot) key not set' });
+      const r = await fetch((process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1') + '/models', { headers:{Authorization:`Bearer ${key}`} });
+      if (!r.ok) throw new Error(`Status ${r.status}`);
+      return res.json({ message: '✅ Kimi key is valid!' });
+    }
+    if (model === 'zai') {
+      const key = process.env.ZAI_API_KEY || Q.getSetting('ai_zai_key');
+      if (!key) return res.status(400).json({ error: 'z.ai key not set' });
+      const r = await fetch((process.env.ZAI_BASE_URL || 'https://api.z.ai/api/paas/v4') + '/models', { headers:{Authorization:`Bearer ${key}`} });
+      if (!r.ok) throw new Error(`Status ${r.status}`);
+      return res.json({ message: '✅ z.ai key is valid!' });
+    }
+    if (model === 'omniroute') {
+      const base = (process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || 'https://omniroute.online/v1').replace(/\/+$/,'');
+      const key = process.env.OMNIROUTE_API_KEY || Q.getSetting('ai_omniroute_key') || '';
+      const r = await fetch(base + '/models', { headers: key ? {Authorization:`Bearer ${key}`} : {} });
+      if (!r.ok) throw new Error(`Status ${r.status} at ${base}`);
+      const d = await r.json().catch(()=>({}));
+      const n = (d.data || d.models || []).length;
+      return res.json({ message: `✅ OmniRoute reachable at ${base} — ${n} model(s) available` });
+    }
+    if (model === 'cloudflare') {
+      const acct = Q.getSetting('ai_cloudflare_account') || process.env.CLOUDFLARE_ACCOUNT_ID;
+      const tok = Q.getSetting('ai_cloudflare_token') || process.env.CLOUDFLARE_API_TOKEN;
+      if (!acct || !tok) return res.status(400).json({ error: 'Cloudflare Account ID + API token required' });
+      const mdl = Q.getSetting('ai_cloudflare_model') || '@cf/meta/llama-3.1-8b-instruct';
+      const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/ai/run/${mdl}`, {
+        method:'POST', headers:{'Authorization':`Bearer ${tok}`,'Content-Type':'application/json'},
+        body: JSON.stringify({ messages:[{role:'user',content:'Reply with exactly: OK'}], max_tokens: 10 }),
+      });
+      const d = await r.json().catch(()=>({}));
+      if (!r.ok || d.success === false) throw new Error((d.errors&&d.errors[0]&&(d.errors[0].message||String(d.errors[0])))||`Status ${r.status}`);
+      return res.json({ message: `✅ Cloudflare Workers AI answered via ${mdl}: ${String(d.result&&d.result.response||'').slice(0,30).trim()}` });
+    }
+    if (model === 'auto') {
+      const rotation = require('../utils/ai-rotation');
+      const { engineStatus } = require('../ai/orchestrator');
+      const engine = await engineStatus();
+      const rs = rotation.rotationStatus({ id:4, slug:'unlimited', daily_limit:99999 }, engine);
+      const cooling = rs.cooling.map(c=>c.id).join(', ');
+      return res.json({ message: `♾️ Auto pool: ${rs.configured.length} provider(s) ready [${rs.configured.join(', ')||'none'}]${cooling ? ` · cooling down: ${cooling}` : ''}${engine.online ? ' · self-hosted engine online' : ''}` });
+    }
     res.status(400).json({ error: 'Unknown model' });
   } catch(e) { res.status(400).json({ error: 'Test failed: '+e.message }); }
 });

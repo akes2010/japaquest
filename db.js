@@ -499,14 +499,29 @@ function seedDefaults() {
   // Plans
   if (!queryScalar('SELECT COUNT(*) FROM plans')) {
     [
-      [1,'Free','free',0,10,'',JSON.stringify(['claude','deepseek']),JSON.stringify(['10 messages/day','2 AI models','Basic visa guidance','Document checklist'])],
-      [2,'Explorer','explorer',4.99,50,'Popular',JSON.stringify(['claude','deepseek','qwen','llama','gemma']),JSON.stringify(['50 messages/day','5 AI models','Full visa tools','Travel planning','Hotel & flight recommendations'])],
-      [3,'Voyager','voyager',12.99,200,'Best Value',JSON.stringify(['claude','deepseek','qwen','llama','gemma','mistral','llama-groq','gemini-flash']),JSON.stringify(['200 messages/day','8 AI models','All visa tools','Priority AI responses','Study abroad guidance','Personalised travel plans','Affiliate booking links'])],
-      [4,'Unlimited','unlimited',29.99,99999,'Pro',JSON.stringify(['claude','deepseek','qwen','llama','gemma','mistral','llama-groq','gemini-flash','gemini-pro']),JSON.stringify(['Unlimited messages','All 9 AI models','All features','API access','Dedicated support'])],
+      [1,'Free','free',0,10,'',JSON.stringify(['auto','claude','deepseek','llama-local','omniroute','cloudflare']),JSON.stringify(['10 messages/day','♾️ Auto-rotation AI (never stops)','Self-hosted engine + free cloud pool','Basic visa guidance','Document checklist'])],
+      [2,'Explorer','explorer',4.99,50,'Popular',JSON.stringify(['auto','claude','deepseek','qwen','llama','gemma','llama-local','qwen-local','deepseek-local','omniroute','cloudflare','kimi','zai']),JSON.stringify(['50 messages/day','♾️ Auto-rotation + 12 models','Self-hosted engine + premium cloud','Full visa tools','Travel planning','Hotel & flight recommendations'])],
+      [3,'Voyager','voyager',12.99,200,'Best Value',JSON.stringify(['auto','claude','deepseek','qwen','llama','gemma','mistral','llama-groq','gemini-flash','llama-local','qwen-local','deepseek-local','omniroute','cloudflare','kimi','zai']),JSON.stringify(['200 messages/day','♾️ Auto-rotation + 15 models','Priority AI responses','All visa tools','Study abroad guidance','Personalised travel plans','Affiliate booking links'])],
+      [4,'Unlimited','unlimited',29.99,99999,'Pro',JSON.stringify(['auto','claude','deepseek','qwen','llama','gemma','mistral','llama-groq','gemini-flash','gemini-pro','llama-local','qwen-local','deepseek-local','omniroute','cloudflare','kimi','zai']),JSON.stringify(['Unlimited messages','♾️ Auto-rotation + all models (quality-ordered)','Self-hosted engine first, premium clouds after','All features','API access','Dedicated support'])],
     ].forEach(([id,name,slug,price,daily,badge,models,features]) =>
       exec(`INSERT OR IGNORE INTO plans(id,name,slug,price,daily_limit,badge,models,features) VALUES(?,?,?,?,?,?,?,?)`,
         [id,name,slug,price,daily,badge,models,features]));
   }
+
+  // Engine + rotation models ride along on every standard plan (existing
+  // installs already have their plan rows, so re-add the ids idempotently).
+  try {
+    const ALL_IDS = ['auto','llama-local','qwen-local','deepseek-local','omniroute','cloudflare'];
+    const PREMIUM_IDS = ['kimi','zai'];
+    for (const p of queryAllSafe(`SELECT id, models FROM plans`)) {
+      let ids; try { ids = JSON.parse(p.models || '[]'); } catch { continue; }
+      if (!Array.isArray(ids) || !ids.includes('claude')) continue;
+      const missing = ALL_IDS.filter(id => !ids.includes(id));
+      // Kimi + z.ai are premium-tier extras (Voyager/Unlimited only).
+      if (p.id >= 3) for (const id of PREMIUM_IDS) if (!ids.includes(id)) missing.push(id);
+      if (missing.length) exec(`UPDATE plans SET models=? WHERE id=?`, [JSON.stringify([...ids, ...missing]), p.id]);
+    }
+  } catch {}
 
   // Settings
   const DEFAULTS = [
@@ -526,6 +541,20 @@ function seedDefaults() {
     ['ai_gemini_key','','ai'],['ai_together_key','','ai'],
     ['ai_openai_key','','ai'],['ai_deepseek_key','','ai'],
     ['ai_ollama_url','http://localhost:11434','ai'],
+    // New cloud providers: Kimi (Moonshot), z.ai (GLM), OmniRoute free gateway,
+    // Cloudflare Workers AI free tier.
+    ['ai_kimi_key','','ai'],['ai_kimi_model','kimi-k2-0905-preview','ai'],
+    ['ai_zai_key','','ai'],['ai_zai_model','glm-4.6','ai'],
+    ['ai_omniroute_url','https://omniroute.online/v1','ai'],['ai_omniroute_key','','ai'],['ai_omniroute_model','auto','ai'],
+    ['ai_cloudflare_account','','ai'],['ai_cloudflare_token','','ai'],['ai_cloudflare_model','@cf/meta/llama-3.1-8b-instruct','ai'],
+    // Self-hosted AI Engine — serves Llama/Qwen/DeepSeek (and friends) locally.
+    // The engine is tried FIRST for its model ids; cloud providers follow when
+    // it is down (ai_engine_fallback='1').
+    ['ai_engine_models','llama3.1,qwen2.5:7b,deepseek-r1:8b','ai'],
+    ['ai_engine_fallback','1','ai'],
+    ['ai_ollama_key','','ai'],
+    ['ai_vllm_url','','ai'],['ai_vllm_key','','ai'],
+    ['ai_lmstudio_url','http://localhost:1234','ai'],['ai_lmstudio_key','','ai'],
     ['amadeus_client_id','','travel'],['amadeus_client_secret','','travel'],
     ['amadeus_env','test','travel'],
     ['booking_affiliate_id','','affiliates'],['skyscanner_affiliate_id','','affiliates'],
