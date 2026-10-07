@@ -250,6 +250,7 @@ Continue to §5 for first-run setup.
 | DB resets after restart | `DB_PATH` must point inside the app folder on persistent storage — never `/tmp` |
 | Emails not sending | Admin → Email/SMTP → 📤 Test; see `EMAIL_SETUP_GUIDE.md` (Gmail needs an app password) |
 | `550 … discarded as high-probability spam` | Sender misalignment, not content — From domain must equal the SMTP mailbox domain; use a real cPanel mailbox on your domain, host `mail.<domain>`, and run cPanel → Email Deliverability → Repair (SPF/DKIM) |
+| Auto chat: "All AI providers in your plan pool failed — <reasons>" | The error now names each provider's real failure. `Invalid API key` → fix that key in Admin → AI Engine; `Rate limit` → pool auto-retries in ~2 min (add a second free provider like Groq/Gemini to spread load) |
 | AI replies fail | No AI key in `.env` — Admin → AI Engine shows which providers are live |
 | Payment webhook 401s | The gateway secret in Admin → Payment Gateways must exactly match the provider dashboard |
 | Everyone gets "Too many requests" | The app must see real client IPs — `trust proxy` is already set; behind Cloudflare, raise it to `trust proxy, 2` |

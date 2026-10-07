@@ -85,17 +85,41 @@ function isConfigured(id) {
 const COOLDOWN_MS = 60 * 1000;
 const cooldowns = new Map(); // provider id → until (epoch ms)
 
+// Providers that share one upstream key/endpoint: when that upstream fails,
+// the whole group fails identically — cool (or skip) them together so the
+// chain doesn't hammer the same API five times with the same dead key.
+const UPSTREAM_GROUPS = {
+  openrouter: ['deepseek', 'qwen', 'llama', 'gemma', 'mistral'],
+  groq:       ['llama-groq', 'mixtral-groq'],
+  gemini:     ['gemini-flash', 'gemini-pro'],
+};
+function upstreamOf(id) {
+  for (const [up, ids] of Object.entries(UPSTREAM_GROUPS)) if (ids.includes(id)) return up;
+  return null;
+}
+
 function coolDown(id, ms = COOLDOWN_MS) { cooldowns.set(id, Date.now() + ms); }
 function isCooling(id) { return (cooldowns.get(id) || 0) > Date.now(); }
 function clearCooldown(id) { cooldowns.delete(id); }
+function cooldownRemaining(id) { const t = cooldowns.get(id) || 0; return Math.max(0, t - Date.now()); }
 
-/** Classify an error for cooldown policy: rate limits cool longest. */
+/**
+ * Classify an error for cooldown policy:
+ *   • 429 / rate limit  → 2 min cooldown for the provider's whole upstream group
+ *   • 401/403/402 (bad key, no credits — deterministic, waiting never heals it)
+ *                      → NO cooldown; retry next request fails fast and the
+ *                        admin sees the real error instead of a lockout
+ *   • anything else (network, 5xx) → 60s for the upstream group
+ */
 function noteFailure(id, err) {
   const msg = String((err && err.message) || err || '');
-  const ms = /rate limit|429|quota|too many/i.test(msg) ? 5 * 60 * 1000
-    : /401|403|invalid.*key|unauthorized|not configured/i.test(msg) ? 15 * 60 * 1000
-    : COOLDOWN_MS;
-  coolDown(id, ms);
+  let ms;
+  if (/rate limit|429|quota|too many/i.test(msg)) ms = 2 * 60 * 1000;
+  else if (/401|403|402|invalid.*key|unauthorized|not configured|insufficient|credit/i.test(msg)) ms = 0;
+  else ms = COOLDOWN_MS;
+  const up = upstreamOf(id);
+  const affected = up ? UPSTREAM_GROUPS[up] : [id];
+  for (const p of affected) { if (ms > 0) coolDown(p, ms); else clearCooldown(p); }
   return ms;
 }
 
@@ -149,5 +173,6 @@ function rotationStatus(plan, engine) {
 
 module.exports = {
   TIER_POOLS, tierForPlan, poolForTier, buildChain, isConfigured,
-  coolDown, isCooling, clearCooldown, noteFailure, rotationStatus,
+  coolDown, isCooling, clearCooldown, cooldownRemaining, noteFailure, rotationStatus,
+  UPSTREAM_GROUPS, upstreamOf,
 };

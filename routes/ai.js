@@ -170,10 +170,14 @@ router.post('/chat', requireAuth, async (req, res) => {
       if (!chain.length) {
         // Distinguish "nothing configured" from "everything is cooling down"
         const configuredCount = rotation.TIER_POOLS[rotation.tierForPlan(plan)].filter(id => rotation.isConfigured(id)).length;
-        if (configuredCount > 0) throw new Error('All AI providers just failed or hit rate limits and are cooling down — retry in a minute; rotation will bring them back automatically.');
+        if (configuredCount > 0) throw new Error('All AI providers just failed or hit rate limits and are cooling down — retry in a couple of minutes; rotation will bring them back automatically.');
         throw new Error('No AI providers are configured yet. Add at least one key in Admin → AI Engine (the free pools need no card: OpenRouter, Groq, Gemini, Cloudflare, OmniRoute).');
       }
+      const failures = [];              // "prov: reason" for the user-facing error
+      const failedUpstreams = new Set(); // several pool ids share one upstream — skip the rest after it fails
       for (const prov of chain) {
+        const up = rotation.upstreamOf(prov);
+        if (up && failedUpstreams.has(up)) continue; // request-local skip only — the real failure already set group policy
         try {
           if (prov.endsWith('-local')) {
             const target = await engineTarget(prov, '');
@@ -187,10 +191,20 @@ router.post('/chat', requireAuth, async (req, res) => {
           break; // answered — cooldowns from earlier failures decay on their own
         } catch (e) {
           const ms = rotation.noteFailure(prov, e);
-          console.warn(`[AI:auto] ${prov} failed (${ms/1000}s cooldown):`, e.message);
+          if (up) failedUpstreams.add(up);
+          failures.push(`${prov}: ${String(e.message).slice(0, 90)}`);
+          console.warn(`[AI:auto] ${prov} failed (${ms ? (ms/1000) + 's cooldown' : 'no cooldown — deterministic error'}):`, e.message);
         }
       }
-      if (!reply) throw new Error('All AI providers in your plan pool failed. Please try again shortly — rotation will retry the pool automatically.');
+      if (!reply) {
+        const eta = Math.max(0, ...chain.map(p => rotation.cooldownRemaining(p)));
+        const detail = failures.slice(0, 3).join(' · ');
+        const more = failures.length > 3 ? ` (+${failures.length - 3} more)` : '';
+        const next = eta > 0
+          ? ` Pool auto-retries in ~${Math.ceil(eta / 1000)}s.`
+          : ' Waiting will not heal these — fix the reported keys or add another provider in Admin → AI Engine.';
+        throw new Error(`All AI providers in your plan pool failed — ${detail}${more}.${next}`);
+      }
     }
     // ── Self-hosted AI Engine (explicit local ids; auto never reaches here) ─
     // Local model ids (llama-local / qwen-local / deepseek-local / …) run on
