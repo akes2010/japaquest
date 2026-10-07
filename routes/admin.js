@@ -156,7 +156,10 @@ router.post('/settings/test-email', async (req, res) => {
     const { to } = req.body;
     if (!to) return res.status(400).json({ error: 'Recipient required' });
     await testSmtp(to);
-    res.json({ message: `Test email sent to ${to} ✅` });
+    const { resolveSender } = require('../utils/mailer');
+    const { fromEmail, fromDomain, smtpDomain, aligned } = resolveSender();
+    const warn = aligned ? '' : ` ⚠️ From domain (${fromDomain}) ≠ SMTP account domain (${smtpDomain}) — outgoing filters commonly discard such mail as "high-probability spam" (550). Use a mailbox on ${fromDomain}, or set the From email to ${smtpDomain}.`;
+    res.json({ message: `Test email sent to ${to} ✅${warn}` });
   } catch(e) { res.status(400).json({ error: 'SMTP failed: '+e.message }); }
 });
 

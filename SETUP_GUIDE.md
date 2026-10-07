@@ -249,6 +249,7 @@ Continue to §5 for first-run setup.
 | 502 on VPS | `systemctl status japaquest` — app down, or nginx `proxy_pass` port ≠ `PORT` in `.env` |
 | DB resets after restart | `DB_PATH` must point inside the app folder on persistent storage — never `/tmp` |
 | Emails not sending | Admin → Email/SMTP → 📤 Test; see `EMAIL_SETUP_GUIDE.md` (Gmail needs an app password) |
+| `550 … discarded as high-probability spam` | Sender misalignment, not content — From domain must equal the SMTP mailbox domain; use a real cPanel mailbox on your domain, host `mail.<domain>`, and run cPanel → Email Deliverability → Repair (SPF/DKIM) |
 | AI replies fail | No AI key in `.env` — Admin → AI Engine shows which providers are live |
 | Payment webhook 401s | The gateway secret in Admin → Payment Gateways must exactly match the provider dashboard |
 | Everyone gets "Too many requests" | The app must see real client IPs — `trust proxy` is already set; behind Cloudflare, raise it to `trust proxy, 2` |

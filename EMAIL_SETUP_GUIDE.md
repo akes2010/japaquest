@@ -65,5 +65,11 @@ JOURNEY_FORCE_DIGEST=1 npm start
 - **`SMTP not configured`** — host/user/pass missing; save settings first.
 - **`Invalid login` / `535`** — wrong user/pass; for Gmail use an App Password, not the account password.
 - **`self signed certificate`** — set port `465` + tick *Secure*, or `587` without secure.
-- **Emails send but land in spam** — set up SPF/DKIM/DMARC on japaquest.com per your provider's docs.
+- **`550 Message discarded as high-probability spam`** — the *sending* mail server's outbound filter rejected the message. Almost always sender misalignment, not content:
+  1. **From must match the SMTP mailbox domain.** If SMTP user is `noreply@japaquest.com`, the From email must also be `@japaquest.com`. The SMTP test in Admin → Email now warns when these differ.
+  2. **Create a real mailbox** in cPanel → *Email Accounts* (e.g. `noreply@japaquest.com`) and use its credentials as SMTP user/password.
+  3. **Use the right host/port** — `mail.japaquest.com`, port `465` (tick Secure) or `587`.
+  4. **Run cPanel → *Email Deliverability*** and click *Repair* for SPF and DKIM (adds the DNS records receivers check). Add a DMARC record (`_dmarc` TXT: `v=DMARC1; p=none`) if missing.
+  5. Sending through Gmail/other external SMTP with a custom-domain From will keep failing this way — the domains must match.
+- **Emails send but land in spam** — same alignment rules as above, plus SPF/DKIM/DMARC on the From domain.
 - All emails are also logged as in-app notifications, so nothing is lost while SMTP is being fixed.

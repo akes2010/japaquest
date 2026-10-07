@@ -1,5 +1,6 @@
 'use strict';
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 const BRAND = require('../config/brand');
 
 function buildTransporter() {
@@ -16,17 +17,56 @@ function buildTransporter() {
   return nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
 }
 
-async function sendEmail({ to, subject, html, text }) {
+const domainOf = (addr) => (String(addr || '').split('@')[1] || '').trim().toLowerCase();
+
+// Receiver spam filters score HTML-only mail harshly and punish tag-soup text
+// alternatives, so render a clean plain-text part.
+const stripHtml = (html) => String(html || '')
+  .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+  .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+  .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+  .replace(/&#?\w+;/g, ' ')
+  .replace(/[ \t]+/g, ' ')
+  .replace(/\n{3,}/g, '\n\n')
+  .trim();
+
+/**
+ * Resolve who the mail appears to come from and whether it is aligned with the
+ * SMTP account. Alignment matters: sending From a domain different from the
+ * authenticated mailbox (SPF/DKIM misalignment) is the single most common
+ * cause of "550 … discarded as high-probability spam" on shared hosts.
+ */
+function resolveSender() {
   const { Q } = require('../db');
   const fromName  = Q.getSetting('smtp_from_name')  || BRAND.NAME;
-  const fromEmail = Q.getSetting('smtp_from_email') || Q.getSetting('smtp_user') || '';
+  const fromEmail = (Q.getSetting('smtp_from_email') || Q.getSetting('smtp_user') || '').trim();
+  const smtpUser  = (Q.getSetting('smtp_user') || '').trim();
+  const fromDomain = domainOf(fromEmail);
+  const smtpDomain = domainOf(smtpUser);
+  const aligned = !fromEmail || !smtpDomain || fromDomain === smtpDomain;
+  return { fromName, fromEmail, smtpUser, fromDomain, smtpDomain, aligned };
+}
+
+async function sendEmail({ to, subject, html, text }) {
+  const { fromName, fromEmail, fromDomain, aligned, smtpDomain } = resolveSender();
+  if (!fromEmail) throw new Error('No From address — set SMTP user or From email in Admin → Email Settings.');
+  if (!aligned) {
+    console.warn(`[mailer] ⚠️ From domain "${fromDomain}" differs from SMTP account domain "${smtpDomain}" — outgoing filters commonly discard this as spam (550). Use a mailbox on the From domain, or set From to the SMTP account's address.`);
+  }
 
   const transporter = buildTransporter();
   return transporter.sendMail({
-    from: `"${fromName}" <${fromEmail}>`,
-    to, subject,
+    from: { name: fromName, address: fromEmail },
+    to,
+    subject,
     html: html || `<p>${text || ''}</p>`,
-    text: text  || (html ? html.replace(/<[^>]+>/g, '') : ''),
+    text: text || stripHtml(html),
+    // Receivers distrust missing/generic Message-IDs; build ours from the From
+    // domain so it matches SPF/DKIM alignment instead of the server hostname.
+    messageId: `<${Date.now()}.${crypto.randomBytes(8).toString('hex')}@${fromDomain || 'localhost'}>`,
+    replyTo: fromEmail,
   });
 }
 
@@ -35,11 +75,10 @@ async function testSmtp(to) {
   const appName = Q.getSetting('app_name') || BRAND.NAME;
   return sendEmail({
     to,
-    subject: `✅ SMTP Test — ${appName}`,
-    html: `<h2>SMTP Test Successful!</h2>
-<p>Your email configuration is working correctly.</p>
-<p>Sent from <strong>${appName}</strong></p>`,
+    subject: `SMTP test — ${appName}`,
+    text: `Your ${appName} email configuration is working.\n\nYou received this because an administrator ran the SMTP test in the ${appName} admin panel.`,
+    html: `<h2>SMTP test</h2><p>Your email configuration is working correctly.</p><p>Sent from <strong>${appName}</strong>.</p>`,
   });
 }
 
-module.exports = { sendEmail, testSmtp };
+module.exports = { sendEmail, testSmtp, resolveSender, stripHtml };
