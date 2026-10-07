@@ -31,7 +31,7 @@ router.get('/journey-insights', (req, res) => {
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
 router.get('/settings/:group', (req, res) => {
   const settings = Q.getSettingsByGroup(req.params.group);
-  const MASK = ['smtp_pass','ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_openai_key','ai_deepseek_key'];
+  const MASK = ['smtp_pass','ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_openai_key','ai_deepseek_key','ai_kimi_key','ai_zai_key','ai_omniroute_key','ai_cloudflare_token','ai_ollama_key'];
   for (const k of MASK) { if (settings[k]) settings[k] = '••••'+settings[k].slice(-4); }
   res.json({ settings });
 });
@@ -39,7 +39,7 @@ router.get('/settings/:group', (req, res) => {
 router.put('/settings', (req, res) => {
   try {
     const updates = { ...req.body };
-    const MASK = ['smtp_pass','ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_openai_key','ai_deepseek_key'];
+    const MASK = ['smtp_pass','ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_openai_key','ai_deepseek_key','ai_kimi_key','ai_zai_key','ai_omniroute_key','ai_cloudflare_token','ai_ollama_key'];
     for (const k of MASK) { if (updates[k]?.startsWith('••••')) delete updates[k]; }
     Q.setSettings(updates);
     res.json({ message: 'Settings saved' });
@@ -200,10 +200,14 @@ router.post('/settings/test-ai', async (req, res) => {
   try {
     const fetch = require('node-fetch');
     const { model } = req.body;
+    // A key typed into the admin UI takes priority (verify-before-save flow),
+    // then the .env value (dispatcher preference), then the saved setting.
+    const typedKey = typeof req.body.key === 'string' ? req.body.key.trim() : '';
+    const typedAccountId = typeof req.body.accountId === 'string' ? req.body.accountId.trim() : '';
 
     if (model === 'claude') {
-      const key = Q.getSetting('ai_anthropic_key');
-      if (!key) return res.status(400).json({ error: 'Anthropic key not set' });
+      const key = typedKey || process.env.ANTHROPIC_API_KEY || Q.getSetting('ai_anthropic_key');
+      if (!key) return res.status(400).json({ error: 'Anthropic key not set — type it in the field above, then Verify' });
       const r = await fetch('https://api.anthropic.com/v1/messages', {
         method:'POST',
         headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
@@ -213,51 +217,52 @@ router.post('/settings/test-ai', async (req, res) => {
       return res.json({ message: '✅ Anthropic key is valid!' });
     }
     if (['deepseek','qwen','llama','gemma','mistral'].includes(model)) {
-      const key = Q.getSetting('ai_openrouter_key');
-      if (!key) return res.status(400).json({ error: 'OpenRouter key not set' });
-      const r = await fetch('https://openrouter.ai/api/v1/models', { headers:{Authorization:`Bearer ${key}`} });
+      const key = typedKey || process.env.OPENROUTER_API_KEY || Q.getSetting('ai_openrouter_key');
+      if (!key) return res.status(400).json({ error: 'OpenRouter key not set — type it in the field above, then Verify' });
+      // /models is public (200 even without a key) — /key requires auth, so it actually validates
+      const r = await fetch('https://openrouter.ai/api/v1/key', { headers:{Authorization:`Bearer ${key}`} });
       if (!r.ok) throw new Error(`Status ${r.status}`);
       return res.json({ message: '✅ OpenRouter key is valid!' });
     }
     if (model === 'openai') {
-      const key = Q.getSetting('ai_openai_key');
-      if (!key) return res.status(400).json({ error: 'OpenAI key not set' });
+      const key = typedKey || process.env.OPENAI_API_KEY || Q.getSetting('ai_openai_key');
+      if (!key) return res.status(400).json({ error: 'OpenAI key not set — type it in the field above, then Verify' });
       const r = await fetch('https://api.openai.com/v1/models', { headers:{Authorization:`Bearer ${key}`} });
       if (!r.ok) throw new Error(`Status ${r.status}`);
       return res.json({ message: '✅ OpenAI key is valid!' });
     }
     if (model === 'deepseek2') {
-      const key = Q.getSetting('ai_deepseek_key');
-      if (!key) return res.status(400).json({ error: 'DeepSeek key not set' });
+      const key = typedKey || process.env.DEEPSEEK_API_KEY || Q.getSetting('ai_deepseek_key');
+      if (!key) return res.status(400).json({ error: 'DeepSeek key not set — type it in the field above, then Verify' });
       const r = await fetch('https://api.deepseek.com/models', { headers:{Authorization:`Bearer ${key}`} });
       if (!r.ok) throw new Error(`Status ${r.status}`);
       return res.json({ message: '✅ DeepSeek key is valid!' });
     }
     if (model === 'groq' || ['llama-groq','mixtral-groq'].includes(model)) {
-      const key = Q.getSetting('ai_groq_key');
-      if (!key) return res.status(400).json({ error: 'Groq key not set' });
+      const key = typedKey || process.env.GROQ_API_KEY || Q.getSetting('ai_groq_key');
+      if (!key) return res.status(400).json({ error: 'Groq key not set — type it in the field above, then Verify' });
       const r = await fetch('https://api.groq.com/openai/v1/models', { headers:{Authorization:`Bearer ${key}`} });
       if (!r.ok) throw new Error(`Status ${r.status}`);
       return res.json({ message: '✅ Groq key is valid!' });
     }
     if (model === 'gemini' || ['gemini-flash','gemini-pro'].includes(model)) {
-      const key = Q.getSetting('ai_gemini_key');
-      if (!key) return res.status(400).json({ error: 'Gemini key not set' });
+      const key = typedKey || process.env.GEMINI_API_KEY || Q.getSetting('ai_gemini_key');
+      if (!key) return res.status(400).json({ error: 'Gemini key not set — type it in the field above, then Verify' });
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
       if (!r.ok) throw new Error(`Status ${r.status}`);
       return res.json({ message: '✅ Gemini key is valid!' });
     }
     if (model === 'together' || model === 'llama-together') {
-      const key = Q.getSetting('ai_together_key');
-      if (!key) return res.status(400).json({ error: 'Together AI key not set' });
+      const key = typedKey || process.env.TOGETHER_API_KEY || Q.getSetting('ai_together_key');
+      if (!key) return res.status(400).json({ error: 'Together AI key not set — type it in the field above, then Verify' });
       const r = await fetch('https://api.together.xyz/v1/models', { headers:{Authorization:`Bearer ${key}`} });
       if (!r.ok) throw new Error(`Status ${r.status}`);
       return res.json({ message: '✅ Together AI key is valid!' });
     }
     if (['mistral7b','zephyr'].includes(model)) {
-      const key = Q.getSetting('ai_huggingface_key');
-      if (!key) return res.status(400).json({ error: 'HuggingFace token not set' });
-      return res.json({ message: '✅ HuggingFace token saved (tested on first use)' });
+      const key = typedKey || process.env.HUGGINGFACE_API_KEY || Q.getSetting('ai_huggingface_key');
+      if (!key) return res.status(400).json({ error: 'HuggingFace token not set — type it in the field above, then Verify' });
+      return res.json({ message: '✅ HuggingFace token accepted (tested on first use)' });
     }
     if (model === 'selfhost' || model === 'ollama') {
       const { engineStatus, engineTarget, engineChat } = require('../ai/orchestrator');
@@ -273,22 +278,22 @@ router.post('/settings/test-ai', async (req, res) => {
       return res.json({ message: `✅ Self-hosted engine via ${ups} — model "${target.model}" answered: ${String(reply).slice(0,40).trim()}` });
     }
     if (model === 'kimi') {
-      const key = process.env.KIMI_API_KEY || Q.getSetting('ai_kimi_key');
-      if (!key) return res.status(400).json({ error: 'Kimi (Moonshot) key not set' });
+      const key = typedKey || process.env.KIMI_API_KEY || Q.getSetting('ai_kimi_key');
+      if (!key) return res.status(400).json({ error: 'Kimi (Moonshot) key not set — type it in the field above, then Verify' });
       const r = await fetch((process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1') + '/models', { headers:{Authorization:`Bearer ${key}`} });
       if (!r.ok) throw new Error(`Status ${r.status}`);
       return res.json({ message: '✅ Kimi key is valid!' });
     }
     if (model === 'zai') {
-      const key = process.env.ZAI_API_KEY || Q.getSetting('ai_zai_key');
-      if (!key) return res.status(400).json({ error: 'z.ai key not set' });
+      const key = typedKey || process.env.ZAI_API_KEY || Q.getSetting('ai_zai_key');
+      if (!key) return res.status(400).json({ error: 'z.ai key not set — type it in the field above, then Verify' });
       const r = await fetch((process.env.ZAI_BASE_URL || 'https://api.z.ai/api/paas/v4') + '/models', { headers:{Authorization:`Bearer ${key}`} });
       if (!r.ok) throw new Error(`Status ${r.status}`);
       return res.json({ message: '✅ z.ai key is valid!' });
     }
     if (model === 'omniroute') {
       const base = (process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || 'https://omniroute.online/v1').replace(/\/+$/,'');
-      const key = process.env.OMNIROUTE_API_KEY || Q.getSetting('ai_omniroute_key') || '';
+      const key = typedKey || process.env.OMNIROUTE_API_KEY || Q.getSetting('ai_omniroute_key') || '';
       const r = await fetch(base + '/models', { headers: key ? {Authorization:`Bearer ${key}`} : {} });
       if (!r.ok) throw new Error(`Status ${r.status} at ${base}`);
       const d = await r.json().catch(()=>({}));
@@ -296,9 +301,9 @@ router.post('/settings/test-ai', async (req, res) => {
       return res.json({ message: `✅ OmniRoute reachable at ${base} — ${n} model(s) available` });
     }
     if (model === 'cloudflare') {
-      const acct = Q.getSetting('ai_cloudflare_account') || process.env.CLOUDFLARE_ACCOUNT_ID;
-      const tok = Q.getSetting('ai_cloudflare_token') || process.env.CLOUDFLARE_API_TOKEN;
-      if (!acct || !tok) return res.status(400).json({ error: 'Cloudflare Account ID + API token required' });
+      const acct = typedAccountId || process.env.CLOUDFLARE_ACCOUNT_ID || Q.getSetting('ai_cloudflare_account');
+      const tok = typedKey || process.env.CLOUDFLARE_API_TOKEN || Q.getSetting('ai_cloudflare_token');
+      if (!acct || !tok) return res.status(400).json({ error: 'Cloudflare Account ID + API token required — fill both fields, then Verify' });
       const mdl = Q.getSetting('ai_cloudflare_model') || '@cf/meta/llama-3.1-8b-instruct';
       const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/ai/run/${mdl}`, {
         method:'POST', headers:{'Authorization':`Bearer ${tok}`,'Content-Type':'application/json'},

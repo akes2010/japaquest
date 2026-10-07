@@ -1532,7 +1532,7 @@ async function testEngine(){
   showToast(r.ok?d.message:(d.error||'Engine test failed'),r.ok?'success':'error');
   refreshEngine(false);
 }
-async function testAI(model){showToast('Testing…');const r=await apiFetch('/api/admin/settings/test-ai',{method:'POST',body:JSON.stringify({model})});const d=await r.json();r.ok?showToast(d.message):showToast(d.error,'error');}
+async function testAI(model){showToast('Testing…');const KEYMAP={claude:'ai_anthropic_key',deepseek:'ai_openrouter_key',openai:'ai_openai_key',deepseek2:'ai_deepseek_key',groq:'ai_groq_key',gemini:'ai_gemini_key',together:'ai_together_key',mistral7b:'ai_huggingface_key',zephyr:'ai_huggingface_key',kimi:'ai_kimi_key',zai:'ai_zai_key',omniroute:'ai_omniroute_key',cloudflare:'ai_cloudflare_token'};const el=KEYMAP[model]?document.getElementById(KEYMAP[model]):null;const v=el&&el.value&&!el.value.startsWith('••••')?el.value.trim():'';const body={model};if(v)body.key=v;if(model==='cloudflare'){const a=document.getElementById('ai_cloudflare_account');if(a&&a.value.trim()&&!a.value.startsWith('••••'))body.accountId=a.value.trim();}const r=await apiFetch('/api/admin/settings/test-ai',{method:'POST',body:JSON.stringify(body)});const d=await r.json();const msg=r.ok?(d.message+(v?' — now click Save to store it':'')):(d.error||'Test failed');r.ok?showToast(msg):showToast(msg,'error');}
 
 // ── EMAIL ─────────────────────────────────────────────────────────────────────
 async function loadEmail(){const r=await apiFetch('/api/admin/settings/email');const d=await r.json();const s=d.settings||{};['smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from_name','smtp_from_email','smtp_secure'].forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k]||'';});}
