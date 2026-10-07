@@ -640,6 +640,112 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
   .tb-title{font-size:.95rem}
   .model-pill{max-width:44vw}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   READABILITY REPAIR — the JS-generated panels hardcode inline
+   style="background:#fff" and light text colors; inline styles beat any
+   stylesheet rule, which left whitish panels with light text (unreadable).
+   Attribute-presence selectors + !important override the inline values so
+   every surface follows the Nightflight palette. Standard dark dashboard:
+   dark panels, light text, consistent contrast everywhere.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 1. Inline-styled surfaces → nightflight panel glass */
+[style*="background:#fff"]{background:rgba(18,28,52,.72)!important}
+[style*="background:#FFFDF8"]{background:rgba(22,34,60,.66)!important}
+[style*="background:#F7F3EA"]{background:rgba(18,28,52,.72)!important}
+[style*="background: #fff"]{background:rgba(18,28,52,.72)!important}
+[style*="background: #FFFDF8"]{background:rgba(22,34,60,.66)!important}
+/* elevated inner boxes written via JS with elev2/elev3 vars */
+[style*="background:var(--elev2)"]{background:rgba(22,34,60,.85)!important}
+[style*="background:var(--elev3)"]{background:rgba(27,44,80,.9)!important}
+#content div[style*="var(--elev2)"]{background:rgba(22,34,60,.85)!important}
+
+/* 2. Inline dark-text hardcodes → light text on the dark panels */
+[style*="color:#0E1B33"]{color:var(--t1)!important}
+[style*="color:#0A1428"]{color:var(--t1)!important}
+[style*="color:#111"]{color:var(--t2)!important}
+[style*="color:#333"]{color:var(--t2)!important}
+[style*="color:#555"]{color:var(--t3)!important}
+[style*="color:#999"]{color:var(--t4)!important}
+[style*="color:#888"]{color:var(--t3)!important}
+
+/* 3. The old landing-override block forced white on these — retune with
+      higher specificity so they can't win again */
+select.input option{background:#101A34!important;color:var(--t1)!important}
+option{background:#101A34;color:var(--t1)}
+#dest-grid div[style*="border:1px dashed"],#dest-grid div[style*="border:1px dashed"] *{
+  background:transparent!important;color:var(--t3)!important}
+#dest-grid div[style*="border:1px dashed"] b{color:var(--t1)!important}
+#dest-grid div[style*="border:1px dashed"] button{background:linear-gradient(135deg,var(--ember-lo),var(--ember-hi))!important;color:#fff!important;border-radius:99px!important;font-weight:600}
+.tool-out{background:rgba(8,14,28,.75)!important;color:var(--t2)!important}
+
+/* 4. Hardcode-fix leftovers from the light override that survived cascade
+      order (same specificity, later block wins → this IS the later block) */
+.card,.ps-card,.sr-card,.notif-card,.book-card,.tc,.dest-card,.plan-card,.m-box,.qc,
+.stat-card,.chart-card,.tbl-card,.s-card,.pa-card,.bc-card{
+  background:linear-gradient(180deg,rgba(18,28,52,.66),rgba(12,20,40,.6))!important;
+  border:1px solid var(--b1)!important}
+.dest-card{background:linear-gradient(180deg,rgba(18,28,52,.66),rgba(12,20,40,.6))!important}
+.input,textarea.input{background:rgba(6,11,24,.5)!important;color:var(--t1)!important;border-color:var(--b2)!important}
+.model-pill{background:var(--glass)!important;color:var(--t2)!important}
+.model-menu{background:rgba(10,18,36,.97)!important}
+.notif-btn,.menu-btn{background:var(--glass)!important;color:var(--t2)!important}
+.bubble{background:rgba(18,28,52,.6)!important;color:var(--t2)!important}
+.pg-btn,.pst-pill{background:var(--glass)!important;color:var(--t3)!important}
+.pst-pill.live{background:rgba(18,120,78,.14)!important;border-color:rgba(47,201,138,.4)!important;color:#7FE0B4!important}
+.pst-pill.live .pst-dot{color:#2FC98A!important}
+.pst-pill.live .pst-tag{color:#7FE0B4!important}
+#toast{background:rgba(12,20,40,.97)!important;color:var(--t1)!important;border:1px solid rgba(232,97,60,.4)!important}
+.new-chat-btn{background:linear-gradient(135deg,var(--ember-lo),var(--ember-hi))!important;color:#fff!important;border:none!important}
+.sb-logo{background:linear-gradient(135deg,var(--ember-lo),var(--ember-hi))!important}
+.u-ava{background:linear-gradient(135deg,#1B2C50,var(--ember-lo))!important;color:#fff!important}
+::-webkit-scrollbar-track{background:transparent!important}
+.n-dot{border-color:#060B18!important}
+
+/* 5. Table & dense-text contrast on dark (admin users/lists, plans tables) */
+th{color:var(--t3)!important;border-bottom-color:var(--b1)!important}
+td{color:var(--t2)!important;border-bottom-color:var(--b0)!important}
+tr:hover td{background:rgba(255,255,255,.04)!important;color:var(--t1)!important}
+table{background:transparent!important}
+.tbl-card,.chart-card,.stat-card{color:var(--t2)}
+.tbl-card *,.chart-card *{max-width:100%}
+
+/* 6. Generic dark-on-light text inside glass panels → tuned for dark bg */
+.s-card,.stat-card,.pa-card,.bc-card,.chart-card,.tbl-card{color:var(--t2)!important}
+.s-title,.stat-label,.section-title{color:var(--t2)!important}
+b,strong{color:var(--t1)}
+label.form-label{color:var(--t3)!important}
+.hi-t,.sr-title,.nc-title,.dc-name,.book-title,.tc-name,.pc-name,.u-name{color:var(--t1)!important}
+.hi-m,.sr-preview,.nc-msg,.dc-meta,.book-desc,.tc-desc,.pc-limit,.u-plan,.usage-lbl{color:var(--t3)!important}
+
+/* 7. Print helper in JS writes light-on-white doc windows — leave those alone */
+@media print{ [style*="background:#fff"]{background:#fff!important} }
+
+/* 8. Second pass — element-level whites the first sweep's selector list
+      didn't name (admin AI-engine cards, journey wizard panel, journeys
+      case list, provider sections). Same standard: dark glass, light text. */
+.provider-section{background:linear-gradient(180deg,rgba(18,28,52,.66),rgba(12,20,40,.6))!important;border-color:var(--b1)!important}
+.provider-header{color:var(--t1)!important}
+.provider-badge-free{background:rgba(18,120,78,.16)!important;color:#7FE0B4!important;border-color:rgba(47,201,138,.35)!important}
+.provider-badge-paid{background:rgba(232,97,60,.14)!important;color:var(--ember-hi)!important;border-color:rgba(232,97,60,.35)!important}
+.get-key-link{color:var(--gold-hi)!important}
+.s-card{background:linear-gradient(180deg,rgba(18,28,52,.66),rgba(12,20,40,.6))!important}
+.stat-card{background:linear-gradient(180deg,rgba(18,28,52,.72),rgba(12,20,40,.66))!important}
+.stat-value,.stat-num,[class*="stat"] b,[class*="stat"] strong{color:var(--t1)!important}
+.mb-bar-w{background:rgba(255,255,255,.08)!important}
+.pg-btn:hover{background:var(--glass2)!important;color:var(--t1)!important}
+.badge{backdrop-filter:blur(4px)}
+/* journey wizard / cases / any leftover 1px-solid b1 white cards via inline bg */
+#content [style*="border:1px solid var(--b1)"][style*="background:#fff"]{
+  background:linear-gradient(180deg,rgba(18,28,52,.72),rgba(12,20,40,.66))!important}
+/* charts text */
+.chart-card text,.chart-card tspan{fill:var(--t3)!important}
+/* links inside dense copy */
+.ps-card a,.s-card a,.notif-card a,.sr-card a{color:var(--ember-hi)}
+/* modals inner labels */
+.m-box .form-label,.m-box label{color:var(--t3)!important}
+.m-box .input,.m-over .input{background:rgba(6,11,24,.5)!important;color:var(--t1)!important}
 </style>
 </head>
 <body>
