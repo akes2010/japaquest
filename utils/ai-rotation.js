@@ -171,8 +171,30 @@ function rotationStatus(plan, engine) {
   };
 }
 
+/**
+ * Why is the chain empty? Lets the caller (startup audit, admin UI) print the
+ * real cause instead of a bare "pool failed":
+ *   • 'nothing-configured' → no usable provider: no cloud key configured AND
+ *                            the engine is offline (locals count only when the
+ *                            engine is actually up and serves that family)
+ *   • 'all-cooling'        → usable providers exist but every one just failed
+ *                            or hit a rate limit
+ *   • 'ok'                 → at least one provider is ready right now
+ */
+function poolHealth(plan, { engineOnline = false, engineFamilies = [] } = {}) {
+  const pool = poolForTier(tierForPlan(plan));
+  const usable = pool.filter(id => {
+    if (!isConfigured(id)) return false;
+    if (!id.endsWith('-local')) return true;
+    return engineOnline && engineFamilies.includes(id.replace(/-local$/, ''));
+  });
+  if (!usable.length) return { state: 'nothing-configured', usable: [] };
+  const ready = buildChain(plan, { engineOnline, engineFamilies });
+  return ready.length ? { state: 'ok', usable } : { state: 'all-cooling', usable };
+}
+
 module.exports = {
-  TIER_POOLS, tierForPlan, poolForTier, buildChain, isConfigured,
+  TIER_POOLS, tierForPlan, poolForTier, buildChain, isConfigured, poolHealth,
   coolDown, isCooling, clearCooldown, cooldownRemaining, noteFailure, rotationStatus,
   UPSTREAM_GROUPS, upstreamOf,
 };

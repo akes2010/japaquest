@@ -168,10 +168,13 @@ router.post('/chat', requireAuth, async (req, res) => {
       const engine = await engineStatusCached();
       const chain = rotation.buildChain(plan, { engineOnline: engine.online, engineFamilies: engine.families });
       if (!chain.length) {
-        // Distinguish "nothing configured" from "everything is cooling down"
-        const configuredCount = rotation.TIER_POOLS[rotation.tierForPlan(plan)].filter(id => rotation.isConfigured(id)).length;
-        if (configuredCount > 0) throw new Error('All AI providers just failed or hit rate limits and are cooling down — retry in a couple of minutes; rotation will bring them back automatically.');
-        throw new Error('No AI providers are configured yet. Add at least one key in Admin → AI Engine (the free pools need no card: OpenRouter, Groq, Gemini, Cloudflare, OmniRoute).');
+        // Distinguish "nothing usable" from "everything is cooling down" —
+        // poolHealth counts a local id as usable only when the engine is
+        // actually online and serves that family (an offline engine is not a
+        // configured provider).
+        const health = rotation.poolHealth(plan, { engineOnline: engine.online, engineFamilies: engine.families });
+        if (health.state === 'all-cooling') throw new Error('All AI providers just failed or hit rate limits and are cooling down — retry in a couple of minutes; rotation will bring them back automatically.');
+        throw new Error('No AI providers are usable right now. Add at least one key in Admin → AI Engine (the free pools need no card: OpenRouter, Groq, Gemini, Cloudflare) or start the self-hosted engine.');
       }
       const failures = [];              // "prov: reason" for the user-facing error
       const failedUpstreams = new Set(); // several pool ids share one upstream — skip the rest after it fails

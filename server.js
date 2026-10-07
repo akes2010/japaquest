@@ -462,6 +462,30 @@ app.use((err,_req,res,next) => {
 });
 
 // ── START ─────────────────────────────────────────────────────────────────────
+// ── STARTUP AUDIT: empty AI pools announce themselves ─────────────────────────
+// Chat is the core product; a misconfigured pool otherwise stays silent until
+// a user's first message fails. At boot (and hourly), check whether the free
+// tier has zero configured providers and say so loudly in the log. Deliberate
+// un-loud for transient 'all-cooling' states — cooldowns decay on their own.
+function warnEmptyAiPool() {
+  const check = async () => {
+    try {
+      const rotation = require('./utils/ai-rotation');
+      const { engineStatus } = require('./ai/orchestrator');
+      const engine = await engineStatus();
+      const h = rotation.poolHealth({ id: 1, slug: 'free' }, { engineOnline: engine.online, engineFamilies: engine.families || [] });
+      if (h.state === 'nothing-configured') {
+        console.warn('⚠️  AI POOL EMPTY — the free plan has no usable AI provider (no cloud key configured and the self-hosted engine is offline). Chats in Auto mode will fail until one is available.');
+        console.warn('    Fix: add a key in Admin → AI Engine or .env (free pools need no card: OpenRouter, Groq, Gemini, Cloudflare, OmniRoute), or start Ollama/vLLM for the self-hosted engine.');
+      } else {
+        console.log(`🌐 AI pool ready — ${h.usable.length} usable free-tier provider(s) [${h.usable.join(', ')}]${engine.online ? ' + self-hosted engine' : ''}`);
+      }
+    } catch (e) { console.warn('⚠️  AI pool audit skipped:', e.message); }
+  };
+  check();
+  setInterval(check, 60 * 60 * 1000).unref();
+}
+
 async function start() {
   console.log('\n🗄  Initialising JapaQuest database with sql.js…');
   await initDB();
@@ -472,6 +496,7 @@ async function start() {
   const PORT = parseInt(process.env.PORT)||4001;
   require('./worker/social-scheduler').startSocialScheduler();
   require('./worker/journey-scheduler').startJourneyScheduler();
+  warnEmptyAiPool(); // audit the plan pools before the first chat hits a dead end
   app.listen(PORT, () => {
     const name = Q.getSetting('app_name')||BRAND.NAME;
     console.log(`

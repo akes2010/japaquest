@@ -207,6 +207,15 @@ router.post('/settings/test-ai', async (req, res) => {
     // then the .env value (dispatcher preference), then the saved setting.
     const typedKey = typeof req.body.key === 'string' ? req.body.key.trim() : '';
     const typedAccountId = typeof req.body.accountId === 'string' ? req.body.accountId.trim() : '';
+    // A URL that never served an API (marketing site) shouldn't be reported as
+    // configured; localhost entries are allowed (self-hosted gateway, checked
+    // live during the test).
+    const omnirouteBaseLikelyValid = u => {
+      const s = String(u || '').trim();
+      if (!s) return false;
+      if (/^https?:\/\/localhost[:/]/i.test(s) || /^https?:\/\/127\.0\.0\.1[:/]/i.test(s) || /^https?:\/\/\[::1\][:\/]/i.test(s)) return true;
+      return !/^https?:\/\/(www\.)?omniroute\.online/i.test(s);
+    };
 
     if (model === 'claude') {
       const key = typedKey || process.env.ANTHROPIC_API_KEY || Q.getSetting('ai_anthropic_key');
@@ -295,7 +304,14 @@ router.post('/settings/test-ai', async (req, res) => {
       return res.json({ message: '✅ z.ai key is valid!' });
     }
     if (model === 'omniroute') {
-      const base = (process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || 'https://omniroute.online/v1').replace(/\/+$/,'');
+      // OMNIROUTE_BASE_URL/ai_omniroute_url only count when the entry is a real
+      // API endpoint. localhost URLs mean a self-hosted gateway (may be down —
+      // that's checked at runtime), and omniroute.online is a marketing site
+      // with no API, so it's ignored here just like CONFIG_CHECKS does.
+      const rawUrl = process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || '';
+      const base = (omnirouteBaseLikelyValid(rawUrl)
+        ? rawUrl
+        : (process.env.OMNIROUTE_BASE_URL || 'https://invalid.omniroute.local/v1')).replace(/\/+$/,'');
       const key = typedKey || process.env.OMNIROUTE_API_KEY || Q.getSetting('ai_omniroute_key') || '';
       const r = await fetch(base + '/models', { headers: key ? {Authorization:`Bearer ${key}`} : {} });
       if (!r.ok) throw new Error(`Status ${r.status} at ${base}`);
@@ -321,8 +337,18 @@ router.post('/settings/test-ai', async (req, res) => {
       const { engineStatus } = require('../ai/orchestrator');
       const engine = await engineStatus();
       const rs = rotation.rotationStatus({ id:4, slug:'unlimited', daily_limit:99999 }, engine);
-      const cooling = rs.cooling.map(c=>c.id).join(', ');
-      return res.json({ message: `♾️ Auto pool: ${rs.configured.length} provider(s) ready [${rs.configured.join(', ')||'none'}]${cooling ? ` · cooling down: ${cooling}` : ''}${engine.online ? ' · self-hosted engine online' : ''}` });
+      // "ready" = configured AND usable right now: locals count only when the
+      // engine is online and actually serves that family; cooling providers
+      // and IDs whose upstream key is absent never count as ready.
+      const ready = rs.pool.filter(id => {
+        if (!rotation.isConfigured(id)) return false;
+        if (id.endsWith('-local')) return engine.online && engine.families.includes(id.replace(/-local$/, ''));
+        return true;
+      });
+      const msg = ready.length || rs.configured.length
+        ? `♾️ Auto pool: ${ready.length} usable provider(s) right now [${ready.join(', ') || 'none — waiting on engine/keys'}] · configured in settings: [${rs.configured.join(', ') || 'none'}]${rs.cooling.length ? ` · cooling: ${rs.cooling.map(c=>c.id).join(', ')}` : ''}${engine.online ? ' · engine online' : ''}`
+        : '♾️ Auto pool is EMPTY — no usable provider (no cloud key configured and engine offline). Free signup, no card: Groq (console.groq.com/keys), Gemini (aistudio.google.com), OpenRouter, Cloudflare; or start the self-hosted engine.';
+      return res.json({ message: msg });
     }
     res.status(400).json({ error: 'Unknown model' });
   } catch(e) { res.status(400).json({ error: 'Test failed: '+e.message }); }
