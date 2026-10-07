@@ -5,7 +5,7 @@ const BRAND = require('../config/brand');
 
 function buildTransporter() {
   const { Q } = require('../db');
-  const host   = Q.getSetting('smtp_host');
+  const host   = String(Q.getSetting('smtp_host') || '').trim();
   const port   = parseInt(Q.getSetting('smtp_port') || '587');
   const user   = Q.getSetting('smtp_user');
   const pass   = Q.getSetting('smtp_pass');
@@ -13,6 +13,13 @@ function buildTransporter() {
 
   if (!host || !user || !pass) {
     throw new Error('SMTP not configured. Go to Admin → Email Settings to set it up.');
+  }
+  // A pasted email in the Host field fails DNS with a cryptic "queryA EBADNAME
+  // <value>". Catch it here and say how to fix it: Host = mail server, the
+  // email goes in Username.
+  if (host.includes('@')) {
+    const dom = host.split('@').pop();
+    throw new Error(`SMTP Host "${host}" is an email address, not a mail server. Set Host to mail.${dom} (or your provider's SMTP host) and keep ${user} in Username.`);
   }
   return nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
 }

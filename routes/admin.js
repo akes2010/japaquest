@@ -41,6 +41,14 @@ router.put('/settings', (req, res) => {
     const updates = { ...req.body };
     const MASK = ['smtp_pass','ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_openai_key','ai_deepseek_key','ai_kimi_key','ai_zai_key','ai_omniroute_key','ai_cloudflare_token','ai_ollama_key'];
     for (const k of MASK) { if (updates[k]?.startsWith('••••')) delete updates[k]; }
+    // SMTP host must be a hostname (mail.example.com), never an email —
+    // 'mail.user@domain' fails DNS with a cryptic EBADNAME at send time.
+    if (typeof updates.smtp_host === 'string' && updates.smtp_host.trim()) {
+      const h = updates.smtp_host.trim();
+      if (h.includes('@') || /\s/.test(h)) {
+        return res.status(400).json({ error: 'SMTP Host must be a mail server hostname like mail.' + (String(updates.smtp_user||'').split('@')[1] || 'yourdomain.com') + ' — not an email address. Put the email (user@domain) in Username instead.' });
+      }
+    }
     Q.setSettings(updates);
     res.json({ message: 'Settings saved' });
   } catch(e) { res.status(500).json({ error: 'Failed: '+e.message }); }
@@ -155,6 +163,8 @@ router.post('/settings/test-email', async (req, res) => {
   try {
     const { to } = req.body;
     if (!to) return res.status(400).json({ error: 'Recipient required' });
+    const hostNow = String(Q.getSetting('smtp_host') || '');
+    if (hostNow.includes('@')) return res.status(400).json({ error: 'SMTP Host is set to "' + hostNow + '" — that is an email address. Host must be the mail server (e.g. mail.' + hostNow.split('@').pop() + '); the email belongs in Username.' });
     await testSmtp(to);
     const { resolveSender } = require('../utils/mailer');
     const { fromEmail, fromDomain, smtpDomain, aligned } = resolveSender();

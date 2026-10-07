@@ -1039,7 +1039,7 @@ label.form-label{color:var(--t3)!important}
     <div style="max-width:900px">
       <div class="settings-grid">
         <div class="s-card"><div class="s-title">🔧 SMTP Configuration</div>
-          <div class="form-group"><label class="form-label">SMTP Host</label><input class="input" id="smtp_host" placeholder="smtp.gmail.com"/></div>
+          <div class="form-group"><label class="form-label">SMTP Host</label><input class="input" id="smtp_host" placeholder="mail.japaquest.com"/><div style="font-size:.66rem;color:var(--t4);margin-top:4px">Mail server hostname only — never an email address. cPanel mailbox → <code>mail.&lt;yourdomain&gt;</code>; Gmail → <code>smtp.gmail.com</code>. The <code>user@domain</code> address goes in Username below.</div></div>
           <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
             <div class="form-group" style="margin-bottom:0"><label class="form-label">Port</label><input class="input" id="smtp_port" type="number" placeholder="587"/></div>
             <div class="form-group" style="margin-bottom:0"><label class="form-label">Secure</label><select class="input" id="smtp_secure"><option value="0">TLS (587)</option><option value="1">SSL (465)</option></select></div>
