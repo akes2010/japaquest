@@ -271,7 +271,7 @@ router.post('/chat', requireAuth, async (req, res) => {
     }
     else if (model === 'omniroute') {
       const key = process.env.OMNIROUTE_API_KEY || Q.getSetting('ai_omniroute_key') || 'omniroute';
-      const base = (process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || 'https://omniroute.online/v1').replace(/\/+$/,'');
+      const base = (process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || 'http://localhost:20128/v1').replace(/\/+$/,'');
       reply = await callOpenAICompat(base + '/chat/completions', key, process.env.OMNIROUTE_DEFAULT_MODEL || Q.getSetting('ai_omniroute_model') || 'auto', messages, system, maxTokens, doStream, res);
     }
     else if (model === 'cloudflare') {
@@ -380,7 +380,7 @@ async function dispatchCloudModel(id, messages, system, maxTokens, doStream, res
   }
   if (id === 'omniroute') {
     const key = process.env.OMNIROUTE_API_KEY || Q.getSetting('ai_omniroute_key') || 'omniroute';
-    const base = (process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || 'https://omniroute.online/v1').replace(/\/+$/,'');
+    const base = (process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || 'http://localhost:20128/v1').replace(/\/+$/,'');
     return callOpenAICompat(base + '/chat/completions', key, process.env.OMNIROUTE_DEFAULT_MODEL || Q.getSetting('ai_omniroute_model') || 'auto', messages, system, maxTokens, doStream, res);
   }
   if (id === 'cloudflare') {

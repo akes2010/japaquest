@@ -304,14 +304,14 @@ router.post('/settings/test-ai', async (req, res) => {
       return res.json({ message: '✅ z.ai key is valid!' });
     }
     if (model === 'omniroute') {
-      // OMNIROUTE_BASE_URL/ai_omniroute_url only count when the entry is a real
-      // API endpoint. localhost URLs mean a self-hosted gateway (may be down —
-      // that's checked at runtime), and omniroute.online is a marketing site
-      // with no API, so it's ignored here just like CONFIG_CHECKS does.
-      const rawUrl = process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || '';
-      const base = (omnirouteBaseLikelyValid(rawUrl)
-        ? rawUrl
-        : (process.env.OMNIROUTE_BASE_URL || 'https://invalid.omniroute.local/v1')).replace(/\/+$/,'');
+      // Admin setting wins (this Verify tests what the form shows); .env is
+      // the fallback. Entries pointing at the marketing site are ignored (no
+      // API there), and a blank result falls back to the self-host default.
+      const settingUrl = String(Q.getSetting('ai_omniroute_url') || '').trim();
+      const envUrl = String(process.env.OMNIROUTE_BASE_URL || '').trim();
+      const url = omnirouteBaseLikelyValid(settingUrl) ? settingUrl
+                : omnirouteBaseLikelyValid(envUrl) ? envUrl : '';
+      const base = (url || 'http://localhost:20128/v1').replace(/\/+$/,'');
       const key = typedKey || process.env.OMNIROUTE_API_KEY || Q.getSetting('ai_omniroute_key') || '';
       const r = await fetch(base + '/models', { headers: key ? {Authorization:`Bearer ${key}`} : {} });
       if (!r.ok) throw new Error(`Status ${r.status} at ${base}`);
