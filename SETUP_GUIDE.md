@@ -78,11 +78,14 @@ OPENROUTER_API_KEY=sk-or-v1-...
    - **Application startup file:** `server.js`
 2. Click **Create**, then **Run NPM Install** (or do it in terminal, next step).
 
+> **Create fails with "Cloudlinux NodeJS Selector demands to store node modules … symlink"?** A real `node_modules` folder already sits in the Application root — typically because `npm install` (or `npm run start:prod`, which auto-installs) ran *before* the app was created. CloudLinux reserves that name for its own symlink into the virtual environment. Delete it in File Manager (or `cd ~/japaquest && rm -rf node_modules`), click **Create**, then **Run NPM Install**.
+
 > **"Run NPM Install" says package.json not found?** cPanel looks for `package.json` **directly inside the Application root** — so the code from §1 must be uploaded *before* this step, and `package.json` must sit at `~/<application-root>/package.json`. If your zip extracted into a nested folder (`japaquest/japaquest/`), either move the files up one level or change the Application root to the inner folder. Verify in cPanel → **File Manager**.
 
 > Don't see "Setup Node.js App" in cPanel? Open a ticket with Truehost support and ask them to enable Node.js on your plan — most plans support it.
 
 ### 3.2 Install dependencies
+Only **after** the app is created in §3.1 — installing first creates a real `node_modules` folder that blocks app creation.
 cPanel → **Terminal** (or the app page's npm button):
 ```bash
 cd ~/japaquest            # your application root
@@ -240,6 +243,7 @@ Continue to §5 for first-run setup.
 |---|---|
 | 503 / app won't start (shared) | Check the cPanel app log; usually missing deps — rerun `npm install --omit=dev` |
 | cPanel "Run NPM Install": package.json not found | Code isn't in the Application root yet, or it's nested one level too deep — upload per §1 and confirm `package.json` sits directly in that folder (check in File Manager) |
+| App creation fails: "Cloudlinux NodeJS Selector demands to store node modules … symlink" | A real `node_modules` folder is in the app root (install ran before creation, or the zip included it) — delete it, Create the app, then **Run NPM Install** |
 | `EADDRINUSE` | Port taken — stop the old instance (cPanel toggle, or `lsof -ti tcp:4001 \| xargs kill` on VPS) or change `PORT` |
 | Domain shows nothing (shared) | Application URL mis-mapped in cPanel — point it at the app root + correct port |
 | 502 on VPS | `systemctl status japaquest` — app down, or nginx `proxy_pass` port ≠ `PORT` in `.env` |

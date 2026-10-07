@@ -29,6 +29,8 @@ cd japaquest
 
 ## 3. Create the Node.js app in cPanel
 
+> ⚠️ **Before you click Create:** the application root must NOT contain a real `node_modules` folder or file. CloudLinux stores real modules in a separate virtual environment and links them as a symlink named `node_modules`; if something with that name already exists, app creation fails with *"Cloudlinux NodeJS Selector demands to store node modules ... pointed by symlink"*. If you already ran `npm install` (or `npm run start:prod`, which auto-installs) before creating the app, delete the folder first: `cd ~/apps/japaquest && rm -rf node_modules`.
+
 1. cPanel → **Setup Node.js App** → *Add Application*
 2. **Node.js version:** 18 or newer
 3. **Application mode:** Production
@@ -41,7 +43,7 @@ cd japaquest
 
 ## 4. Install dependencies & configure
 
-In cPanel Terminal (or the "Run NPM Install" button on the Node.js app page):
+On the Node.js app page click **Run NPM Install** — this installs into the CloudLinux virtual environment. (Alternatively, *after* the app is created, in cPanel Terminal — installing in the root is fine once the app exists because it writes through the symlink):
 
 ```bash
 cd ~/apps/japaquest
@@ -130,6 +132,7 @@ The second monitor catches more than downtime: `/api/health` returns a top-level
 | Symptom | Fix |
 |---|---|
 | 503 / app won't start | Check cPanel app log; usually a missing dependency — run `npm install --omit=dev` again inside the app root |
+| Create fails: "Cloudlinux NodeJS Selector demands to store node modules ... symlink" | A real `node_modules` folder/file sits in the app root (npm install or `start:prod` ran before the app was created, or the zip included it). Delete it — `cd <app-root> && rm -rf node_modules` — then Create, then **Run NPM Install** |
 | `EADDRINUSE` | The port is taken — stop the app in cPanel, or change `PORT` in `.env` and the app's port field |
 | Domain shows nothing | Application URL mis-mapped in cPanel — point it at the app root + correct port |
 | Emails not sending | Set SMTP in **Admin → Email Settings** (see `EMAIL_SETUP_GUIDE.md`), then use 📤 Test |
