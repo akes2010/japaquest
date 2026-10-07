@@ -25,9 +25,9 @@ const FREE_POOL = [
   'cloudflare',                                     // Workers AI free tier
   'mistral7b',                                      // HuggingFace free tier
 ];
-const PREMIUM_EXTRA = ['kimi', 'zai', 'deepseek2', 'llama-together', 'gemini-pro', 'openai', 'claude'];
+const PREMIUM_EXTRA = ['kimi', 'zai', 'deepseek2', 'llama-together', 'gemini-pro', 'cheaperinference', 'openai', 'claude'];
 // Quality-ordered premium tail for Unlimited: best models first.
-const ULTIMATE_EXTRA = ['zai', 'kimi', 'claude', 'openai', 'gemini-pro', 'deepseek2'];
+const ULTIMATE_EXTRA = ['zai', 'kimi', 'claude', 'cheaperinference', 'openai', 'gemini-pro', 'deepseek2'];
 
 const TIER_POOLS = {
   free:      [...FREE_POOL],
@@ -58,6 +58,7 @@ const CONFIG_CHECKS = {
   'deepseek-local': () => true,
   omniroute:        () => !!(process.env.OMNIROUTE_BASE_URL || setting('ai_omniroute_url') || process.env.OMNIROUTE_API_KEY || setting('ai_omniroute_key')),
   xkiro:            () => !!(process.env.XKIRO_API_KEY || setting('ai_xkiro_key')),
+  cheaperinference: () => !!(process.env.CHEAPERINFERENCE_API_KEY || setting('ai_ci_key')),
   cloudflare:       () => !!((process.env.CLOUDFLARE_ACCOUNT_ID || setting('ai_cloudflare_account')) && (process.env.CLOUDFLARE_API_TOKEN || setting('ai_cloudflare_token'))),
   kimi:             () => !!(process.env.KIMI_API_KEY || setting('ai_kimi_key')),
   zai:              () => !!(process.env.ZAI_API_KEY || setting('ai_zai_key')),

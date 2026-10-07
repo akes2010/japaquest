@@ -319,6 +319,21 @@ router.post('/settings/test-ai', async (req, res) => {
       const n = (d.data || d.models || []).length;
       return res.json({ message: `✅ OmniRoute reachable at ${base} — ${n} model(s) available` });
     }
+    if (model === 'cheaperinference') {
+      const base = (process.env.CHEAPERINFERENCE_BASE_URL || 'https://api.cheaperinference.com/v1').replace(/\/+$/,'');
+      const key = typedKey || process.env.CHEAPERINFERENCE_API_KEY || Q.getSetting('ai_ci_key') || '';
+      if (!key) return res.status(400).json({ error: 'Cheaper Inference key not set — get one at platform.cheaperinference.com (ci_live_…), paste it above, then Verify' });
+      // Real billing check: a tiny max_tokens call settles cents at most and
+      // /v1/models only proves the key format, not that the wallet works.
+      const r = await fetch(base + '/chat/completions', {
+        method:'POST',
+        headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},
+        body: JSON.stringify({ model: process.env.CHEAPERINFERENCE_DEFAULT_MODEL || Q.getSetting('ai_ci_model') || 'gemini-3.7-flash', max_tokens:5, messages:[{role:'user',content:'Hi'}] }),
+      });
+      if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e?.error?.message || `Status ${r.status}`); }
+      const d = await r.json().catch(()=>({}));
+      return res.json({ message: '✅ Cheaper Inference key is valid — test reply: ' + String(d.choices?.[0]?.message?.content || 'ok').slice(0, 30).trim() });
+    }
     if (model === 'xkiro') {
       const base = (process.env.XKIRO_BASE_URL || 'https://api.xkiro.com/v1').replace(/\/+$/,'');
       const key = typedKey || process.env.XKIRO_API_KEY || Q.getSetting('ai_xkiro_key') || '';

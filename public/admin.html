@@ -691,6 +691,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
           <div id="pst-zai" class="pst-pill off"><span class="pst-dot">●</span> z.ai<br/><span class="pst-tag">GLM-4.6</span></div>
           <div id="pst-omniroute" class="pst-pill off"><span class="pst-dot">●</span> OmniRoute<br/><span class="pst-tag">Free gateway</span></div>
           <div id="pst-xkiro" class="pst-pill off"><span class="pst-dot">●</span> xKiro<br/><span class="pst-tag">Free tier · 90+ models</span></div>
+          <div id="pst-ci" class="pst-pill off"><span class="pst-dot">●</span> Cheaper Inference<br/><span class="pst-tag">Discounted · GPT/Claude/Gemini</span></div>
           <div id="pst-cloudflare" class="pst-pill off"><span class="pst-dot">●</span> Cloudflare<br/><span class="pst-tag">Workers AI free</span></div>
           <div id="pst-engine" class="pst-pill off"><span class="pst-dot">●</span> Self-Hosted<br/><span class="pst-tag">Ollama · vLLM · LMS</span></div>
         </div>
@@ -850,6 +851,19 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
         <button class="btn btn-ghost btn-sm" onclick="testAI('xkiro')">🔍 Verify</button>
       </div>
 
+      <!-- Cheaper Inference (discounted pay-as-you-go gateway) -->
+      <div class="provider-section">
+        <div class="provider-header">
+          <span>💠 Cheaper Inference</span><span class="provider-badge-paid">Pay-as-you-go</span>
+          <a href="https://platform.cheaperinference.com/" target="_blank" class="get-key-link" style="margin-left:auto">Platform →</a>
+        </div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">ChatGPT, Claude, Gemini & more at 15–60% below list price behind one OpenAI-compatible API. Wallet-based (fund from $5) — every response carries the exact settled charge. Keys look like ci_live_…</div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">API Key</label>
+          <div class="key-wrap"><input class="input" id="ai_ci_key" type="password" placeholder="ci_live_…"/><button class="key-show" onclick="toggleKey('ai_ci_key')">Show</button></div></div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Model (optional)</label><input class="input" id="ai_ci_model" placeholder="gemini-3.7-flash"/></div>
+        <button class="btn btn-ghost btn-sm" onclick="testAI('cheaperinference')">🔍 Verify</button>
+      </div>
+
       <!-- Cloudflare Workers AI -->
       <div class="provider-section">
         <div class="provider-header">
@@ -875,6 +889,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
               <option value="deepseek-local">🔍 DeepSeek R1 — Self-hosted Engine (main AI)</option>
               <option value="omniroute">🕸️ OmniRoute — Free Gateway</option>
               <option value="xkiro">🜲 xKiro — Free Tier (90+ models)</option>
+              <option value="cheaperinference">💠 Cheaper Inference — Discounted Gateway</option>
               <option value="cloudflare">☁️ Cloudflare Workers AI (Free)</option>
               <option value="kimi">🌙 Kimi K2 (Moonshot)</option>
               <option value="zai">🧬 GLM-4.6 (z.ai)</option>
@@ -1651,7 +1666,7 @@ async function delPartner(i){
 // ── AI SETTINGS ────────────────────────────────────────────────────────────────
 async function loadAI(){
   const r=await apiFetch('/api/admin/settings/ai');const d=await r.json();const s=d.settings||{};
-  const keys=['ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_default_model','ai_max_tokens','ai_system_prompt_addon','ai_engine_models','ai_ollama_url','ai_vllm_url','ai_lmstudio_url','ai_ollama_key','ai_kimi_key','ai_zai_key','ai_omniroute_url','ai_omniroute_key','ai_xkiro_key','ai_xkiro_model','ai_cloudflare_account','ai_cloudflare_token'];
+  const keys=['ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_default_model','ai_max_tokens','ai_system_prompt_addon','ai_engine_models','ai_ollama_url','ai_vllm_url','ai_lmstudio_url','ai_ollama_key','ai_kimi_key','ai_zai_key','ai_omniroute_url','ai_omniroute_key','ai_xkiro_key','ai_xkiro_model','ai_ci_key','ai_ci_model','ai_cloudflare_account','ai_cloudflare_token'];
   keys.forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k]||'';});
   document.getElementById('ai_stream').checked=s.ai_stream!=='0';
   document.getElementById('ai_engine_fallback').checked=s.ai_engine_fallback!=='0';
@@ -1701,6 +1716,7 @@ function updateProviderStatus(settings){
     'pst-zai': 'ai_zai_key',
     'pst-omniroute': 'ai_omniroute_key',
     'pst-xkiro': 'ai_xkiro_key',
+    'pst-ci': 'ai_ci_key',
     'pst-cloudflare': 'ai_cloudflare_token',
   };
   for(const [id, key] of Object.entries(map)){
@@ -1715,9 +1731,11 @@ function updateProviderStatus(settings){
   if(om){ const live=!!(settings.ai_omniroute_url||settings.ai_omniroute_key); om.classList.toggle('live',live); om.classList.toggle('off',!live); }
   const xk=document.getElementById('pst-xkiro');
   if(xk){ const live=!!settings.ai_xkiro_key; xk.classList.toggle('live',live); xk.classList.toggle('off',!live); }
+  const ci=document.getElementById('pst-ci');
+  if(ci){ const live=!!settings.ai_ci_key; ci.classList.toggle('live',live); ci.classList.toggle('off',!live); }
 }
 async function saveAI(){
-  const keyFields=['ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_ollama_key','ai_kimi_key','ai_zai_key','ai_omniroute_key','ai_xkiro_key','ai_cloudflare_token'];
+  const keyFields=['ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_ollama_key','ai_kimi_key','ai_zai_key','ai_omniroute_key','ai_xkiro_key','ai_ci_key','ai_cloudflare_token'];
   const settings={ai_default_model:document.getElementById('ai_default_model').value,ai_max_tokens:document.getElementById('ai_max_tokens').value,ai_stream:document.getElementById('ai_stream').checked?'1':'0',ai_system_prompt_addon:document.getElementById('ai_system_prompt_addon').value,ai_engine_fallback:document.getElementById('ai_engine_fallback').checked?'1':'0'};
   keyFields.forEach(k=>{const v=document.getElementById(k)?.value;if(v&&!v.startsWith('••••'))settings[k]=v;});
   ['ai_engine_models','ai_ollama_url','ai_vllm_url','ai_lmstudio_url','ai_omniroute_url','ai_cloudflare_account'].forEach(k=>{const el=document.getElementById(k);if(el)settings[k]=el.value.trim();});
@@ -1734,7 +1752,7 @@ async function testEngine(){
   showToast(r.ok?d.message:(d.error||'Engine test failed'),r.ok?'success':'error');
   refreshEngine(false);
 }
-async function testAI(model){showToast('Testing…');const KEYMAP={claude:'ai_anthropic_key',deepseek:'ai_openrouter_key',openai:'ai_openai_key',deepseek2:'ai_deepseek_key',groq:'ai_groq_key',gemini:'ai_gemini_key',together:'ai_together_key',mistral7b:'ai_huggingface_key',zephyr:'ai_huggingface_key',kimi:'ai_kimi_key',zai:'ai_zai_key',omniroute:'ai_omniroute_key',xkiro:'ai_xkiro_key',cloudflare:'ai_cloudflare_token'};const el=KEYMAP[model]?document.getElementById(KEYMAP[model]):null;const v=el&&el.value&&!el.value.startsWith('••••')?el.value.trim():'';const body={model};if(v)body.key=v;if(model==='cloudflare'){const a=document.getElementById('ai_cloudflare_account');if(a&&a.value.trim()&&!a.value.startsWith('••••'))body.accountId=a.value.trim();}const r=await apiFetch('/api/admin/settings/test-ai',{method:'POST',body:JSON.stringify(body)});const d=await r.json();const msg=r.ok?(d.message+(v?' — now click Save to store it':'')):(d.error||'Test failed');r.ok?showToast(msg):showToast(msg,'error');}
+async function testAI(model){showToast('Testing…');const KEYMAP={claude:'ai_anthropic_key',deepseek:'ai_openrouter_key',openai:'ai_openai_key',deepseek2:'ai_deepseek_key',groq:'ai_groq_key',gemini:'ai_gemini_key',together:'ai_together_key',mistral7b:'ai_huggingface_key',zephyr:'ai_huggingface_key',kimi:'ai_kimi_key',zai:'ai_zai_key',omniroute:'ai_omniroute_key',xkiro:'ai_xkiro_key',cheaperinference:'ai_ci_key',cloudflare:'ai_cloudflare_token'};const el=KEYMAP[model]?document.getElementById(KEYMAP[model]):null;const v=el&&el.value&&!el.value.startsWith('••••')?el.value.trim():'';const body={model};if(v)body.key=v;if(model==='cloudflare'){const a=document.getElementById('ai_cloudflare_account');if(a&&a.value.trim()&&!a.value.startsWith('••••'))body.accountId=a.value.trim();}const r=await apiFetch('/api/admin/settings/test-ai',{method:'POST',body:JSON.stringify(body)});const d=await r.json();const msg=r.ok?(d.message+(v?' — now click Save to store it':'')):(d.error||'Test failed');r.ok?showToast(msg):showToast(msg,'error');}
 
 // ── EMAIL ─────────────────────────────────────────────────────────────────────
 async function loadEmail(){const r=await apiFetch('/api/admin/settings/email');const d=await r.json();const s=d.settings||{};['smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from_name','smtp_from_email','smtp_secure'].forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k]||'';});}

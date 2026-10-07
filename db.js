@@ -547,6 +547,7 @@ function seedDefaults() {
     ['ai_zai_key','','ai'],['ai_zai_model','glm-4.6','ai'],
     ['ai_omniroute_url','','ai'],['ai_omniroute_key','','ai'],['ai_omniroute_model','auto','ai'],   // URL left blank: omniroute.online is a marketing site, not an API — set it only when self-hosting the gateway
     ['ai_xkiro_key','','ai'],['ai_xkiro_model','qwen/qwen3.7-max:free','ai'],
+    ['ai_ci_key','','ai'],['ai_ci_model','gemini-3.7-flash','ai'],
     ['ai_cloudflare_account','','ai'],['ai_cloudflare_token','','ai'],['ai_cloudflare_model','@cf/meta/llama-3.1-8b-instruct','ai'],
     // Self-hosted AI Engine — serves Llama/Qwen/DeepSeek (and friends) locally.
     // The engine is tried FIRST for its model ids; cloud providers follow when
