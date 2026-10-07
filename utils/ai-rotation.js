@@ -18,6 +18,7 @@ const { Q } = require('../db');
 const FREE_POOL = [
   'llama-local', 'qwen-local', 'deepseek-local',   // self-hosted engine (skipped when offline)
   'omniroute',                                      // free AI gateway (90+ free models)
+  'xkiro',                                          // xKiro aggregator — 500K free tokens/day, 40+ :free models
   'deepseek', 'qwen', 'llama', 'gemma', 'mistral',  // OpenRouter free tier
   'llama-groq', 'mixtral-groq',                     // Groq free tier
   'gemini-flash',                                   // Google free tier
@@ -56,6 +57,7 @@ const CONFIG_CHECKS = {
   'qwen-local':     () => true,
   'deepseek-local': () => true,
   omniroute:        () => !!(process.env.OMNIROUTE_BASE_URL || setting('ai_omniroute_url') || process.env.OMNIROUTE_API_KEY || setting('ai_omniroute_key')),
+  xkiro:            () => !!(process.env.XKIRO_API_KEY || setting('ai_xkiro_key')),
   cloudflare:       () => !!((process.env.CLOUDFLARE_ACCOUNT_ID || setting('ai_cloudflare_account')) && (process.env.CLOUDFLARE_API_TOKEN || setting('ai_cloudflare_token'))),
   kimi:             () => !!(process.env.KIMI_API_KEY || setting('ai_kimi_key')),
   zai:              () => !!(process.env.ZAI_API_KEY || setting('ai_zai_key')),

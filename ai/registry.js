@@ -42,6 +42,7 @@ const PROVIDERS = {
   kimi:         { name:'Kimi K2',              tag:'Moonshot AI', icon:'🌙', free:false, configured:()=>keyAvailable('KIMI_API_KEY','ai_kimi_key') },
   zai:          { name:'GLM-4.6',              tag:'z.ai',        icon:'🧬', free:false, configured:()=>keyAvailable('ZAI_API_KEY','ai_zai_key') },
   omniroute:    { name:'OmniRoute (free)',     tag:'Free Gateway',icon:'🕸️', free:true,  configured:()=>keyAvailable('OMNIROUTE_API_KEY','ai_omniroute_key')||!!process.env.OMNIROUTE_BASE_URL },
+  xkiro:        { name:'xKiro',                tag:'Free Tier',   icon:'🜲', free:true,  configured:()=>keyAvailable('XKIRO_API_KEY','ai_xkiro_key') },
   cloudflare:   { name:'Workers AI',           tag:'Cloudflare',  icon:'☁️', free:true,  configured:()=>!!(process.env.CLOUDFLARE_ACCOUNT_ID&&process.env.CLOUDFLARE_API_TOKEN) },
   ...Object.fromEntries(Object.entries(LOCAL_META).map(([id, m]) => [id, { ...m, configured:()=>true }])),
 };

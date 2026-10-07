@@ -36,6 +36,7 @@ const MODEL_SOURCES = {
   kimi:            ['KIMI_API_KEY','ai_kimi_key'],
   zai:             ['ZAI_API_KEY','ai_zai_key'],
   omniroute:       ['OMNIROUTE_API_KEY','ai_omniroute_key'],
+  xkiro:           ['XKIRO_API_KEY','ai_xkiro_key'],
   cloudflare:      ['CLOUDFLARE_API_TOKEN','ai_cloudflare_token'], // + account id required
 };
 
@@ -274,6 +275,11 @@ router.post('/chat', requireAuth, async (req, res) => {
       const base = (process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || 'http://localhost:20128/v1').replace(/\/+$/,'');
       reply = await callOpenAICompat(base + '/chat/completions', key, process.env.OMNIROUTE_DEFAULT_MODEL || Q.getSetting('ai_omniroute_model') || 'auto', messages, system, maxTokens, doStream, res);
     }
+    else if (model === 'xkiro') {
+      const key = process.env.XKIRO_API_KEY || Q.getSetting('ai_xkiro_key');
+      const base = (process.env.XKIRO_BASE_URL || 'https://api.xkiro.com/v1').replace(/\/+$/,'');
+      reply = await callOpenAICompat(base + '/chat/completions', key, process.env.XKIRO_DEFAULT_MODEL || Q.getSetting('ai_xkiro_model') || 'qwen/qwen3.7-max:free', messages, system, maxTokens, doStream, res);
+    }
     else if (model === 'cloudflare') {
       const cf = require('../ai/providers/cloudflare');
       const d = await cf.chat({ messages, system, model: process.env.CLOUDFLARE_DEFAULT_MODEL || Q.getSetting('ai_cloudflare_model') || undefined, maxTokens });
@@ -382,6 +388,11 @@ async function dispatchCloudModel(id, messages, system, maxTokens, doStream, res
     const key = process.env.OMNIROUTE_API_KEY || Q.getSetting('ai_omniroute_key') || 'omniroute';
     const base = (process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || 'http://localhost:20128/v1').replace(/\/+$/,'');
     return callOpenAICompat(base + '/chat/completions', key, process.env.OMNIROUTE_DEFAULT_MODEL || Q.getSetting('ai_omniroute_model') || 'auto', messages, system, maxTokens, doStream, res);
+  }
+  if (id === 'xkiro') {
+    const key = process.env.XKIRO_API_KEY || Q.getSetting('ai_xkiro_key');
+    const base = (process.env.XKIRO_BASE_URL || 'https://api.xkiro.com/v1').replace(/\/+$/,'');
+    return callOpenAICompat(base + '/chat/completions', key, process.env.XKIRO_DEFAULT_MODEL || Q.getSetting('ai_xkiro_model') || 'qwen/qwen3.7-max:free', messages, system, maxTokens, doStream, res);
   }
   if (id === 'cloudflare') {
     const cf = require('../ai/providers/cloudflare');

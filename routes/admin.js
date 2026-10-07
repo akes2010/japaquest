@@ -319,6 +319,21 @@ router.post('/settings/test-ai', async (req, res) => {
       const n = (d.data || d.models || []).length;
       return res.json({ message: `✅ OmniRoute reachable at ${base} — ${n} model(s) available` });
     }
+    if (model === 'xkiro') {
+      const base = (process.env.XKIRO_BASE_URL || 'https://api.xkiro.com/v1').replace(/\/+$/,'');
+      const key = typedKey || process.env.XKIRO_API_KEY || Q.getSetting('ai_xkiro_key') || '';
+      if (!key) return res.status(400).json({ error: 'xKiro key not set — create one at xkiro.com (free, no card), paste it above, then Verify' });
+      // A 5-token chat call is the only honest check — /models is public and
+      // would 200 even with a bad key.
+      const r = await fetch(base + '/chat/completions', {
+        method:'POST',
+        headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},
+        body: JSON.stringify({ model: process.env.XKIRO_DEFAULT_MODEL || Q.getSetting('ai_xkiro_model') || 'qwen/qwen3.7-max:free', max_tokens:5, messages:[{role:'user',content:'Hi'}] }),
+      });
+      if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e?.error?.message || `Status ${r.status}`); }
+      const d = await r.json().catch(()=>({}));
+      return res.json({ message: '✅ xKiro key is valid — test reply: ' + String(d.choices?.[0]?.message?.content || 'ok').slice(0, 30).trim() });
+    }
     if (model === 'cloudflare') {
       const acct = typedAccountId || process.env.CLOUDFLARE_ACCOUNT_ID || Q.getSetting('ai_cloudflare_account');
       const tok = typedKey || process.env.CLOUDFLARE_API_TOKEN || Q.getSetting('ai_cloudflare_token');
