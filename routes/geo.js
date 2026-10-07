@@ -62,6 +62,7 @@ router.get('/', async (req, res) => {
     currency, currencySymbol: fx.SYMBOLS[currency] || currency,
     currencyLive: fxst.live, fxUpdated: fxst.fetchedAt,
     fx_rates: fx.ratesSnapshot(),
+    currency_symbols: fx.SYMBOLS,
     lang: effLang, rtl: i18n.RTL.has(effLang), strings: i18n.bundle(effLang).strings,
     languages: i18n.LANGUAGES,
     detected: { via: geo.countryFromHeaders(req) ? 'cdn-header' : (geo.cachePeek(geo.clientIp(req)) ? 'ip-cache' : 'ip-lookup-or-default'), geoCountry: g.country },

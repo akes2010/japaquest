@@ -623,9 +623,10 @@ fetch('/api/app-info').then(r=>r.json()).then(d=>{
 }).catch(()=>{});
 
 /* Destinations preview — with local-currency budgets */
-let GEO=null; fetch('/api/geo').then(r=>r.json()).then(g=>GEO=g).catch(()=>{GEO={currency:'USD',currencySymbol:'$',fx_rates:{}}});
+let GEO={currency:'USD',currencySymbol:'$',fx_rates:{}};
+const GEO_READY=(()=>{const c=localStorage.getItem('vg_currency');return fetch('/api/geo'+(c?'?currency='+encodeURIComponent(c):'')).then(r=>r.json()).then(g=>{GEO=g;}).catch(()=>{});})();
 function loc(usd){ if(!GEO||GEO.currency==='USD'||!GEO.fx_rates) return '$'+usd; const v=usd*(GEO.fx_rates[GEO.currency]||1); const dec=v>=1000?0:2; return (GEO.currencySymbol||'')+v.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
-fetch('/api/visa/destinations?passport=NG&purpose=Tourism').then(r=>r.json()).then(d=>{
+GEO_READY.then(()=>fetch('/api/visa/destinations?passport=NG&purpose=Tourism')).then(r=>r.json()).then(d=>{
   const dests=(d.destinations||[]).slice(0,8);
   document.getElementById('dest-preview-grid').innerHTML=dests.map(x=>`
     <div class="dest-card" onclick="openModal('register-modal')">
@@ -640,7 +641,7 @@ fetch('/api/visa/destinations?passport=NG&purpose=Tourism').then(r=>r.json()).th
 const SL={visa_free:'Visa-free',voa:'On arrival',evisa:'eVisa',eta:'eTA',visa_required:'Visa required',needs_verification:'Check embassy'};
 
 /* Plans */
-fetch('/api/user/plans').then(r=>r.json()).then(d=>{
+GEO_READY.then(()=>fetch('/api/user/plans')).then(r=>r.json()).then(d=>{
   const plans=d.plans||[];
   if(!plans.length){document.getElementById('plans-wrap').innerHTML='<p style="color:var(--mut2);text-align:center">Plans coming soon.</p>';return;}
   const hottest=plans.reduce((a,p)=>(p.badge&&!a)?p:((p.badge&&(!a||plans.indexOf(p)<plans.indexOf(a)))?p:a),null);
@@ -649,7 +650,7 @@ fetch('/api/user/plans').then(r=>r.json()).then(d=>{
     return `<div class="plan${hot?' hot':''}">
       ${p.badge?`<div class="plan-badge">${p.badge}</div>`:''}
       <div class="p-name">${p.name}</div>
-      <div class="p-price">${p.price===0?'Free':'$'+p.price}<small>${p.price===0?'':'/mo'}</small></div>
+      <div class="p-price">${p.price===0?'Free':(GEO.currency&&GEO.currency!=='USD'?loc(p.price):'$'+p.price)}<small>${p.price===0?'':'/mo'}</small>${p.price!==0&&GEO.currency&&GEO.currency!=='USD'?`<small style="display:block;font-size:.62rem;opacity:.5;font-family:var(--ff)">≈ $${p.price} USD</small>`:''}</div>
       <div class="p-for">${p.daily_limit>=99999?'Unlimited conversations':p.daily_limit+' conversations a day'}</div>
       <ul class="p-list">${(p.features||[]).map(f=>`<li>${f}</li>`).join('')}</ul>
       <button class="btn ${hot?'btn-acc':'btn-line'} btn-full p-btn" onclick="openModal('register-modal')">${p.price===0?'Start free':'Choose '+p.name}</button>
@@ -883,6 +884,25 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch
         location.reload();
       };
       (nav.querySelector('.nav-links') || nav).appendChild(sel);
+    }
+    // Currency picker pill (stored locally for guests; saved server-side when signed in).
+    if (nav && !document.getElementById('cur-pill')) {
+      const cur = document.createElement('select');
+      cur.id = 'cur-pill'; cur.className = 'lang-pill'; cur.setAttribute('aria-label','Currency');
+      const syms = g.currency_symbols || {};
+      const codes = [...new Set([...Object.keys(syms), ...Object.keys(g.fx_rates||{}), 'USD'])].sort();
+      const savedCur = localStorage.getItem('vg_currency') || '';
+      cur.innerHTML = '<option value="">💱 ' + (savedCur ? (syms[savedCur]||'') + ' ' + savedCur + ' (your choice)' : 'Auto (' + ((g.currencySymbol||'') + ' ' + (g.currency||'USD')) + ')') + '</option>' +
+        codes.map(c => `<option value="${c}"${c===savedCur?' selected':''}>${syms[c]?syms[c]+' ':''}${c}</option>`).join('');
+      cur.onchange = async () => {
+        if (cur.value) localStorage.setItem('vg_currency', cur.value); else localStorage.removeItem('vg_currency');
+        try {
+          const tok2 = localStorage.getItem('vg_token');
+          if (tok2) { await fetch('/api/geo/pref', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok2 }, body: JSON.stringify({ currency: cur.value }) }); }
+        } catch {}
+        location.reload();
+      };
+      (nav.querySelector('.nav-links') || nav).appendChild(cur);
     }
     const st = document.createElement('style');
     st.textContent = '.lang-pill{background:transparent;border:1px solid rgba(10,20,40,.15);border-radius:99px;padding:7px 12px;font:inherit;font-size:.8rem;cursor:pointer;color:inherit}';

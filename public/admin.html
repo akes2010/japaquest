@@ -581,6 +581,156 @@ label.form-label{color:var(--t3)!important}
 /* modals inner labels */
 .m-box .form-label,.m-box label{color:var(--t3)!important}
 .m-box .input,.m-over .input{background:rgba(6,11,24,.5)!important;color:var(--t1)!important}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SKIN ENGINE — swappable dashboard skins: night · ink · paper · snow ·
+   daylight. Each skin re-points the token set on <body data-skin="…">, so
+   every var()-based rule in the layers above re-resolves automatically.
+   Opaque !important hardcodes from the Nightflight layers are re-tuned for
+   light skins below (body.skin-light), applied by applySkin() in the script
+   block. Choice persists in localStorage('jquest_skin').
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* tokens: ink — pure black · paper text · ember+gold stay */
+body[data-skin="ink"]{
+  --canvas:#000; --surface:#09090B;
+  --elev1:rgba(20,20,24,.9); --elev2:rgba(30,30,36,.94); --elev3:#16161A;
+  --t1:#F7F4EC; --t2:#D6D2C6; --t3:rgba(230,224,210,.6); --t4:rgba(230,224,210,.38);
+  --b0:rgba(255,255,255,.07); --b1:rgba(255,255,255,.11); --b2:rgba(255,255,255,.2);
+  --glass:rgba(255,255,255,.05); --glass2:rgba(255,255,255,.09);
+  --ba:rgba(232,97,60,.42);
+  --shadow-sm:0 2px 10px rgba(0,0,0,.6); --shadow-md:0 14px 40px -12px rgba(0,0,0,.8); --shadow-lg:0 30px 80px -24px rgba(0,0,0,.95);
+}
+/* tokens: paper — warm off-white editorial (the landing mood) */
+body[data-skin="paper"]{
+  --canvas:#F5F0E6; --surface:#F5F0E6;
+  --elev1:#FFFFFF; --elev2:#EFE8D8; --elev3:#E5DCC6;
+  --t1:#0E1D38; --t2:#3A4460; --t3:rgba(14,29,56,.62); --t4:rgba(14,29,56,.44);
+  --b0:rgba(14,29,56,.07); --b1:rgba(14,29,56,.12); --b2:rgba(14,29,56,.22);
+  --glass:rgba(14,29,56,.05); --glass2:rgba(14,29,56,.08);
+  --bg:rgba(225,90,45,.4); --ba:rgba(178,118,26,.45);
+  --ember:#C94E30; --ember-hi:#C2491F; --ember-lo:#E8613C;
+  --gold:#B07A20; --gold-hi:#8A5A14;
+  --o300:#C2491F; --o400:#C94E30; --a300:#8A5A14; --a400:#B07A20; --a600:#8A5A14;
+  --g300:#0E7B4F; --g200:#0E7B4F; --r300:#B3282D;
+  --shadow-sm:0 2px 8px rgba(14,29,56,.06);
+  --shadow-md:0 10px 30px -10px rgba(14,29,56,.22);
+  --shadow-lg:0 30px 70px -30px rgba(14,29,56,.35);
+}
+/* tokens: snow — bright white minimal, cooler neutrals */
+body[data-skin="snow"]{
+  --canvas:#FAFAF7; --surface:#FAFAF7;
+  --elev1:#FFFFFF; --elev2:#EFEEE9; --elev3:#E5E3DB;
+  --t1:#101826; --t2:#39445A; --t3:rgba(16,24,38,.6); --t4:rgba(16,24,38,.42);
+  --b0:rgba(16,24,38,.07); --b1:rgba(16,24,38,.12); --b2:rgba(16,24,38,.22);
+  --glass:rgba(16,24,38,.04); --glass2:rgba(16,24,38,.08);
+  --bg:rgba(225,90,45,.4); --ba:rgba(178,118,26,.45);
+  --ember:#C94E30; --ember-hi:#C2491F; --ember-lo:#E8613C;
+  --gold:#B07A20; --gold-hi:#8A5A14;
+  --o300:#C2491F; --o400:#C94E30; --a300:#8A5A14; --a400:#B07A20; --a600:#8A5A14;
+  --g300:#0E7B4F; --g200:#0E7B4F; --r300:#B3282D;
+  --shadow-sm:0 2px 8px rgba(16,24,38,.06);
+  --shadow-md:0 10px 30px -10px rgba(16,24,38,.2);
+  --shadow-lg:0 30px 70px -30px rgba(16,24,38,.32);
+}
+/* tokens: daylight — warm cream skin with ember-orange accents */
+body[data-skin="daylight"]{
+  --canvas:#FFF6EE; --surface:#FFF2E7;
+  --elev1:#FFFFFF; --elev2:#FFEDE0; --elev3:#FFDFC9;
+  --t1:#2A1708; --t2:#5C3B24; --t3:rgba(74,45,25,.65); --t4:rgba(74,45,25,.46);
+  --b0:rgba(74,45,25,.08); --b1:rgba(74,45,25,.14); --b2:rgba(74,45,25,.25);
+  --glass:rgba(74,45,25,.05); --glass2:rgba(74,45,25,.09);
+  --bg:rgba(200,70,28,.45); --ba:rgba(178,118,26,.5);
+  --ember:#C94E30; --ember-hi:#C2491F; --ember-lo:#E8613C;
+  --gold:#B07A20; --gold-hi:#8A5A14;
+  --o300:#C2491F; --o400:#C94E30; --a300:#8A5A14; --a400:#B07A20; --a600:#8A5A14;
+  --g300:#0E7B4F; --g200:#0E7B4F; --r300:#B3282D;
+  --shadow-sm:0 2px 8px rgba(120,60,20,.08);
+  --shadow-md:0 10px 30px -10px rgba(120,60,20,.24);
+  --shadow-lg:0 30px 70px -30px rgba(120,60,20,.4);
+}
+/* ambience: swap the nightflight aurora for a per-skin backdrop */
+body[data-skin="paper"]::before,body[data-skin="snow"]::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;mix-blend-mode:multiply;animation:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+body[data-skin="snow"]::before{opacity:.35}
+body[data-skin="daylight"]::before{
+  content:'';position:fixed;inset:-20%;z-index:0;pointer-events:none;opacity:.55;mix-blend-mode:multiply;
+  background:
+    radial-gradient(38% 42% at 18% 8%, rgba(232,122,60,.18), transparent 62%),
+    radial-gradient(42% 46% at 84% 16%, rgba(217,164,65,.16), transparent 65%),
+    radial-gradient(50% 55% at 50% 108%, rgba(255,228,198,.75), transparent 70%);
+  animation:aurora 26s ease-in-out infinite alternate}
+body[data-skin="ink"]::before{opacity:.65}
+
+/* ink: re-glass the navy gradients into black glass */
+body[data-skin="ink"] #sb{background:linear-gradient(180deg,rgba(9,9,11,.95),rgba(3,3,5,.97))}
+body[data-skin="ink"] #topbar{background:rgba(0,0,0,.82)}
+body[data-skin="ink"] .card,body[data-skin="ink"] .ps-card,body[data-skin="ink"] .sr-card,body[data-skin="ink"] .notif-card,body[data-skin="ink"] .book-card,body[data-skin="ink"] .tc,body[data-skin="ink"] .dest-card,body[data-skin="ink"] .plan-card,body[data-skin="ink"] .qc,body[data-skin="ink"] .input-box,body[data-skin="ink"] .tool-out{
+  background:linear-gradient(180deg,rgba(16,16,20,.72),rgba(8,8,10,.62))}
+body[data-skin="ink"] .stat-card,body[data-skin="ink"] .chart-card,body[data-skin="ink"] .tbl-card,body[data-skin="ink"] .s-card,body[data-skin="ink"] .pa-card,body[data-skin="ink"] .bc-card,body[data-skin="ink"] .provider-section{background:linear-gradient(180deg,rgba(16,16,20,.75),rgba(8,8,10,.68))!important}
+body[data-skin="ink"] .m-box{background:#0B0B0D}
+body[data-skin="ink"] .model-menu{background:rgba(7,7,9,.97)!important}
+body[data-skin="ink"] .input,body[data-skin="ink"] textarea.input,body[data-skin="ink"] .m-box .input,body[data-skin="ink"] .m-over .input{background:rgba(4,4,6,.6)!important}
+body[data-skin="ink"] #dest-grid div[style*="border:1px dashed"],body[data-skin="ink"] [style*="background:#fff"],body[data-skin="ink"] [style*="background: #fff"],body[data-skin="ink"] [style*="background:#FFFDF8"],body[data-skin="ink"] [style*="background:#F7F3EA"],body[data-skin="ink"] [style*="background:var(--elev2)"],body[data-skin="ink"] #content div[style*="var(--elev2)"],body[data-skin="ink"] [style*="background:var(--elev3)"]{background:rgba(16,16,20,.88)!important}
+body[data-skin="ink"] select.input option,body[data-skin="ink"] option{background:#0C0C0E!important;color:var(--t1)!important}
+body[data-skin="ink"] .m-ov,body[data-skin="ink"] .m-over{background:rgba(0,0,0,.86)}
+body[data-skin="ink"] .bubble{background:rgba(14,14,17,.66)!important}
+body[data-skin="ink"] .n-dot{border-color:#000!important}
+
+/* ── light skins (paper · snow · daylight): white surfaces, ink text ── */
+body.skin-light #sb{background:rgba(255,255,255,.88);backdrop-filter:blur(14px)}
+body.skin-light #topbar{background:rgba(255,255,255,.82);background-image:none;backdrop-filter:blur(14px)}
+body.skin-light #ia{background:rgba(255,255,255,.94);border-top-color:var(--b1)}
+body.skin-light .card,body.skin-light .ps-card,body.skin-light .sr-card,body.skin-light .notif-card,body.skin-light .book-card,body.skin-light .tc,body.skin-light .dest-card,body.skin-light .plan-card,body.skin-light .qc,body.skin-light .input-box,body.skin-light .tool-out{background:#fff!important;border:1px solid var(--b1)!important;backdrop-filter:none}
+body.skin-light .stat-card,body.skin-light .chart-card,body.skin-light .tbl-card,body.skin-light .s-card,body.skin-light .pa-card,body.skin-light .bc-card{background:#fff!important;border:1px solid var(--b1)!important}
+body.skin-light .provider-section{background:#fff!important}
+body.skin-light .m-box{background:#fff!important}
+body.skin-light .bubble{background:#fff!important;color:var(--t2)!important}
+body.skin-light .bubble strong{color:var(--t1)!important}
+body.skin-light .input,body.skin-light textarea.input,body.skin-light .m-box .input,body.skin-light .m-over .input{background:#fff!important;color:var(--t1)!important;border-color:var(--b2)!important}
+body.skin-light .model-menu{background:#fff!important}
+body.skin-light .model-pill,body.skin-light .notif-btn,body.skin-light .menu-btn{background:#fff!important;color:var(--t3)!important;border-color:var(--b1)!important}
+body.skin-light select.input option,body.skin-light option{background:#fff!important;color:var(--t1)!important}
+body.skin-light [style*="background:#fff"],body.skin-light [style*="background: #fff"],body.skin-light [style*="background:#FFFDF8"],body.skin-light [style*="background: #FFFDF8"],body.skin-light [style*="background:#F7F3EA"]{background:#fff!important}
+body.skin-light [style*="background:var(--elev2)"],body.skin-light [style*="background: var(--elev2)"],body.skin-light #content div[style*="var(--elev2)"]{background:var(--elev2)!important}
+body.skin-light [style*="background:var(--elev3)"]{background:var(--elev3)!important}
+body.skin-light .m-ov,body.skin-light .m-over{background:rgba(15,20,32,.45);backdrop-filter:blur(6px)}
+body.skin-light th,body.skin-light td{color:var(--t2)!important;border-bottom-color:var(--b0)!important}
+body.skin-light tr:hover td{background:rgba(14,29,56,.04)!important;color:var(--t1)!important}
+body.skin-light .mb-bar-w{background:rgba(14,29,56,.09)!important}
+body.skin-light .usage-row .progress{background:rgba(14,29,56,.09)}
+body.skin-light .n-dot{border-color:#fff!important}
+body.skin-light ::-webkit-scrollbar-thumb{background:rgba(14,29,56,.24)}
+body.skin-light ::-webkit-scrollbar-thumb:hover{background:rgba(194,73,31,.55)}
+body.skin-light .dest-card::after,body.skin-light .tc::after,body.skin-light .qc::after,body.skin-light .plan-card::after,body.skin-light .book-card::after{display:none}
+body.skin-light .sb-logo{animation:none}
+body.skin-light .sb-logo::after{background:radial-gradient(circle at 30% 25%,rgba(232,97,60,.55),transparent 55%)}
+body.skin-light .tb-title{background:linear-gradient(100deg,var(--t1),var(--gold-hi))!important;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+body.skin-light .sb-appname{background:linear-gradient(100deg,var(--t1),var(--gold) 60%,var(--gold-hi))!important;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+body.skin-light .pst-pill.live{background:rgba(14,123,79,.08)!important;border-color:rgba(14,123,79,.3)!important;color:#0E7B4F!important}
+body.skin-light .pst-pill.live .pst-dot,body.skin-light .pst-pill.live .pst-tag{color:#0E7B4F!important}
+body.skin-light .status-visa_free{background:rgba(14,123,79,.1);color:#0E7B4F;border-color:rgba(14,123,79,.25)}
+body.skin-light .status-voa{background:rgba(217,138,42,.12);color:#8A5A14;border-color:rgba(176,122,32,.35)}
+body.skin-light .status-evisa{background:rgba(194,73,31,.08);color:#C2491F;border-color:rgba(194,73,31,.28)}
+body.skin-light .status-eta{background:rgba(59,91,219,.08);color:#4A66D8;border-color:rgba(59,91,219,.25)}
+body.skin-light .status-visa_required{background:rgba(14,29,56,.06);color:var(--t3);border-color:var(--b1)}
+body.skin-light .status-needs_verification{background:rgba(14,29,56,.04);color:var(--t4);border-color:var(--b0)}
+body.skin-light .logout-btn{color:#B3282D;background:rgba(200,45,45,.06);border-color:rgba(200,45,45,.25)}
+body.skin-light .admin-badge{color:#5B3FD6;background:rgba(109,74,255,.08);border-color:rgba(109,74,255,.25)}
+body.skin-light .sb-name{color:var(--t1)!important;-webkit-text-fill-color:initial}
+body.skin-light .maint-pill{color:#B3282D;background:rgba(200,45,45,.07);border-color:rgba(200,45,45,.25)}
+
+/* ── skin switcher control ── */
+.skin-dot-wrap{display:flex;align-items:center;gap:6px;padding:5px 9px;background:var(--glass);border:1px solid var(--b1);border-radius:var(--r-pill);flex-shrink:0}
+.skin-dot{width:15px;height:15px;border-radius:50%;border:1px solid var(--b2);padding:0;cursor:pointer;transition:transform .25s var(--ease),box-shadow .25s var(--ease);flex-shrink:0}
+.skin-dot:hover{transform:scale(1.25)}
+body.skin-light .skin-dot{border-color:rgba(14,29,56,.35)}
+.skin-dot-night{background:linear-gradient(135deg,#0A1428,#24406E)}
+.skin-dot-ink{background:#000}
+.skin-dot-paper{background:#F5F0E6}
+.skin-dot-snow{background:#fff}
+.skin-dot-daylight{background:linear-gradient(135deg,#E8613C 20%,#F5B77E)}
+.skin-dot-on{box-shadow:0 0 0 2px rgba(217,90,35,.6);transform:scale(1.12)}
 </style>
 </head>
 <body>
@@ -703,6 +853,7 @@ label.form-label{color:var(--t3)!important}
   <div id="topbar">
     <div class="tb-title" id="tb-title">Dashboard Overview</div>
     <div class="maint-pill" id="maint-pill">🔧 Maintenance ON</div>
+    <div class="skin-dot-wrap" id="skin-dots" title="Skins — Night · Ink · Paper · Snow · Daylight"></div>
     <button class="btn btn-ghost btn-sm" onclick="sw('general')" style="font-size:.7rem">⚙ Settings</button>
   </div>
   <div id="content">
@@ -1113,6 +1264,10 @@ label.form-label{color:var(--t3)!important}
           <div class="tgl-row"><div><div class="tgl-lbl">Open Registration</div><div class="tgl-sub">Allow new user sign-ups</div></div><label class="toggle"><input type="checkbox" id="registration_open"/><span class="toggle-sl"></span></label></div>
           <div style="margin-top:14px;padding:12px;background:var(--elev2);border:1px solid var(--b1);border-radius:var(--r-md);font-size:.74rem;color:var(--t4);line-height:1.7">⚠️ Change admin credentials via <strong style="color:var(--t2)">Users → edit admin account</strong>. Never share admin credentials.</div>
         </div>
+        <div class="s-card"><div class="s-title">🌍 Locale &amp; FX</div>
+          <div id="geo-status" style="font-size:.76rem;color:var(--t3);line-height:2">Loading geo/FX status…</div>
+          <div style="margin-top:10px;font-size:.7rem;color:var(--t4);line-height:1.7">Travellers see every USD price converted into their geo-detected currency (override from the 🌐 menu in their dashboard) and the interface in their detected language (en · fr · es · pt · ar · sw). Rates refresh daily from open.er-api.com, with a static fallback when offline.</div>
+        </div>
       </div>
       <button class="btn btn-primary" onclick="saveGeneral()">💾 Save System Settings</button>
     </div>
@@ -1354,7 +1509,31 @@ label.form-label{color:var(--t3)!important}
 <script>
 var tok=localStorage.getItem('vg_token'),role=localStorage.getItem('vg_role');
 if(!tok||role!=='admin'){window.location.href='/admin-login';}
-// KEY FIX: store plans in array, reference by index — no JSON in onclick
+
+// ── SKIN ENGINE (same engine as dashboard: night · ink · paper · snow · daylight) ──
+const SKINS=[
+  {id:'night', name:'Night',       light:false, desc:'Deep-space navy + ember accents (default)'},
+  {id:'ink',   name:'Ink',         light:false, desc:'Pure black OLED skin'},
+  {id:'paper', name:'Paper',       light:true,  desc:'Warm off-white editorial'},
+  {id:'snow',  name:'Snow',        light:true,  desc:'Bright white minimal'},
+  {id:'daylight', name:'Daylight', light:true,  desc:'Warm cream with orange accents'}
+];
+function getSkin(){const i=SKINS.findIndex(s=>s.id===localStorage.getItem('jquest_skin'));return i>=0?i:0;}
+function applySkin(animFlash){
+  const s=SKINS[getSkin()],b=document.body;
+  b.dataset.skin=s.id;b.classList.toggle('skin-light',!!s.light);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',s.light?'#FFFFFF':'#060B18');
+  document.querySelectorAll('#skin-dots .skin-dot').forEach((d,i)=>d.classList.toggle('skin-dot-on',i===getSkin()));
+  if(animFlash){b.style.transition='opacity .18s ease';b.style.opacity='.5';setTimeout(()=>{b.style.opacity='1';setTimeout(()=>b.style.transition='',200)},120);}
+}
+function initSkin(){
+  const w=document.getElementById('skin-dots');
+  SKINS.forEach((s,i)=>{const d=document.createElement('button');d.className='skin-dot skin-dot-'+s.id;d.type='button';d.title=s.name+' — '+s.desc;d.setAttribute('aria-label','Switch to '+s.name+' skin');
+    d.onclick=()=>{if(i===getSkin())return;localStorage.setItem('jquest_skin',s.id);applySkin(true);showToast(s.name+' skin applied');};w.appendChild(d);});
+  applySkin();
+}
+initSkin();
+// ── /SKIN ENGINE ─────────────────────────────────────────────────────────
 var allPlans=[],selPlanModels=[],usersPage=1,convsPage=1,userQ='',convQ='',convRows=[];
 // Keep in sync with the models the /api/ai/chat dispatcher can serve
 const ALL_MODELS=['claude','openai','deepseek','deepseek2','qwen','llama','gemma','mistral','llama-groq','mixtral-groq','gemini-flash','gemini-pro','llama-together','mistral7b','zephyr','ollama'];
@@ -1384,6 +1563,8 @@ async function init(){
     document.getElementById('sf-email').textContent=u.email||'admin@visaguru.ai';
     updateMaintBadge(appD.maintenance);
     renderStats(statsD);loadPlans();loadClicks();loadIntegrity();
+    // Geo/FX status for the Locale card + local-currency hints on plan prices.
+    fetch('/api/geo').then(r=>r.json()).then(g=>{_adminGeo=g;renderGeoStatus();loadPlans();}).catch(()=>{});
   }catch(e){console.error('Init:',e);}
 }
 
@@ -1626,6 +1807,25 @@ async function viewConv(uuid,title){
 }
 async function delConv(uuid){if(!confirm('Delete?'))return;await apiFetch(`/api/admin/conversations/${uuid}`,{method:'DELETE'});loadConvs(convsPage);showToast('Deleted');}
 
+// ── GEO / FX (multi-currency display) ───────────────────────────────────────
+let _adminGeo=null;
+function adminFx(usd){
+  if(!_adminGeo||!_adminGeo.currency||_adminGeo.currency==='USD'||!_adminGeo.fx_rates)return null;
+  const v=usd*(_adminGeo.fx_rates[_adminGeo.currency]||1);
+  const dec=v>=1000?0:2;
+  return (_adminGeo.currencySymbol||'')+v.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec})+' '+_adminGeo.currency;
+}
+function renderGeoStatus(){
+  const el=document.getElementById('geo-status');if(!el)return;
+  const g=_adminGeo;
+  if(!g){el.textContent='Geo/FX status unavailable.';return;}
+  const fxRow=g.fxUpdated?('rates '+(g.currencyLive?'🟢 live':'🟡 fallback')+' · updated '+new Date(g.fxUpdated).toLocaleString()):'rates unavailable';
+  el.innerHTML=
+    '<div>👤 Visitors from <strong style="color:var(--t2)">'+((g.flag||'🌍')+' '+esc(g.countryName||g.country||'—'))+'</strong> see <strong style="color:var(--t2)">'+((g.currencySymbol||'')+' '+g.currency)+'</strong></div>'+
+    '<div>🗣 Default language: <strong style="color:var(--t2)">'+String(g.lang||'en').toUpperCase()+'</strong> · '+((g.languages||[]).length)+' languages supported</div>'+
+    '<div>💱 '+(g.currency_symbols?Object.keys(g.currency_symbols).length:'—')+' currencies · '+fxRow+'</div>';
+}
+
 // ── PLANS ─────────────────────────────────────────────────────────────────────
 async function loadPlans(){
   const r=await apiFetch('/api/admin/plans');const d=await r.json();
@@ -1634,7 +1834,7 @@ async function loadPlans(){
   grid.innerHTML=allPlans.length?allPlans.map((p,i)=>`
     <div class="pa-card">
       <div class="pa-name">${esc(p.name)} ${p.badge?`<span class="badge badge-gold" style="font-size:.58rem">${p.badge}</span>`:''}</div>
-      <div class="pa-price">${p.price===0?'Free':'$'+p.price}<span style="font-size:.72rem;color:var(--t4);font-family:var(--ff)">${p.price===0?'':'/mo'}</span></div>
+      <div class="pa-price">${p.price===0?'Free':'$'+p.price}<span style="font-size:.72rem;color:var(--t4);font-family:var(--ff)">${p.price===0?'':'/mo'}</span>${p.price!==0&&adminFx(p.price)?`<div style="font-size:.62rem;color:var(--t4);font-family:var(--ff)">≈ ${adminFx(p.price)}/mo</div>`:''}</div>
       <div class="pa-limit">${p.daily_limit>=99999?'Unlimited':p.daily_limit} msgs/day</div>
       <div class="pa-models">${(Array.isArray(p.models)?p.models:[]).map(m=>`<span class="pa-tag">${m}</span>`).join('')}</div>
       <div style="display:flex;gap:6px">
