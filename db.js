@@ -1308,4 +1308,42 @@ const Q = {
   },
 };
 
-module.exports = { initDB, Q, persist, exec, DB_PATH, quickCheck, reloadDB };
+// ── SYSTEM RESET ─────────────────────────────────────────────────────────────
+// Partial reset: wipe every user account (admins are KEPT so the operator
+// stays signed in and in control) plus all user-generated data — chats,
+// payments, credits, journeys, concierge, analytics, wallet docs.
+// Configuration survives untouched: settings (branding, AI keys, payment
+// gateways, SMTP), plans, visa/destination reference data, partner links.
+const USER_DATA_TABLES = [
+  'conversations','messages','notifications','usage_log','password_resets',
+  'payments','affiliate_credits','affiliate_clicks','tool_results',
+  'passport_wallet','travel_profiles','travel_searches','social_posts',
+  'brain_insights','journey_cases','concierge_tickets','concierge_replies',
+  'journeys','journey_tasks',
+];
+function resetPartial() {
+  exec(`DELETE FROM users WHERE role!='admin'`);
+  for (const t of USER_DATA_TABLES) {
+    try { exec(`DELETE FROM "${t}"`); }
+    catch (e) { if (!/no such table/i.test(e.message)) throw new Error(`table ${t}: ` + e.message); }
+  }
+  persist();
+}
+
+// Complete reset: wipe EVERYTHING — users, chats, AI keys, payment gateway
+// config, SMTP, branding, plans, visa data — then re-seed the factory
+// defaults (plans, blank settings, default admin, visa reference data) so the
+// app is ready to be reconfigured from scratch. Every session token dies (the
+// fresh admin gets a new uuid); log back in with the default credentials.
+function resetAll() {
+  const tables = queryAll(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`);
+  for (const row of tables) {
+    const t = row.name;
+    try { exec(`DELETE FROM "${t}"`); }
+    catch (e) { if (!/no such table/i.test(e.message)) throw new Error(`table ${t}: ` + e.message); }
+  }
+  seedDefaults();
+  persist();
+}
+
+module.exports = { initDB, Q, persist, exec, DB_PATH, quickCheck, reloadDB, resetPartial, resetAll };

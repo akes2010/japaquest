@@ -4,7 +4,7 @@ const bcrypt  = require('bcryptjs');
 const path    = require('path');
 const fs      = require('fs');
 const { requireAdmin } = require('../middleware/auth');
-const { Q, persist, reloadDB, DB_PATH } = require('../db');
+const { Q, persist, reloadDB, DB_PATH, resetPartial, resetAll } = require('../db');
 const { sendEmail, testSmtp } = require('../utils/mailer');
 const { getOverrides, getEffectivePartners, clearPartnerCache } = require('../ai/affiliates');
 const { PLATFORMS, shareLinks } = require('../utils/social');
@@ -1005,6 +1005,37 @@ router.delete('/backups/:name', requireAdmin, (req, res) => {
   if (!p) return res.status(400).json({ error: 'Invalid backup name' });
   try { fs.unlinkSync(p); res.json({ message: 'Backup deleted', backups: backupList() }); }
   catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── SYSTEM RESET ─────────────────────────────────────────────────────────────
+// Destructive maintenance operations. Both archive a safety snapshot of the
+// current database into data/backups first, so an accidental click stays
+// recoverable via Backup & Restore.
+const archiveBeforeReset = () => {
+  persist();
+  fs.mkdirSync(BACKUP_DIR, { recursive: true });
+  fs.copyFileSync(DB_PATH, path.join(BACKUP_DIR, 'pre-reset-' + Date.now() + '.db'));
+};
+
+// Partial: users + user-generated data wiped; admin account, settings (AI
+// keys, payment gateways, SMTP, branding), plans and visa data survive.
+router.post('/reset/partial', requireAdmin, (_req, res) => {
+  try {
+    archiveBeforeReset();
+    resetPartial();
+    res.json({ message: 'Partial reset complete — all users and user data wiped. Admin account, settings, AI keys and payment gateways were kept.' });
+  } catch (e) { res.status(500).json({ error: 'Partial reset failed: ' + e.message }); }
+});
+
+// Complete: the entire database back to factory state, then re-seeded with
+// defaults so everything can be reconfigured. All sessions die — the operator
+// must log in again with the default admin credentials.
+router.post('/reset/complete', requireAdmin, (_req, res) => {
+  try {
+    archiveBeforeReset();
+    resetAll();
+    res.json({ message: 'Complete reset done — database is factory-fresh and ready to be reconfigured. You will be logged out; sign in with the default admin credentials.' });
+  } catch (e) { res.status(500).json({ error: 'Complete reset failed: ' + e.message }); }
 });
 
 router.get('/payment-gateways', requireAdmin, (_req, res) => {

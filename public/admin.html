@@ -1361,6 +1361,22 @@ body.skin-light .skin-dot{border-color:rgba(14,29,56,.35)}
     </div>
     <div class="stats-grid" id="bk-summary" style="margin-bottom:16px"></div>
     <div id="bk-rows"></div>
+    <div style="margin-top:24px;border:1px solid rgba(200,16,46,.3);background:rgba(200,16,46,.05);border-radius:var(--r-md);padding:16px">
+      <div style="font-family:var(--fd);font-size:.92rem;color:#FF8F9C;margin-bottom:6px">⚠️ System Reset</div>
+      <div style="font-size:.76rem;color:var(--t4);margin-bottom:12px;line-height:1.5">A safety snapshot is archived to this page automatically before either reset runs — restore it from the list above if anything goes wrong.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+        <div style="border:1px solid rgba(240,147,43,.3);border-radius:var(--r-sm);padding:12px;background:rgba(240,147,43,.04)">
+          <div style="font-size:.8rem;color:var(--o300);font-weight:600;margin-bottom:4px">🧹 Partial Reset</div>
+          <div style="font-size:.72rem;color:var(--t4);line-height:1.5;margin-bottom:10px">Wipes <strong>all users</strong> and user data — chats, payments, credits, journeys, concierge tickets, wallet docs, analytics. <strong>Kept:</strong> your admin account, all settings, AI engine keys, payment gateways, SMTP, visa data. You stay signed in.</div>
+          <button class="btn btn-sm" style="border-color:rgba(240,147,43,.4);color:var(--o300)" onclick="systemReset('partial')">Wipe users &amp; data</button>
+        </div>
+        <div style="border:1px solid rgba(200,16,46,.35);border-radius:var(--r-sm);padding:12px;background:rgba(200,16,46,.06)">
+          <div style="font-size:.8rem;color:#FF8F9C;font-weight:600;margin-bottom:4px">💥 Complete Reset</div>
+          <div style="font-size:.72rem;color:var(--t4);line-height:1.5;margin-bottom:10px">Wipes the <strong>entire database</strong> — users, chats, AI engine keys, payment gateways, SMTP, branding, plans — and restores factory defaults. Ready to be reconfigured from scratch. <strong>You will be logged out.</strong></div>
+          <button class="btn btn-sm" style="border-color:rgba(200,16,46,.45);color:#FF8F9C" onclick="systemReset('complete')">Wipe everything</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- PARTNERS -->
@@ -2321,6 +2337,25 @@ async function loadIntegrity(){
   }catch{el.style.display='none';}
 }
 function doLogout(){localStorage.clear();window.location.href='/admin-login';}
+
+// ── SYSTEM RESET ────────────────────────────────────────────────────────────────
+async function systemReset(kind){
+  const partial = kind==='partial';
+  const what = partial
+    ? 'PARTIAL RESET — final confirmation\n\nThis permanently deletes ALL user accounts and user data:\n• User accounts (admins are kept)\n• Chats & AI conversations\n• Payments & affiliate credits\n• Journeys, concierge tickets, wallet docs\n• Usage logs, analytics, notifications\n\nKEPT: your admin account, all settings, AI engine keys, payment gateways, SMTP, visa data.\n\nA safety snapshot is archived to Backup & Restore first.\n\nType OK to continue.'
+    : 'COMPLETE RESET — final confirmation\n\nThis permanently deletes the ENTIRE database:\n• All users (including your admin session)\n• Chats, payments, journeys, concierge\n• AI engine keys & model config\n• Payment gateway & SMTP config\n• Branding, plans, everything\n\nThe database returns to factory defaults and must be reconfigured from scratch.\n\nA safety snapshot is archived to Backup & Restore first.\n\nType RESET to continue.';
+  const pass = partial ? 'OK' : 'RESET';
+  if(prompt(what) !== pass){ showToast('Reset cancelled','info'); return; }
+  if(!confirm(partial ? 'Last check — wipe all users and user data now?' : 'Last check — wipe the ENTIRE database now?')){ showToast('Reset cancelled','info'); return; }
+  try {
+    const r = await apiFetch('/api/admin/reset/'+kind,{method:'POST'});
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error||'Reset failed');
+    showToast(d.message,'success');
+    if(partial){ loadBackups(); }
+    else { setTimeout(()=>{ localStorage.clear(); window.location.href='/admin-login'; }, 1800); }
+  } catch(e){ showToast('Reset failed: '+e.message,'error'); }
+}
 
 init();
 
