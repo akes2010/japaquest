@@ -88,6 +88,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opac
 fetch('/api/app-info').then(r=>r.json()).then(d=>{
   document.getElementById('app-name').textContent=d.name||'JapaQuest';
   document.title='Admin Login — '+(d.name||'JapaQuest');
+  if(d.faviconUrl){var l=document.querySelector('link[rel="icon"]');if(l)l.href=d.faviconUrl;}
 }).catch(()=>{});
 
 var t=localStorage.getItem('vg_token'),rl=localStorage.getItem('vg_role');

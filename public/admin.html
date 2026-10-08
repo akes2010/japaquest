@@ -1250,6 +1250,18 @@ body.skin-light .skin-dot{border-color:rgba(14,29,56,.35)}
                 </div>
               </div>
             </div>
+            <label class="form-label" style="margin-top:16px">Favicon (browser tab + PWA icon — applies system-wide)</label>
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+              <div class="logo-preview" id="favicon-preview-box" style="width:40px;height:40px;font-size:18px;margin-bottom:0">✈</div>
+              <div>
+                <div style="font-size:.76rem;color:var(--t1);margin-bottom:4px">Upload Favicon</div>
+                <div style="font-size:.68rem;color:var(--t4);margin-bottom:8px">PNG, ICO, SVG, WEBP up to 2MB</div>
+                <div class="upload-zone" style="padding:10px 16px;display:inline-block">
+                  <input type="file" accept=".png,.ico,.svg,.webp,.jpg,.jpeg" onchange="uploadFavicon(this)"/>
+                  <span style="font-size:.76rem;color:var(--o300)">📁 Choose file…</span>
+                </div>
+              </div>
+            </div>
             <label class="form-label">Logo Emoji (fallback if no image)</label>
             <input class="input" id="app_logo" placeholder="✈" maxlength="4"/>
           </div>
@@ -1557,6 +1569,7 @@ async function init(){
     const sbIcon=document.getElementById('sb-icon');
     if(logoUrl){sbIcon.innerHTML=`<img src="${logoUrl}" alt="logo" style="width:100%;height:100%;object-fit:contain"/>`;document.getElementById('logo-preview-box').innerHTML=`<img src="${logoUrl}" alt="logo" style="width:100%;height:100%;object-fit:contain"/>`;}
     else{sbIcon.textContent=logoEmoji;}
+    if(appD.faviconUrl){const fl=document.querySelector('link[rel="icon"]');if(fl)fl.href=appD.faviconUrl;}
     document.getElementById('sb-name').textContent=appD.name||'JapaQuest';
     document.title='Admin — '+(appD.name||'JapaQuest');
     const u=JSON.parse(localStorage.getItem('vg_user')||'{}');
@@ -2080,6 +2093,7 @@ async function loadGeneral(){
   // Show existing logo
   if(s.app_logo_url){document.getElementById('logo-preview-box').innerHTML=`<img src="${s.app_logo_url}" style="width:100%;height:100%;object-fit:contain"/>`;}
   else if(s.app_logo){document.getElementById('logo-preview-box').textContent=s.app_logo;}
+  if(s.app_favicon_url){const fp=document.getElementById('favicon-preview-box');if(fp)fp.innerHTML=`<img src="${s.app_favicon_url}" style="width:100%;height:100%;object-fit:contain"/>`;}
 }
 async function saveGeneral(){
   const fields=['app_name','app_tagline','app_logo','support_email','app_url','concierge_notify_email'];
@@ -2094,19 +2108,27 @@ async function saveGeneral(){
 function updateMaintBadge(on){const b=document.getElementById('maint-pill');if(b)b.style.display=on?'block':'none';}
 
 // ── LOGO UPLOAD ────────────────────────────────────────────────────────────────
-async function uploadLogo(input){
+async function uploadBrandImage(input,kind){
   if(!input.files||!input.files[0])return;
   const file=input.files[0];
   if(file.size>2*1024*1024){showToast('File too large (max 2MB)','error');return;}
-  showToast('Uploading logo…');
+  const label=kind==='logo'?'logo':'favicon';
+  showToast('Uploading '+label+'…');
   const fd=new FormData();fd.append('logo',file);
-  const r=await fetch('/api/admin/upload/logo',{method:'POST',headers:{'Authorization':'Bearer '+localStorage.getItem('vg_token')},body:fd});
+  const r=await fetch('/api/admin/upload/'+kind,{method:'POST',headers:{'Authorization':'Bearer '+localStorage.getItem('vg_token')},body:fd});
   const d=await r.json();
   if(!r.ok){showToast(d.error||'Upload failed','error');return;}
-  showToast('Logo uploaded ✅');
-  document.getElementById('logo-preview-box').innerHTML=`<img src="${d.url}?t=${Date.now()}" style="width:100%;height:100%;object-fit:contain"/>`;
-  document.getElementById('sb-icon').innerHTML=`<img src="${d.url}?t=${Date.now()}" style="width:100%;height:100%;object-fit:contain"/>`;
+  showToast(label.charAt(0).toUpperCase()+label.slice(1)+' uploaded ✅');
+  if(kind==='logo'){
+    document.getElementById('logo-preview-box').innerHTML=`<img src="${d.url}" style="width:100%;height:100%;object-fit:contain"/>`;
+    document.getElementById('sb-icon').innerHTML=`<img src="${d.url}" style="width:100%;height:100%;object-fit:contain"/>`;
+  }else{
+    const fp=document.getElementById('favicon-preview-box');if(fp)fp.innerHTML=`<img src="${d.url}" style="width:100%;height:100%;object-fit:contain"/>`;
+    const link=document.querySelector('link[rel="icon"]');if(link)link.href=d.url;
+  }
 }
+async function uploadLogo(input){return uploadBrandImage(input,'logo');}
+async function uploadFavicon(input){return uploadBrandImage(input,'favicon');}
 
 // ── BROADCAST ─────────────────────────────────────────────────────────────────
 function openNotifModal(userId,isBroadcast){

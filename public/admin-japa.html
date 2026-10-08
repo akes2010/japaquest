@@ -479,6 +479,7 @@ async function init(){
     const[appD,statsD,ppD,dpD,plD]=await Promise.all([appR.json(),statsR.json(),ppR.json(),dpR.json(),plR.json()]);
     document.getElementById('sb-app').textContent=appD.name||'JapaQuest';
     document.title='Japa Console — '+(appD.name||'JapaQuest');
+    if(appD.faviconUrl){const fl=document.querySelector('link[rel="icon"]');if(fl)fl.href=appD.faviconUrl;}
     const u=JSON.parse(localStorage.getItem('vg_user')||'{}');
     document.getElementById('sf-email').textContent=u.email||'admin@jagaguru.ai';
     allPassports=ppD.passports||[];allDests=dpD.destinations||[];allPlans=plD.plans||[];

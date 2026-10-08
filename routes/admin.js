@@ -123,40 +123,58 @@ router.delete("/partners/:id", (req, res) => {
   res.json({ message: 'Partner removed' });
 });
 
-// ── LOGO UPLOAD ────────────────────────────────────────────────────────────────
-router.post('/upload/logo', (req, res) => {
-  try {
-    const multer = require('multer');
-    const uploadDir = path.join(__dirname, '../public/uploads');
-    fs.mkdirSync(uploadDir, { recursive: true });
+// ── BRAND IMAGE UPLOADS (logo + favicon) ────────────────────────────────────
+// Files get a UNIQUE name per upload (logo-<timestamp>.png) so the URL changes
+// every time. Reusing a fixed name (/uploads/logo.png) made browsers — and the
+// service worker — keep serving the 7-day-cached OLD image, so a newly
+// uploaded logo appeared to "not save". Old versions are cleaned up after save.
+const BRAND_UPLOADS = {
+  logo:    { prefix: 'logo',    setting: 'app_logo_url',    test: /\.(jpg|jpeg|png|svg|webp|gif)$/i, label: 'Logo' },
+  favicon: { prefix: 'favicon', setting: 'app_favicon_url', test: /\.(jpg|jpeg|png|svg|webp|ico)$/i, label: 'Favicon' },
+};
+function brandUploadHandler(kind){
+  return (req, res) => {
+    try {
+      const cfg = BRAND_UPLOADS[kind];
+      const multer = require('multer');
+      const uploadDir = path.join(__dirname, '../public/uploads');
+      fs.mkdirSync(uploadDir, { recursive: true });
 
-    const storage = multer.diskStorage({
-      destination: (_req, _file, cb) => cb(null, uploadDir),
-      filename:    (_req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase();
-        cb(null, 'logo'+ext);
-      },
-    });
-    const upload = multer({
-      storage,
-      limits: { fileSize: 2 * 1024 * 1024 },
-      fileFilter: (_req, file, cb) => {
-        const ok = /\.(jpg|jpeg|png|svg|webp|gif)$/i.test(file.originalname);
-        cb(ok ? null : new Error('Only image files allowed'), ok);
-      },
-    }).single('logo');
+      const storage = multer.diskStorage({
+        destination: (_req, _file, cb) => cb(null, uploadDir),
+        filename:    (_req, file, cb) => {
+          const ext = path.extname(file.originalname).toLowerCase();
+          cb(null, cfg.prefix + '-' + Date.now() + ext);
+        },
+      });
+      const upload = multer({
+        storage,
+        limits: { fileSize: 2 * 1024 * 1024 },
+        fileFilter: (_req, file, cb) => {
+          if (cfg.test.test(file.originalname)) cb(null, true);
+          else cb(new Error('Only image files allowed'));
+        },
+      }).single('logo');
 
-    upload(req, res, (err) => {
-      if (err) return res.status(400).json({ error: err.message });
-      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-      const logoUrl = '/uploads/' + req.file.filename;
-      Q.setSetting('app_logo_url', logoUrl);
-      res.json({ url: logoUrl, message: 'Logo uploaded successfully' });
-    });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-});
+      upload(req, res, (err) => {
+        if (err) return res.status(400).json({ error: err.message });
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+        const url = '/uploads/' + req.file.filename;
+        Q.setSetting(cfg.setting, url);
+        // Remove previous versions so the uploads dir stays clean.
+        try {
+          const re = new RegExp('^' + cfg.prefix + '(-[0-9]+)?\\.(png|jpe?g|svg|webp|gif|ico)$', 'i');
+          for (const f of fs.readdirSync(uploadDir)) if (f !== req.file.filename && re.test(f)) fs.unlinkSync(path.join(uploadDir, f));
+        } catch {}
+        res.json({ url, setting: cfg.setting, message: cfg.label + ' uploaded successfully' });
+      });
+    } catch(e) {
+      res.status(500).json({ error: e.message });
+    }
+  };
+}
+router.post('/upload/logo', brandUploadHandler('logo'));
+router.post('/upload/favicon', brandUploadHandler('favicon'));
 
 // ── TEST SMTP ─────────────────────────────────────────────────────────────────
 router.post('/settings/test-email', async (req, res) => {

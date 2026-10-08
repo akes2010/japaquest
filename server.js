@@ -97,6 +97,43 @@ app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
 app.use('/api', rateLimit({ windowMs:15*60*1000, max:300, standardHeaders:true, legacyHeaders:false }));
 
+// ── BRAND ASSETS (logo / favicon / manifest) — follow the admin uploads ──────
+// NOTE: these routes MUST be registered BEFORE express.static mounts, otherwise
+// static serves public/manifest.json (and any on-disk /favicon.ico) first and
+// the brand settings below never take effect.
+const FAVICON_TYPES = { '.ico':'image/x-icon','.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp','.jpg':'image/jpeg','.jpeg':'image/jpeg' };
+const brandFavicon = () => String(Q.getSetting('app_favicon_url') || '/icons/icon.svg');
+
+// Browsers request /favicon.ico directly — serve the uploaded favicon with the
+// right type, or fall back to the built-in icon. no-cache so brand changes
+// propagate immediately instead of sticking for a week.
+app.get('/favicon.ico', (_req,res) => {
+  const fav = String(Q.getSetting('app_favicon_url') || '');
+  const file = fav && /^\/uploads\/[\w.-]+$/.test(fav) ? path.join(__dirname,'public',fav) : null;
+  if (file && fs.existsSync(file)) {
+    res.setHeader('Cache-Control','no-cache');
+    res.setHeader('Content-Type', FAVICON_TYPES[path.extname(file).toLowerCase()] || 'image/x-icon');
+    res.sendFile(file);
+  } else res.redirect(302, '/icons/icon.svg');
+});
+
+// Manifest is generated so the PWA name and icons follow the uploaded brand.
+app.get('/manifest.json', (_req,res) => {
+  res.setHeader('Cache-Control','no-cache');
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(__dirname,'public','manifest.json'),'utf8'));
+    const name = Q.getSetting('app_name');
+    if (name) { m.name = name + ' — ' + BRAND.TAGLINE; m.short_name = name; }
+    const fav = String(Q.getSetting('app_favicon_url') || '');
+    const logo = String(Q.getSetting('app_logo_url') || '');
+    const icons = [];
+    if (fav) icons.push({ src: fav, sizes: 'any', type: FAVICON_TYPES[path.extname(fav).toLowerCase()] || 'image/png', purpose: 'any' });
+    if (logo && /\.(png|webp|svg)$/i.test(logo)) icons.push({ src: logo, sizes: 'any', type: FAVICON_TYPES[path.extname(logo).toLowerCase()] || 'image/png', purpose: 'any' });
+    if (icons.length) m.icons = icons;
+    res.json(m);
+  } catch { res.sendFile(path.join(__dirname,'public','manifest.json')); }
+});
+
 // ── STATIC FILES ──────────────────────────────────────────────────────────────
 app.use('/icons',   express.static(path.join(__dirname,'public','icons'),   {maxAge:'30d',immutable:true}));
 app.use('/uploads', express.static(path.join(__dirname,'public','uploads'), {maxAge:'7d'}));
@@ -104,7 +141,6 @@ app.use(express.static(path.join(__dirname,'public'), {maxAge:0}));
 
 // ── SERVICE WORKER ────────────────────────────────────────────────────────────
 app.get('/sw.js', (_req,res) => { res.setHeader('Service-Worker-Allowed','/'); res.setHeader('Cache-Control','no-cache'); res.sendFile(path.join(__dirname,'public','sw.js')); });
-app.get('/manifest.json', (_req,res) => { res.setHeader('Cache-Control','public,max-age=86400'); res.sendFile(path.join(__dirname,'public','manifest.json')); });
 
 // ── APP INFO ──────────────────────────────────────────────────────────────────
 app.get('/api/app-info', (_req,res) => res.json({
@@ -112,6 +148,7 @@ app.get('/api/app-info', (_req,res) => res.json({
   tagline:     Q.getSetting('app_tagline') || BRAND.TAGLINE,
   logo:        Q.getSetting('app_logo')    || '✈',
   logoUrl:     Q.getSetting('app_logo_url')|| '',
+  faviconUrl:  Q.getSetting('app_favicon_url')|| '',
   supportEmail:Q.getSetting('support_email')|| '',
   maintenance: Q.getSetting('maintenance_mode')==='1',
   regOpen:     Q.getSetting('registration_open')!=='0',
@@ -270,6 +307,7 @@ app.get('/suite/:key', (req,res) => {
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>${esc5(p.name)} — ${esc5(p.short)} | ${esc5(BRAND.NAME)}</title>
 <meta name="description" content="${esc5(p.desc)}"/>
+<link rel="icon" href="${brandFavicon()}"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -331,6 +369,7 @@ app.get('/affiliate', (req, res) => {
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Earn up to ${maxRate}% — ${esc5(BRAND.NAME)} Affiliate Program</title>
 <meta name="description" content="Share ${esc5(BRAND.NAME)} with your audience and earn ${rate}%${maxRate > rate ? ' (up to ' + maxRate + '% with performance tiers)' : ''} commission on every paid plan. Individuals, groups and organisations welcome."/>
+<link rel="icon" href="${brandFavicon()}"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet"/>
 <style>

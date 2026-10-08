@@ -1,5 +1,5 @@
 /* JapaQuest — Service Worker v2.0 */
-const CACHE  = 'japaplus-v2';
+const CACHE  = 'japaplus-v3';
 const STATIC = ['/', '/style.css', '/manifest.json', '/icons/icon.svg', '/icons/icon-192.png'];
 
 self.addEventListener('install', e => {
@@ -20,6 +20,13 @@ self.addEventListener('fetch', e => {
     e.respondWith(fetch(e.request).catch(() =>
       new Response(JSON.stringify({error:'You are offline. Please reconnect.'}),
         {status:503,headers:{'Content-Type':'application/json'}})));
+    return;
+  }
+
+  // Brand assets change with admin uploads — always network-first so a new
+  // logo/favicon/manifest is picked up immediately (cache only as offline fallback).
+  if (url.pathname === '/manifest.json' || url.pathname === '/favicon.ico' || url.pathname.startsWith('/uploads/')) {
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
     return;
   }
 

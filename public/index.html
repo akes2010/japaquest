@@ -616,6 +616,7 @@ if(tok){window.location.href=rol==='admin'?'/admin':'/dashboard';}
 
 fetch('/api/app-info').then(r=>r.json()).then(d=>{
   const name=d.name||'JapaQuest';
+  if(d.faviconUrl){const l=document.querySelector('link[rel="icon"]');if(l)l.href=d.faviconUrl;}
   if(name && name!=='JapaQuest')document.title=name+' — Your Journey. Our Intelligence.';
   document.getElementById('fn-tag').textContent=(d.tagline||'Your Journey. Our Intelligence.')+'. Visa answers, embassy-ready letters and honest budgets for African passports.';
   if(d.supportEmail)document.getElementById('fn-support').href='mailto:'+d.supportEmail;

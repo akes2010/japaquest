@@ -1457,6 +1457,7 @@ async function init(){
     const lEl=document.getElementById('sb-logo');
     if(appD.logoUrl)lEl.innerHTML=`<img src="${appD.logoUrl}" alt="logo"/>`;
     else lEl.textContent=appD.logo||'✈';
+    if(appD.faviconUrl){const fl=document.querySelector('link[rel="icon"]');if(fl)fl.href=appD.faviconUrl;}
     document.getElementById('sb-appname').textContent=appD.name||'JapaQuest';
     document.title='Dashboard — '+(appD.name||'JapaQuest');
     document.getElementById('support-email').textContent=appD.supportEmail||'support@japaplus.app';
