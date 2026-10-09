@@ -298,6 +298,18 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
 .chart-row .db-card{animation:fadeUp .55s var(--ease) both}
 .chart-row .db-card:nth-child(1){animation-delay:.3s}
 .chart-row .db-card:nth-child(2){animation-delay:.38s}
+/* Auto-open the group that contains the active page, close the rest. */
+function toggleNavGroup(btn){
+  btn.classList.toggle('open');
+  document.getElementById(btn.dataset.g)?.classList.toggle('open');
+}
+function openActiveNavGroup(){
+  const act=document.querySelector('.sb-btn.active');
+  if(!act)return;
+  const pages=act.closest('.nav-pages');
+  document.querySelectorAll('.nav-pages.open').forEach(p=>{if(p!==pages){p.classList.remove('open');const g=document.querySelector(`.nav-group[data-g="${p.id}"]`);g&&g.classList.remove('open');}});
+  if(pages&&!pages.classList.contains('open')){pages.classList.add('open');const g=document.querySelector(`.nav-group[data-g="${pages.id}"]`);g&&g.classList.add('open');}
+}
 /* mobile: metrics two-up then one-up on tiny phones */
 @media(max-width:900px){.db-hero-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:480px){
@@ -502,7 +514,9 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 }
 
 @media(max-width:900px){
-  #sb{width:min(86vw,300px);box-shadow:30px 0 80px rgba(0,0,0,.5)}
+  #sb{position:fixed;left:0;top:0;height:100%;z-index:150;transform:translateX(-100%);transition:transform .3s var(--ease);width:min(86vw,300px);box-shadow:30px 0 80px rgba(0,0,0,.5)}
+  body.sb-open #sb{transform:translateX(0)}
+  body.sb-open #sb-ov{opacity:1;pointer-events:auto}
 }
 @media(max-width:768px){
   .quick-grid,.dest-grid,.tools-grid,.booking-section,.plans-grid{grid-template-columns:repeat(2,1fr)}
@@ -870,6 +884,22 @@ body::before{animation:aurora 26s ease-in-out infinite alternate,auroraGlow 14s 
   .shimmer::before,body::before,.sb-logo{animation:none!important}
   .view.active>*,.view.active .view-wrap>*,.m-box,#toast{animation-duration:.01ms!important}
 }
+/* show the drawer toggle only when the sidebar becomes a drawer (≤900px) */
+.menu-btn{display:none}
+@media(max-width:900px){ .menu-btn{display:inline-flex!important;align-items:center;justify-content:center;width:38px;height:38px} }
+/* TailAdmin grouped, collapsible sidebar */
+.nav-group{display:flex;align-items:center;gap:6px;width:100%;padding:9px 14px;background:none;border:none;color:var(--t3);font-size:.62rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;transition:color .25s var(--ease)}
+.nav-group:hover{color:var(--t1)}
+.ng-caret{display:inline-block;font-size:.62rem;transition:transform .3s var(--ease);transform:rotate(90deg)}
+.nav-group:not(.open) .ng-caret{transform:rotate(0deg)}
+.nav-pages{overflow:hidden;max-height:none;transition:max-height .35s var(--ease),opacity .3s var(--ease);opacity:1}
+.nav-pages:not(.open){max-height:0;opacity:0;pointer-events:none}
+@media(max-width:900px){
+  /* On phones the sidebar is an overlay drawer — auto-open the group that
+     holds the active page so the highlight is always visible. */
+  .nav-pages:not(.open){max-height:0}
+}
+
 /* mobile-first node ergonomics (≤520px): cards breathe, tables slide */
 @media(max-width:520px){
   .card,.ps-card,.sr-card,.notif-card,.book-card,.tc,.dest-card,.plan-card,.qc,.tbl-card,.chart-card,.stat-card,.s-card,.pa-card,.bc-card,.provider-section{border-radius:16px}
@@ -881,6 +911,7 @@ body::before{animation:aurora 26s ease-in-out infinite alternate,auroraGlow 14s 
 </head>
 <body>
 <div id="toast"></div>
+<div id="sb-ov" onclick="document.body.classList.remove('sb-open')" style="display:none;position:fixed;inset:0;background:rgba(2,5,12,.55);z-index:149;opacity:0;pointer-events:none;transition:opacity .25s var(--ease)"></div>
 
 <!-- USER EDIT MODAL -->
 <div class="m-over" id="cq-modal" onclick="if(event.target===this)closeM('cq-modal')">
@@ -966,29 +997,56 @@ body::before{animation:aurora 26s ease-in-out infinite alternate,auroraGlow 14s 
       <div class="admin-badge">ADMIN</div>
     </div>
   </div>
-  <div class="sb-nav">
-    <div class="nav-sec">Overview</div>
-    <button class="sb-btn active" id="snav-overview" onclick="sw('overview')">📊 Dashboard</button>
-    <button class="sb-btn" id="snav-users" onclick="sw('users')">👥 Users</button>
-    <button class="sb-btn" id="snav-convs" onclick="sw('convs')">💬 Conversations</button>
-    <div class="nav-sec">Configuration</div>
-    <button class="sb-btn" id="snav-ai" onclick="sw('ai')">🤖 AI Engine</button>
-    <button class="sb-btn" id="snav-plans" onclick="sw('plans')">💳 Plans</button>
-    <button class="sb-btn" id="snav-partners" onclick="sw('partners')">🔗 Travel Partners</button>
-    <button class="sb-btn" id="snav-email" onclick="sw('email')">📧 Email / SMTP</button>
-    <button class="sb-btn" id="snav-notif-s" onclick="sw('notif-s')">🔔 Notifications</button>
-    <button class="sb-btn" id="snav-general" onclick="sw('general')">⚙️ System Settings</button>
-    <button class="sb-btn" id="snav-gateways" onclick="sw('gateways')">🏦 Payment Gateways</button>
-    <button class="sb-btn" id="snav-affiliates" onclick="sw('affiliates')">🤝 Affiliates</button>
-    <button class="sb-btn" id="snav-ledger" onclick="sw('ledger')">📒 Finance Ledger</button>
-    <button class="sb-btn" id="snav-backup" onclick="sw('backup')">🗄️ Backup & Restore</button>
-    <button class="sb-btn" id="snav-seo" onclick="sw('seo')">🔍 SEO Manager</button>
-    <div class="nav-sec">Tools</div>
-    <button class="sb-btn" id="snav-broadcast" onclick="sw('broadcast')">📢 Broadcast</button>
-    <button class="sb-btn" id="snav-social" onclick="sw('social')">📣 Social Posts</button>
-    <button class="sb-btn" id="snav-brain" onclick="sw('brain')">🧠 Journey & Brain</button>
-    <button class="sb-btn" id="snav-concierge" onclick="sw('concierge')">🤝 Concierge Queue</button>
-    <button class="sb-btn" onclick="window.open('/dashboard','_blank')">👁️ View App</button>
+  <div class="sb-nav" id="sb-nav">
+    <!-- TailAdmin-style collapsible groups -->
+    <button class="nav-group open" data-g="g-main" onclick="toggleNavGroup(this)">
+      <span class="ng-caret">▸</span> Main
+    </button>
+    <div class="nav-pages open" id="g-main">
+      <button class="sb-btn active" id="snav-overview" onclick="sw('overview')">📊 Dashboard</button>
+      <button class="sb-btn" id="snav-users" onclick="sw('users')">👥 Users</button>
+      <button class="sb-btn" id="snav-convs" onclick="sw('convs')">💬 Conversations</button>
+      <button class="sb-btn" id="snav-concierge" onclick="sw('concierge')">🤝 Concierge Queue</button>
+      <button class="sb-btn" id="snav-brain" onclick="sw('brain')">🧠 Journey &amp; Brain</button>
+    </div>
+
+    <button class="nav-group open" data-g="g-config" onclick="toggleNavGroup(this)">
+      <span class="ng-caret">▸</span> Configuration
+    </button>
+    <div class="nav-pages open" id="g-config">
+      <button class="sb-btn" id="snav-ai" onclick="sw('ai')">🤖 AI Engine</button>
+      <button class="sb-btn" id="snav-plans" onclick="sw('plans')">💳 Plans</button>
+      <button class="sb-btn" id="snav-partners" onclick="sw('partners')">🔗 Travel Partners</button>
+      <button class="sb-btn" id="snav-email" onclick="sw('email')">📧 Email / SMTP</button>
+      <button class="sb-btn" id="snav-notif-s" onclick="sw('notif-s')">🔔 Notifications</button>
+      <button class="sb-btn" id="snav-general" onclick="sw('general')">⚙️ System Settings</button>
+    </div>
+
+    <button class="nav-group open" data-g="g-money" onclick="toggleNavGroup(this)">
+      <span class="ng-caret">▸</span> Money &amp; Growth
+    </button>
+    <div class="nav-pages open" id="g-money">
+      <button class="sb-btn" id="snav-gateways" onclick="sw('gateways')">🏦 Payment Gateways</button>
+      <button class="sb-btn" id="snav-affiliates" onclick="sw('affiliates')">🤝 Affiliates</button>
+      <button class="sb-btn" id="snav-ledger" onclick="sw('ledger')">📒 Finance Ledger</button>
+    </div>
+
+    <button class="nav-group open" data-g="g-growth" onclick="toggleNavGroup(this)">
+      <span class="ng-caret">▸</span> Marketing &amp; Promotion
+    </button>
+    <div class="nav-pages open" id="g-growth">
+      <button class="sb-btn" id="snav-seo" onclick="sw('seo')">🔍 SEO Manager</button>
+      <button class="sb-btn" id="snav-broadcast" onclick="sw('broadcast')">📢 Broadcast</button>
+      <button class="sb-btn" id="snav-social" onclick="sw('social')">📣 Social Posts</button>
+    </div>
+
+    <button class="nav-group open" data-g="g-system" onclick="toggleNavGroup(this)">
+      <span class="ng-caret">▸</span> System
+    </button>
+    <div class="nav-pages open" id="g-system">
+      <button class="sb-btn" id="snav-backup" onclick="sw('backup')">🗄️ Backup &amp; Restore</button>
+      <button class="sb-btn" onclick="window.open('/dashboard','_blank')">👁️ View App</button>
+    </div>
   </div>
   <div class="sb-footer">
     <div class="sf-email" id="sf-email">admin@visaguru.ai</div>
@@ -998,6 +1056,7 @@ body::before{animation:aurora 26s ease-in-out infinite alternate,auroraGlow 14s 
 
 <div id="main">
   <div id="topbar">
+    <button class="notif-btn menu-btn" onclick="document.body.classList.toggle('sb-open')" aria-label="Toggle menu" style="display:none">☰</button>
     <div class="tb-title" id="tb-title">Dashboard Overview</div>
     <div class="maint-pill" id="maint-pill">🔧 Maintenance ON</div>
     <div class="skin-dot-wrap" id="skin-dots" title="Skins — Night · Ink · Paper · Snow · Daylight"></div>
@@ -1841,12 +1900,14 @@ function sw(v){
   const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',gateways:'Payment Gateways',affiliates:'Affiliate Program',ledger:'Finance Ledger',backup:'Backup & Restore',seo:'SEO & Search Engines',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base',concierge:'Concierge Queue'};
   document.getElementById('tb-title').textContent=T[v]||v;
   if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();else if(v==='concierge')loadConciergeQ();else if(v==='gateways')loadGateways();else if(v==='affiliates')loadAffiliates();else if(v==='ledger')loadLedger();else if(v==='backup')loadBackups();else if(v==='seo')loadSeo();
+  openActiveNavGroup();
+  if(window.innerWidth<=900)document.body.classList.remove('sb-open');
   if(v==='overview')loadClicks();
   history.replaceState(null,'','#'+v);
 }
 function swFromHash(){const v=(location.hash||'').slice(1);if(v&&document.getElementById('view-'+v))sw(v);}
 window.addEventListener('hashchange',swFromHash);
-window.addEventListener('load',swFromHash);
+window.addEventListener('load',swFromHash);window.addEventListener('load',openActiveNavGroup);
 
 /* ── CONCIERGE QUEUE ── */
 const CQ_META={open:{l:'Open',c:'#B3282D'},answered:{l:'Answered',c:'#0E7B4F'},closed:{l:'Closed',c:'rgba(10,20,40,.45)'}};

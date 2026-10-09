@@ -254,6 +254,16 @@ button,.btn,a.tb-title,model-pill,.m-opt{ touch-action:manipulation }
   .plans-grid{grid-template-columns:1fr}
 }
 @media(max-width:380px){ .hero-h1,.tb-title{font-size:.95rem} }
+/* Visual-QA fixes ≤400px: topbar crowds (☰ + title + model pill + skin
+   dots + 🌐 + 🔔 must fit 320px) and the drawer must close after nav. */
+@media(max-width:400px){
+  #topbar{gap:6px;padding:0 10px}
+  .skin-dot-wrap{display:none}            /* skins stay switchable via chat-profile/layout; keep topbar one row */
+  .model-pill{max-width:34vw;padding:5px 8px;font-size:.68rem}
+  .menu-btn{width:32px;height:32px;font-size:16px}
+  .notif-btn{width:32px;height:32px;font-size:.82rem}
+  .tb-title{font-size:.88rem;min-width:0}
+}
 /* RTL: keep directional paddings mirrored when Arabic is active */
 [dir="rtl"] .msg-row.user{flex-direction:row-reverse}
 [dir="rtl"] #sb{left:auto;right:0;transform:translateX(100%)}
