@@ -261,6 +261,55 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
 .pst-pill{background:#fff;border:1px solid var(--b1)}
 .pst-pill.live{background:rgba(14,123,79,.06);border-color:rgba(14,123,79,.3);color:#0E7B4F}
 .pst-pill.live .pst-dot,.pst-pill.live .pst-tag{color:#0E7B4F}
+
+/* ══ DASHBOARD — humanized mission-control ══════════════════════════════ */
+/* Postcard metric cards — tactile, hover-lift, ember accent on the lead */
+.db-hero-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.db-hero-card{display:flex;align-items:center;gap:14px;background:var(--surface,rgba(22,34,60,.85));border:1px solid var(--b1,Rgba(255,255,255,.10));border-radius:18px;padding:18px 16px;min-width:0;transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .35s var(--ease)}
+.db-hero-card:hover{transform:translateY(-5px);box-shadow:0 18px 44px -14px rgba(0,0,0,.6);border-color:var(--b2,rgba(255,255,255,.18))}
+.db-hero-card:focus-visible{outline:2px solid var(--ember,#E8613C);outline-offset:2px}
+.db-hc-icon{font-size:1.55rem;line-height:1;filter:drop-shadow(0 4px 10px rgba(0,0,0,.4));animation:dbBob 3.2s ease-in-out infinite}
+.db-hero-card:nth-child(2) .db-hc-icon{animation-delay:.4s}.db-hero-card:nth-child(3) .db-hc-icon{animation-delay:.8s}.db-hero-card:nth-child(4) .db-hc-icon{animation-delay:1.2s}
+@keyframes dbBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.db-hc-val{font-family:var(--fd);font-size:1.75rem;font-weight:700;color:var(--t1,#F2EFE7);line-height:1.1;letter-spacing:-.01em}
+.db-hc-lbl{font-size:.7rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--t3,rgba(210,222,240,.62));margin-top:5px}
+.db-hc-sub{font-size:.7rem;color:var(--t4,rgba(210,222,240,.38));margin-top:2px}
+.db-hero-card[onclick]{cursor:pointer}
+.db-hero-card[onclick]:active{transform:scale(.985)}
+.db-card{position:relative;overflow:hidden}
+.db-card::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.db-card:hover .cc-title{color:var(--t1)}
+.cc-title{transition:color .3s var(--ease)}
+/* Count-up when numbers land */
+.db-count{opacity:0;transform:translateY(6px);animation:dbNum .5s var(--ease) forwards}
+@keyframes dbNum{to{opacity:1;transform:none}}
+/* Greeting pulse */
+#db-greet.show{animation:dbGreet .8s var(--ease) both}
+@keyframes dbGreet{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+#db-greet-emoji{display:inline-block;animation:dbWave 2.4s ease-in-out infinite;transform-origin:70% 70%}
+@keyframes dbWave{0%,60%,100%{transform:rotate(0)}10%,30%{transform:rotate(12deg)}20%{transform:rotate(-6deg)}40%{transform:rotate(9deg)}}
+/* staggered entrance */
+.db-hero-grid .db-hero-card{animation:fadeUp .5s var(--ease) both}
+.db-hero-grid .db-hero-card:nth-child(1){animation-delay:.05s}
+.db-hero-grid .db-hero-card:nth-child(2){animation-delay:.12s}
+.db-hero-grid .db-hero-card:nth-child(3){animation-delay:.19s}
+.db-hero-grid .db-hero-card:nth-child(4){animation-delay:.26s}
+.chart-row .db-card{animation:fadeUp .55s var(--ease) both}
+.chart-row .db-card:nth-child(1){animation-delay:.3s}
+.chart-row .db-card:nth-child(2){animation-delay:.38s}
+/* mobile: metrics two-up then one-up on tiny phones */
+@media(max-width:900px){.db-hero-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){
+  .db-hero-grid{gap:10px}
+  .db-hero-card{padding:14px 12px;gap:10px}
+  .db-hc-val{font-size:1.4rem}
+  .db-hc-icon{font-size:1.25rem}
+}
+@media(max-width:360px){.db-hero-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){
+  .db-hc-icon,#db-greet-emoji{animation:none}
+  .db-hero-card,.db-card,.db-count,#db-greet{animation-duration:.01ms!important}
+}
 .upload-zone:hover{border-color:#E8613C;background:rgba(232,97,60,.04)}
 .logo-preview{border:2px solid var(--b1)}
 /* Alerts + toast */
@@ -866,29 +915,83 @@ body.skin-light .skin-dot{border-color:rgba(14,29,56,.35)}
   <!-- OVERVIEW -->
   <div class="view active" id="view-overview">
     <div id="integrity-banner" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:10px;font-size:.8rem"></div>
-    <div class="stats-grid">
-      <div class="stat-card"><div class="sc-lbl">Total Users</div><div class="sc-val" id="st-users">—</div><div class="sc-sub" id="st-users-sub">loading…</div></div>
-      <div class="stat-card"><div class="sc-lbl">New Today</div><div class="sc-val" id="st-today">—</div><div class="sc-sub">Registered</div></div>
-      <div class="stat-card"><div class="sc-lbl">Conversations</div><div class="sc-val" id="st-convs">—</div><div class="sc-sub">All time</div></div>
-      <div class="stat-card"><div class="sc-lbl">Messages Today</div><div class="sc-val" id="st-msgs">—</div><div class="sc-sub">All users</div></div>
-      <div class="stat-card"><div class="sc-lbl">Active Today</div><div class="sc-val" id="st-active">—</div><div class="sc-sub">Unique users</div></div>
+    <div id="db-greet" style="display:none;margin-bottom:18px">
+      <div style="font-family:var(--fd);font-size:clamp(1.25rem,3.5vw,1.7rem);font-weight:600;color:var(--t1);line-height:1.25">
+        <span id="db-greet-hi">Good day</span>, <span id="db-greet-name">Admin</span> <span id="db-greet-emoji">👋</span>
+      </div>
+      <div id="db-greet-line" style="font-size:.82rem;color:var(--t3);margin-top:4px;line-height:1.6">Here's how the journey is going today.</div>
+    </div>
+
+    <!-- Postcard metrics — small paper cards, like a travel log -->
+    <div class="db-hero-grid">
+      <div class="db-hero-card db-hc-accent" onclick="sw('users')" role="button" tabindex="0" style="cursor:pointer">
+        <div class="db-hc-icon">🧳</div>
+        <div>
+          <div class="db-hc-val db-count" id="st-users">—</div>
+          <div class="db-hc-lbl">Travellers on board</div>
+          <div class="db-hc-sub" id="st-users-sub">counting…</div>
+        </div>
+      </div>
+      <div class="db-hero-card" onclick="sw('convs')" role="button" tabindex="0" style="cursor:pointer">
+        <div class="db-hc-icon">💬</div>
+        <div>
+          <div class="db-hc-val db-count" id="st-convs">—</div>
+          <div class="db-hc-lbl">Conversations started</div>
+          <div class="db-hc-sub">all time</div>
+        </div>
+      </div>
+      <div class="db-hero-card" onclick="sw('overview')" role="button" tabindex="0" style="cursor:pointer">
+        <div class="db-hc-icon">⚡</div>
+        <div>
+          <div class="db-hc-val db-count" id="st-active">—</div>
+          <div class="db-hc-lbl">Live in the last 24h</div>
+          <div class="db-hc-sub" id="st-msgs-sub">— messages sent today</div>
+        </div>
+      </div>
+      <div class="db-hero-card db-hc-gold">
+        <div class="db-hc-icon">🌟</div>
+        <div>
+          <div class="db-hc-val db-count" id="st-today">—</div>
+          <div class="db-hc-lbl">New passports today</div>
+          <div class="db-hc-sub">joined the quest</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="chart-row">
+      <div class="chart-card db-card">
+        <div class="cc-title">📈 Boarding rate — new travellers, last 30 days</div>
+        <div class="bar-chart" id="signup-chart"><div style="color:var(--t4);font-size:.75rem;padding:10px">No data yet</div></div>
+      </div>
+      <div class="chart-card db-card">
+        <div class="cc-title">🧭 What travellers are asking — top assistant engines</div>
+        <div id="models-chart"><div style="color:var(--t4);font-size:.75rem">No usage yet</div></div>
+      </div>
     </div>
     <div class="chart-row">
-      <div class="chart-card"><div class="cc-title">📈 Daily Signups (30 days)</div><div class="bar-chart" id="signup-chart"><div style="color:var(--t4);font-size:.75rem;padding:10px">No data yet</div></div></div>
-      <div class="chart-card"><div class="cc-title">🤖 Top AI Models</div><div id="models-chart"><div style="color:var(--t4);font-size:.75rem">No usage yet</div></div></div>
+      <div class="chart-card db-card">
+        <div class="cc-title">🔗 Booking interest — partner clicks, last 30 days</div>
+        <div id="clicks-chart"><div style="color:var(--t4);font-size:.75rem">No clicks yet</div></div>
+      </div>
+      <div class="chart-card db-card">
+        <div class="cc-title">🏆 Where travellers click most</div>
+        <div id="clicks-partners"><div style="color:var(--t4);font-size:.75rem">No clicks yet</div></div>
+      </div>
     </div>
-    <div class="chart-row">
-      <div class="chart-card"><div class="cc-title">🔗 Partner Clicks (30 days)</div><div id="clicks-chart"><div style="color:var(--t4);font-size:.75rem">No clicks yet</div></div></div>
-      <div class="chart-card"><div class="cc-title">🔗 Top Partners</div><div id="clicks-partners"><div style="color:var(--t4);font-size:.75rem">No clicks yet</div></div></div>
-    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <div class="chart-card"><div class="cc-title">💳 Plan Distribution</div><div id="plan-dist"></div></div>
-      <div class="chart-card"><div class="cc-title">⚡ Quick Actions</div>
+      <div class="chart-card db-card">
+        <div class="cc-title">💳 Journeys by plan</div>
+        <div id="plan-dist"></div>
+      </div>
+      <div class="chart-card db-card">
+        <div class="cc-title">✨ Do something now</div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <button class="btn btn-primary btn-sm" onclick="openNotifModal(null,true)">📢 Broadcast to All</button>
-          <button class="btn btn-ghost btn-sm" onclick="sw('users')">👥 Manage Users</button>
-          <button class="btn btn-ghost btn-sm" onclick="sw('ai')">🔑 Configure AI Keys</button>
-          <button class="btn btn-ghost btn-sm" onclick="sw('plans')">💳 Manage Plans</button>
+          <button class="btn btn-primary btn-sm" onclick="openNotifModal(null,true)">📢 Send a broadcast</button>
+          <button class="btn btn-ghost btn-sm" onclick="sw('users')">👥 Check on your travellers</button>
+          <button class="btn btn-ghost btn-sm" onclick="sw('ai')">🔑 Keep the assistant healthy</button>
+          <button class="btn btn-ghost btn-sm" onclick="sw('plans')">💳 Shape the plans</button>
         </div>
       </div>
     </div>
@@ -1777,12 +1880,32 @@ async function loadBrain(){
 }
 
 function renderStats(d){
-  document.getElementById('st-users').textContent=d.totalUsers||0;
-  document.getElementById('st-users-sub').textContent='+'+(d.today||0)+' today';
-  document.getElementById('st-today').textContent=d.today||0;
-  document.getElementById('st-convs').textContent=d.totalConvs||0;
-  document.getElementById('st-msgs').textContent=d.todayMsgs||0;
-  document.getElementById('st-active').textContent=d.activeToday||0;
+  // Greeting strip — time-aware, addressed to the operator by name.
+  try{
+    const g=document.getElementById('db-greet');
+    if(g){
+      const h=new Date().getHours();
+      document.getElementById('db-greet-hi').textContent=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+      let nm='Admin';
+      try{ const u=JSON.parse(localStorage.getItem('vg_user')||'{}'); if(u.name)nm=u.name.split(' ')[0]; }catch{}
+      document.getElementById('db-greet-name').textContent=nm;
+      const total=d.totalUsers||0, live=d.activeToday||0, fresh=d.today||0;
+      document.getElementById('db-greet-line').textContent=
+        total===0 ? 'The first traveller hasn\'t arrived yet — share your link to open the doors.'
+        : fresh===0 ? `You're supporting ${total} travellers — none new today, so the floor is quiet.`
+        : fresh===1 ? 'One new traveller joined today — a lovely start.'
+        : `${fresh} new travellers joined today. ${live} ${live===1?'is':'are'} using the assistant right now.`;
+      g.style.display='block';g.classList.add('show');
+    }
+  }catch{}
+  // Metrics — count-up for a alive feel; values land from the API.
+  const countUp=(id,val)=>{const el=document.getElementById(id);if(!el)return;el.textContent=val;el.classList.remove('db-count');void el.offsetWidth;el.classList.add('db-count');};
+  countUp('st-users',d.totalUsers||0);
+  countUp('st-today',d.today||0);
+  countUp('st-convs',d.totalConvs||0);
+  countUp('st-active',d.activeToday||0);
+  const msgsSub=document.getElementById('st-msgs-sub');if(msgsSub)msgsSub.textContent=(d.todayMsgs||0)+' message'+((d.todayMsgs||0)===1?'':'s')+' sent today';
+  if(document.getElementById('st-users-sub'))document.getElementById('st-users-sub').textContent='+'+(d.today||0)+' today';
   const sc=document.getElementById('signup-chart');
   const signups=d.dailySignups||[];const max=Math.max(...signups.map(s=>s.count),1);
   sc.innerHTML=signups.length?signups.map(s=>`<div class="bc-b" style="height:${Math.max(6,Math.round((s.count/max)*65))}px" title="${s.date}: ${s.count}"></div>`).join(''):'<div style="color:var(--t4);font-size:.75rem;padding:10px">No data yet</div>';
