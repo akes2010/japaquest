@@ -891,6 +891,7 @@ body::before{animation:aurora 26s ease-in-out infinite alternate,auroraGlow 14s 
 .sb-btn{position:relative}
 .sb-badge{margin-left:auto;font-size:.58rem;font-weight:700;min-width:18px;height:18px;padding:0 5px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;background:rgba(232,97,60,.16);color:#F07B4F;border:1px solid rgba(232,97,60,.3);animation:bshow .4s var(--ease) both;transition:transform .25s var(--ease)}
 .sb-badge:hover{transform:scale(1.1)}
+.sb-badge+.sb-badge{margin-left:5px}
 .sb-badge.alert{background:rgba(200,45,45,.16);color:#FF8F9C;border-color:rgba(200,45,45,.35);animation:bshow .4s var(--ease) both,badgePulse 2s ease-in-out infinite}
 .sb-badge.gold{background:rgba(217,164,65,.16);color:#F0C878;border-color:rgba(217,164,65,.35)}
 @keyframes bshow{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
@@ -1922,31 +1923,30 @@ function sw(v){
 /* ── SIDEBAR BADGES — live counts on nav (concierge queue, SLA breaches,
    new travellers, banned users, conversations today). Polled every 60s and
    refreshed on overview/concierge visits. ── */
-const SB_BADGES={
-  'snav-concierge':{keys:['concierge_open'],cls:'sb-badge',when:n=>n>0},
-  'snav-concierge-alert':{key:'concierge_breached',cls:'sb-badge alert',when:n=>n>0},
-  'snav-users':{keys:['users_new_today','users_banned'],cls:'sb-badge gold',when:n=>n>0},
-  'snav-convs':{keys:['convs_today'],cls:'sb-badge',when:n=>n>0},
-};
 async function loadSidebarBadges(){
   let d;
   try{ const r=await apiFetch('/api/admin/badges'); d=await r.json(); if(!r.ok)return; }
   catch{ return; }
-  const put=(id,n,cls)=>{
+  // Sync a nav button's badges to a wanted list so several counts can
+  // coexist on one button (e.g. Concierge Queue shows open + breached).
+  const sync=(id,items)=>{
     const host=document.getElementById(id);if(!host)return;
-    let b=host.querySelector('.sb-badge');
-    if(n>0){
+    const wanted=items.filter(i=>(i.n||0)>0);
+    const cur=[...host.querySelectorAll('.sb-badge')];
+    cur.slice(wanted.length).forEach(b=>b.remove());
+    wanted.forEach((it,i)=>{
+      let b=cur[i];
       if(!b){b=document.createElement('span');host.appendChild(b);}
-      b.className=cls;b.textContent=n>99?'99+':String(n);
-      b.title=cls.includes('alert')?'Past SLA — reply now':'Needs attention';
-    } else if(b) b.remove();
+      b.className=it.cls;b.textContent=it.n>99?'99+':String(it.n);b.title=it.title||'Needs attention';
+    });
   };
-  put('snav-concierge',d.concierge_open||0,SB_BADGES['snav-concierge'].cls);
-  put('snav-concierge',d.concierge_breached||0,SB_BADGES['snav-concierge-alert'].cls);
-  const u=(d.users_new_today||0)+(d.users_banned||0);
-  put('snav-users',u,SB_BADGES['snav-users'].cls);
-  document.getElementById('snav-users')?.querySelector('.sb-badge')?.setAttribute('title',`+${d.users_new_today||0} new · ${d.users_banned||0} banned`);
-  put('snav-convs',d.convs_today||0,SB_BADGES['snav-convs'].cls);
+  sync('snav-concierge',[
+    {n:d.concierge_open||0,cls:'sb-badge',title:'Open tickets'},
+    {n:d.concierge_breached||0,cls:'sb-badge alert',title:'Past SLA — reply now'},
+  ]);
+  sync('snav-users',[{n:(d.users_new_today||0)+(d.users_banned||0),cls:'sb-badge gold',
+    title:`+${d.users_new_today||0} new · ${d.users_banned||0} banned`}]);
+  sync('snav-convs',[{n:d.convs_today||0,cls:'sb-badge',title:'Conversations today'}]);
 }
 setInterval(()=>{ if(document.querySelector('.view.active')) loadSidebarBadges(); },60000);
 

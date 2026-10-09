@@ -55,6 +55,22 @@ fi
 
 echo "⬇️   Updating: $BEHIND commit(s) behind (${LOCAL:0:8} → ${REMOTE_REV:0:8})…"
 
+# 1.5 Snapshot what must survive: the DB (settings, AI keys, gateways) and
+#     the uploaded brand files (logo/favicon) — even though the pull below
+#     should never touch them, belt-and-braces restorable copies first.
+mkdir -p data/backups
+STAMP=$(date +%Y%m%d-%H%M%S)
+[ -f data/jagaguru.db ] && cp data/jagaguru.db "data/backups/pre-update-${STAMP}-${LOCAL:0:8}.db" \
+  && ok "DB snapshot: data/backups/pre-update-${STAMP}-${LOCAL:0:8}.db"
+if [ -d public/uploads ] && [ -n "$(ls -A public/uploads 2>/dev/null | grep -v '^\.')" ]; then
+  UDIR="data/backups/pre-update-uploads-${STAMP}-${LOCAL:0:8}"
+  mkdir -p "$UDIR"
+  find public/uploads -maxdepth 1 -type f ! -name '.*' -exec cp {} "$UDIR/" \;
+  ok "Uploads snapshot: $UDIR ($(ls -1 "$UDIR" | wc -l) files)"
+fi
+# Keep at most 5 pre-update DB snapshots.
+ls -1 data/backups | grep '^pre-update-' | grep '\.db$' | sort | head -n -5 2>/dev/null | while read -r f; do rm -f "data/backups/$f"; done
+
 # 2. Stash any stray local edits so a pull never bails on a dirty tree.
 git stash push --include-untracked -m "auto-update $(date -Iseconds)" >/dev/null 2>&1 || true
 
