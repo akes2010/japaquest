@@ -887,6 +887,19 @@ body::before{animation:aurora 26s ease-in-out infinite alternate,auroraGlow 14s 
 /* show the drawer toggle only when the sidebar becomes a drawer (≤900px) */
 .menu-btn{display:none}
 @media(max-width:900px){ .menu-btn{display:inline-flex!important;align-items:center;justify-content:center;width:38px;height:38px} }
+/* Sidebar badges — small live counts on nav buttons (TailAdmin style) */
+.sb-btn{position:relative}
+.sb-badge{margin-left:auto;font-size:.58rem;font-weight:700;min-width:18px;height:18px;padding:0 5px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;background:rgba(232,97,60,.16);color:#F07B4F;border:1px solid rgba(232,97,60,.3);animation:bshow .4s var(--ease) both;transition:transform .25s var(--ease)}
+.sb-badge:hover{transform:scale(1.1)}
+.sb-badge.alert{background:rgba(200,45,45,.16);color:#FF8F9C;border-color:rgba(200,45,45,.35);animation:bshow .4s var(--ease) both,badgePulse 2s ease-in-out infinite}
+.sb-badge.gold{background:rgba(217,164,65,.16);color:#F0C878;border-color:rgba(217,164,65,.35)}
+@keyframes bshow{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+@keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(200,45,45,.4)}50%{box-shadow:0 0 0 5px rgba(200,45,45,0)}}
+body.skin-light .sb-badge{background:rgba(194,73,31,.1);color:#C2491F;border-color:rgba(194,73,31,.3)}
+body.skin-light .sb-badge.alert{background:rgba(179,40,45,.1);color:#B3282D;border-color:rgba(179,40,45,.3)}
+body.skin-light .sb-badge.gold{background:rgba(176,122,32,.12);color:#8A5A14;border-color:rgba(176,122,32,.35)}
+@media(prefers-reduced-motion:reduce){.sb-badge.alert{animation:none}.sb-badge{animation:none}}
+
 /* TailAdmin grouped, collapsible sidebar */
 .nav-group{display:flex;align-items:center;gap:6px;width:100%;padding:9px 14px;background:none;border:none;color:var(--t3);font-size:.62rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;transition:color .25s var(--ease)}
 .nav-group:hover{color:var(--t1)}
@@ -1886,7 +1899,7 @@ async function init(){
     const u=JSON.parse(localStorage.getItem('vg_user')||'{}');
     document.getElementById('sf-email').textContent=u.email||'admin@visaguru.ai';
     updateMaintBadge(appD.maintenance);
-    renderStats(statsD);loadPlans();loadClicks();loadIntegrity();
+    renderStats(statsD);loadPlans();loadClicks();loadIntegrity();loadSidebarBadges();
     // Geo/FX status for the Locale card + local-currency hints on plan prices.
     fetch('/api/geo').then(r=>r.json()).then(g=>{_adminGeo=g;renderGeoStatus();loadPlans();}).catch(()=>{});
   }catch(e){console.error('Init:',e);}
@@ -1903,8 +1916,40 @@ function sw(v){
   openActiveNavGroup();
   if(window.innerWidth<=900)document.body.classList.remove('sb-open');
   if(v==='overview')loadClicks();
+  if(v==='concierge'||v==='overview')loadSidebarBadges();
   history.replaceState(null,'','#'+v);
 }
+/* ── SIDEBAR BADGES — live counts on nav (concierge queue, SLA breaches,
+   new travellers, banned users, conversations today). Polled every 60s and
+   refreshed on overview/concierge visits. ── */
+const SB_BADGES={
+  'snav-concierge':{keys:['concierge_open'],cls:'sb-badge',when:n=>n>0},
+  'snav-concierge-alert':{key:'concierge_breached',cls:'sb-badge alert',when:n=>n>0},
+  'snav-users':{keys:['users_new_today','users_banned'],cls:'sb-badge gold',when:n=>n>0},
+  'snav-convs':{keys:['convs_today'],cls:'sb-badge',when:n=>n>0},
+};
+async function loadSidebarBadges(){
+  let d;
+  try{ const r=await apiFetch('/api/admin/badges'); d=await r.json(); if(!r.ok)return; }
+  catch{ return; }
+  const put=(id,n,cls)=>{
+    const host=document.getElementById(id);if(!host)return;
+    let b=host.querySelector('.sb-badge');
+    if(n>0){
+      if(!b){b=document.createElement('span');host.appendChild(b);}
+      b.className=cls;b.textContent=n>99?'99+':String(n);
+      b.title=cls.includes('alert')?'Past SLA — reply now':'Needs attention';
+    } else if(b) b.remove();
+  };
+  put('snav-concierge',d.concierge_open||0,SB_BADGES['snav-concierge'].cls);
+  put('snav-concierge',d.concierge_breached||0,SB_BADGES['snav-concierge-alert'].cls);
+  const u=(d.users_new_today||0)+(d.users_banned||0);
+  put('snav-users',u,SB_BADGES['snav-users'].cls);
+  document.getElementById('snav-users')?.querySelector('.sb-badge')?.setAttribute('title',`+${d.users_new_today||0} new · ${d.users_banned||0} banned`);
+  put('snav-convs',d.convs_today||0,SB_BADGES['snav-convs'].cls);
+}
+setInterval(()=>{ if(document.querySelector('.view.active')) loadSidebarBadges(); },60000);
+
 function swFromHash(){const v=(location.hash||'').slice(1);if(v&&document.getElementById('view-'+v))sw(v);}
 window.addEventListener('hashchange',swFromHash);
 window.addEventListener('load',swFromHash);window.addEventListener('load',openActiveNavGroup);

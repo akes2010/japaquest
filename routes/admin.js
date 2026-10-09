@@ -19,6 +19,24 @@ router.use(requireAdmin);
 // ── STATS ─────────────────────────────────────────────────────────────────────
 router.get('/stats', (req, res) => res.json(Q.getAdminStats()));
 
+// ── SIDEBAR BADGES ───────────────────────────────────────────────────────────
+// Tiny counts for the sidebar. One cheap query set, admin-only, polled by
+// the admin UI so open tickets / SLA breaches / new users stay visible
+// without opening each section.
+router.get('/badges', (_req, res) => {
+  try {
+    const c = Q.conciergeTicketStats();
+    const n1 = sql => (Q.queryAllSafe(sql)[0] || {}).c || 0;
+    res.json({
+      concierge_open: c.open || 0,
+      concierge_breached: c.breachedCount || 0,
+      users_new_today: n1(`SELECT COUNT(*) AS c FROM users WHERE date(created_at)=date('now')`),
+      users_banned: n1(`SELECT COUNT(*) AS c FROM users WHERE status='banned'`),
+      convs_today: n1(`SELECT COUNT(*) AS c FROM conversations WHERE date(updated_at)=date('now')`),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── JOURNEY & BRAIN BASE ANALYTICS ─────────────────────────────────────────
 router.get('/journey-insights', (req, res) => {
   const filters = {};
