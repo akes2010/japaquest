@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <meta name="theme-color" content="#060B18"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{50:'#EEF2FF',100:'#E0E7FF',200:'#C7D2FE',300:'#A5B4FC',400:'#818CF8',500:'#6366F1',600:'#4F46E5'},ink:'#060B18',panel:'#0B1222',panel2:'#101A30'}}}}</script>
+<style>/* responsive floor: usable down to 320px */
+@media (max-width:360px){html{font-size:14px}}
 <title>Admin — JapaQuest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -836,6 +840,7 @@ body.skin-light .skin-dot{border-color:rgba(14,29,56,.35)}
     <button class="sb-btn" id="snav-affiliates" onclick="sw('affiliates')">🤝 Affiliates</button>
     <button class="sb-btn" id="snav-ledger" onclick="sw('ledger')">📒 Finance Ledger</button>
     <button class="sb-btn" id="snav-backup" onclick="sw('backup')">🗄️ Backup & Restore</button>
+    <button class="sb-btn" id="snav-seo" onclick="sw('seo')">🔍 SEO Manager</button>
     <div class="nav-sec">Tools</div>
     <button class="sb-btn" id="snav-broadcast" onclick="sw('broadcast')">📢 Broadcast</button>
     <button class="sb-btn" id="snav-social" onclick="sw('social')">📣 Social Posts</button>
@@ -1347,6 +1352,35 @@ body.skin-light .skin-dot{border-color:rgba(14,29,56,.35)}
     <div id="lg-rows"></div>
   </div>
 
+  <!-- SEO MANAGER -->
+  <div class="view" id="view-seo">
+    <div style="margin-bottom:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:var(--fd);font-size:1rem;color:var(--a300);margin-bottom:5px">🔍 SEO &amp; Search Engines</div>
+        <div style="font-size:.78rem;color:var(--t4)">Meta tags, sitemap.xml and robots.txt are generated live. One click submits the site to Google, Bing, Yandex &amp; IndexNow.</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="submitSeo()">🚀 Submit site to search engines</button>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="cc-title">Meta defaults (leave blank to use app name + tagline)</div>
+      <label class="form-label" style="margin-top:8px">Meta title</label><input class="input" id="seo-title" placeholder="App — tagline"/>
+      <label class="form-label" style="margin-top:10px">Meta description</label><textarea class="input" id="seo-desc" rows="2" placeholder="Shown under your link in search results"></textarea>
+      <label class="form-label" style="margin-top:10px">Meta keywords (comma-separated, optional)</label><input class="input" id="seo-keywords" placeholder="visa, nigeria passport, travel"/>
+      <label class="form-label" style="margin-top:10px">Site URL (used for canonical + sitemap)</label><input class="input" id="seo-url" placeholder="https://yourdomain.com"/>
+      <button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="saveSeo()">💾 Save SEO settings</button>
+    </div>
+    <div class="stats-grid" id="seo-summary" style="margin-bottom:14px"></div>
+    <div id="seo-results"></div>
+    <div class="card" style="margin-top:14px">
+      <div class="cc-title">Preview — served automatically</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <a class="btn btn-sm" id="seo-sitemap-link" target="_blank">🌐 sitemap.xml</a>
+        <a class="btn btn-sm" id="seo-robots-link" target="_blank">🤖 robots.txt</a>
+      </div>
+      <textarea class="input" id="seo-sitemap-view" rows="8" readonly style="font-family:var(--fm);font-size:.7rem"></textarea>
+    </div>
+  </div>
+
   <!-- BACKUP & RESTORE -->
   <div class="view" id="view-backup">
     <div style="margin-bottom:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
@@ -1568,8 +1602,14 @@ const ALL_MODELS=['claude','openai','deepseek','deepseek2','qwen','llama','gemma
 const MICONS={claude:'✨',openai:'🧠',deepseek:'🔍',deepseek2:'🔍',qwen:'🧠',llama:'🦙',gemma:'💎',mistral:'🌪️','llama-groq':'⚡','mixtral-groq':'⚡','gemini-flash':'🔮','gemini-pro':'🔮','llama-together':'🤝',mistral7b:'🤗',zephyr:'🤗',ollama:'🏠'};
 
 async function apiFetch(path,opts={}){
-  const liveToken=localStorage.getItem('vg_token')||'';
-  const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':'Bearer '+liveToken,...(opts.headers||{})}});
+  // Bearer header when a token is held, else the httpOnly session cookie
+  // (credentials:'include') set at login — the JWT never lives in localStorage.
+  const liveToken = localStorage.getItem('vg_token') || '';
+  const r = await fetch(path, {
+    ...opts,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(liveToken ? { Authorization: 'Bearer ' + liveToken } : {}), ...(opts.headers || {}) },
+  });
   if(r.status===401){localStorage.clear();window.location.href='/admin-login';}
   if(r.status===403){showToast('Admin access required','error');throw new Error('Forbidden');}
   return r;
@@ -1602,9 +1642,9 @@ function sw(v){
   document.querySelectorAll('.sb-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v)?.classList.add('active');
   document.getElementById('snav-'+v)?.classList.add('active');
-  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',gateways:'Payment Gateways',affiliates:'Affiliate Program',ledger:'Finance Ledger',backup:'Backup & Restore',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base',concierge:'Concierge Queue'};
+  const T={overview:'Dashboard Overview',users:'User Management',convs:'Conversations',ai:'AI Engine',plans:'Plans Management',partners:'Travel Partners',email:'Email / SMTP','notif-s':'Notification Settings',general:'System Settings',gateways:'Payment Gateways',affiliates:'Affiliate Program',ledger:'Finance Ledger',backup:'Backup & Restore',seo:'SEO & Search Engines',broadcast:'Broadcast',social:'Social Posts & Promotion',brain:'Journey & Brain Base',concierge:'Concierge Queue'};
   document.getElementById('tb-title').textContent=T[v]||v;
-  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();else if(v==='concierge')loadConciergeQ();else if(v==='gateways')loadGateways();else if(v==='affiliates')loadAffiliates();else if(v==='ledger')loadLedger();else if(v==='backup')loadBackups();
+  if(v==='users')loadUsers();else if(v==='convs')loadConvs();else if(v==='ai')loadAI();else if(v==='email')loadEmail();else if(v==='notif-s')loadNotifS();else if(v==='general')loadGeneral();else if(v==='partners')loadPartners();else if(v==='social')loadSocial();else if(v==='brain')loadBrain();else if(v==='concierge')loadConciergeQ();else if(v==='gateways')loadGateways();else if(v==='affiliates')loadAffiliates();else if(v==='ledger')loadLedger();else if(v==='backup')loadBackups();else if(v==='seo')loadSeo();
   if(v==='overview')loadClicks();
   history.replaceState(null,'','#'+v);
 }
@@ -2336,7 +2376,10 @@ async function loadIntegrity(){
     el.style.cssText='display:block;margin-bottom:14px;padding:10px 14px;border-radius:10px;font-size:.8rem;color:'+color+';background:'+bg+';border:1px solid '+color+'33';
   }catch{el.style.display='none';}
 }
-function doLogout(){localStorage.clear();window.location.href='/admin-login';}
+async function doLogout(){
+  try{ await fetch('/api/auth/logout',{method:'POST',credentials:'include'}); }catch{}
+  localStorage.clear();window.location.href='/admin-login';
+}
 
 // ── SYSTEM RESET ────────────────────────────────────────────────────────────────
 async function systemReset(kind){
@@ -2429,7 +2472,47 @@ async function loadLedger(){
       :'<div style="opacity:.5;padding:18px;font-size:.8rem">No entries in this period.</div>';
   }catch(e){showToast('Could not load ledger: '+e.message,'error');}
 }
-// ── BACKUP & RESTORE ────────────────────────────────────────────────────────
+// ── SEO MANAGER ─────────────────────────────────────────────────────────
+async function loadSeo(){
+  try{
+    const r=await apiFetch('/api/admin/seo');const d=await r.json();if(!r.ok)return showToast(d.error||'Failed','error');
+    document.getElementById('seo-title').value=d.meta_title||'';
+    document.getElementById('seo-desc').value=d.meta_description||'';
+    document.getElementById('seo-keywords').value=d.meta_keywords||'';
+    document.getElementById('seo-url').value=d.base_url||'';
+    document.getElementById('seo-sitemap-view').value=d.robots||'';
+    document.getElementById('seo-sitemap-link').href='/sitemap.xml';
+    document.getElementById('seo-robots-link').href='/robots.txt';
+    const ok=(d.last_submit&&d.last_submit.engines||[]).filter(e=>e.ok).length;
+    document.getElementById('seo-summary').innerHTML=`
+      <div class="stat-c"><div class="stat-n">${ok}/${(d.last_submit&&d.last_submit.engines||[]).length||4}</div><div class="stat-l">Engines accepted last ping</div></div>
+      <div class="stat-c"><div class="stat-n">${d.last_submit?new Date(d.last_submit.submitted_at).toLocaleDateString():'—'}</div><div class="stat-l">Last submission</div></div>`;
+    const ls=d.last_submit;
+    document.getElementById('seo-results').innerHTML=ls&&ls.engines&&ls.engines.length?`<div class="card">
+      <div class="cc-title">Last submission results</div>
+      ${ls.engines.map(e=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:.78rem">
+        <span>${esc(e.engine)}</span>
+        <span style="color:${e.ok?'#4ade80':'#FF8F9C'}">${e.ok?'✓ accepted':(e.status?'✗ HTTP '+e.status:'✗ '+(e.error||'failed'))}</span></div>`).join('')}
+      </div>`:'';
+  }catch(e){showToast('Could not load SEO: '+e.message,'error');}
+}
+async function saveSeo(){
+  try{
+    const body={meta_title:document.getElementById('seo-title').value,meta_description:document.getElementById('seo-desc').value,meta_keywords:document.getElementById('seo-keywords').value,app_url:document.getElementById('seo-url').value};
+    const r=await apiFetch('/api/admin/seo',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();if(!r.ok)return showToast(d.error||'Failed','error');
+    showToast('SEO settings saved','success');loadSeo();
+  }catch(e){showToast('Save failed: '+e.message,'error');}
+}
+async function submitSeo(){
+  if(!confirm('Submit sitemap + pages to Google, Bing & Yandex now? (Free, uses IndexNow protocol.)'))return;
+  try{
+    const r=await apiFetch('/api/admin/seo/submit',{method:'POST'});
+    const d=await r.json();if(!r.ok)return showToast(d.error||'Submission failed','error');
+    showToast(d.message||'Submitted','success');loadSeo();
+  }catch(e){showToast('Submission failed: '+e.message,'error');}
+}
+// ── BACKUP & RESTORE ───────────────────────────────────────────────────────
 async function loadBackups(){
   try{
     const r=await apiFetch('/api/admin/backups');const d=await r.json();

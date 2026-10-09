@@ -6,6 +6,17 @@
 <meta name="theme-color" content="#0A1428"/>
 <meta property="og:title" content="JapaQuest — Your Journey. Our Intelligence."/>
 <title>JapaQuest — Your Journey. Our Intelligence.</title>
+<script>
+// SEO enrichment — server trades live app-info for full meta at boot.
+fetch('/api/app-info').then(r=>r.json()).then(d=>{
+  if(d.seo){
+    const h=document.head, s=document.createElement('div');
+    s.innerHTML=d.seo;
+    h.appendChild(s); // canonical, OG, Twitter, JSON-LD
+    if(d.seo_title)document.title=d.seo_title;
+  }
+}).catch(()=>{});
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -728,7 +739,9 @@ const st=document.createElement('style');
 st.textContent='.spinner-light{display:inline-block;width:14px;height:14px;border:2px solid rgba(10,20,40,.15);border-top-color:var(--accent);border-radius:50%;animation:spn .7s linear infinite;vertical-align:-2px;margin-right:8px}@keyframes spn{to{transform:rotate(360deg)}}.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spn .7s linear infinite;vertical-align:-2px}';
 document.head.appendChild(st);
 
-if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(reg=>{
+  if(reg.active)reg.active.postMessage({type:'WARM',urls:['/api/app-info','/api/user/plans']});
+}).catch(()=>{});
 </script>
 
 <!-- ══════════ CONCIERGE CHATBOT ══════════ -->

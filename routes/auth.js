@@ -6,6 +6,23 @@ const { Q }   = require('../db');
 const { signToken, requireAuth } = require('../middleware/auth');
 const { sendEmail } = require('../utils/mailer');
 
+// ── SECURITY: httpOnly session cookie ──────────────────────────────────────
+// The JWT also rides an httpOnly cookie so the fatal credential is NOT kept in
+// localStorage (XSS-stealable). Bearer in an Authorization header still works
+// for API clients. Cookie is SameSite=Lax, Secure in production, 7-day maxAge.
+function setSessionCookie(res, token) {
+  res.cookie('vg_session', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 7 * 24 * 3600 * 1000,
+    path: '/',
+  });
+}
+function clearSessionCookie(res) {
+  res.clearCookie('vg_session', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/' });
+}
+
 // ── Helper: strip sensitive fields ─────────────────────────────────────────
 function safeUser(user, plan) {
   return {
@@ -93,6 +110,7 @@ router.post('/register', async (req, res) => {
     }
 
     const token = signToken({ uuid: user.uuid, role: user.role });
+    setSessionCookie(res, token);
     res.json({ token, user: safeUser(user, plan) });
   } catch (e) {
     console.error('Register error:', e);
@@ -118,6 +136,7 @@ router.post('/login', async (req, res) => {
     Q.updateLastLogin(user.id);
     const plan  = Q.getPlanById(user.plan_id);
     const token = signToken({ uuid: user.uuid, role: user.role });
+    setSessionCookie(res, token);
     res.json({ token, user: safeUser(user, plan) });
   } catch (e) {
     console.error('Login error:', e);
@@ -230,6 +249,13 @@ router.post('/reset-password', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: 'Reset failed' });
   }
+});
+
+// POST /api/auth/logout — clears the httpOnly session cookie (Bearer tokens
+// are stateless; the client must forget its copy — see doLogout() in pages).
+router.post('/logout', (req, res) => {
+  clearSessionCookie(res);
+  res.json({ message: 'Logged out' });
 });
 
 module.exports = router;

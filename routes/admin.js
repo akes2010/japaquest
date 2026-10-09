@@ -1038,6 +1038,44 @@ router.post('/reset/complete', requireAdmin, (_req, res) => {
   } catch (e) { res.status(500).json({ error: 'Complete reset failed: ' + e.message }); }
 });
 
+// ── SEO MANAGER ──────────────────────────────────────────────────────────
+// One dashboard card: view/edit meta defaults, sitemap preview, robots,
+// and the one-click "sell itself" submission to search engines.
+const seo = require('../utils/seo');
+router.get('/seo', (_req, res) => {
+  const Q2 = Q;
+  const lastSubmit = (() => { try { return JSON.parse(Q2.getSetting('seo_last_submit') || 'null'); } catch { return null; } })();
+  res.json({
+    site_name: seo.siteName(), tagline: seo.tagline(), base_url: process.env.APP_URL || seo.baseUrl(),
+    meta_title: Q2.getSetting('seo_meta_title') || `${seo.siteName()} — ${seo.tagline()}`,
+    meta_description: Q2.getSetting('seo_meta_description') || seo.DESC,
+    meta_keywords: Q2.getSetting('seo_meta_keywords') || '',
+    canonical_base: seo.baseUrl(),
+    sitemap: seo.sitemap(), robots: seo.robots(),
+    sitemap_url: `${seo.baseUrl()}/sitemap.xml`,
+    last_submit: lastSubmit,
+  });
+});
+router.put('/seo', (req, res) => {
+  try {
+    const b = req.body || {};
+    if (b.meta_title)       Q.setSetting('seo_meta_title', String(b.meta_title).slice(0, 120), 'seo');
+    if (b.meta_description) Q.setSetting('seo_meta_description', String(b.meta_description).slice(0, 320), 'seo');
+    if (b.meta_keywords !== undefined) Q.setSetting('seo_meta_keywords', String(b.meta_keywords).slice(0, 400), 'seo');
+    if (b.app_url && /^https?:\/\//.test(String(b.app_url))) Q.setSetting('app_url', String(b.app_url).replace(/\/+$/, ''), 'general');
+    res.json({ message: 'SEO settings saved' });
+  } catch (e) { res.status(500).json({ error: 'Failed: ' + e.message }); }
+});
+// One click: submit sitemap + URLs to Google / Bing / Yandex / IndexNow.
+router.post('/seo/submit', async (_req, res) => {
+  try {
+    const r = await seo.submitToSearchEngines();
+    persist();
+    if (r.error) return res.status(400).json(r);
+    res.json({ message: 'Submission sent — ' + r.engines.filter(e => e.ok).length + '/' + r.engines.length + ' engines accepted the ping', ...r });
+  } catch (e) { res.status(500).json({ error: 'Submission failed: ' + e.message }); }
+});
+
 router.get('/payment-gateways', requireAdmin, (_req, res) => {
   const providers = registry.listProviders().map(p => ({
     key: p.key, displayName: p.displayName, docsUrl: p.docsUrl, manual: !!p.manual,

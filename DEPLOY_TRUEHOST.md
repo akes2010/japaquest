@@ -127,7 +127,39 @@ The second monitor catches more than downtime: `/api/health` returns a top-level
 
 ---
 
-## 8. Troubleshooting
+## 8. Updating the app without touching the database (Codebuff → GitHub → Truehost)
+
+Code changes flow: **Codebuff commits locally → you push to GitHub → the server pulls**. The database (`data/`) and secrets (`.env`) are gitignored and live outside the pulled code tree, so **every update leaves user data, payments and settings untouched**.
+
+**One-time setup** (in cPanel → Terminal, from the app root):
+```bash
+git remote set-url origin https://github.com/<you>/<repo>.git   # if you cloned via a different URL
+grep -q APP_GIT_REMOTE .env || cat >> .env <<'EOF'
+
+# Self-update pipeline
+APP_GIT_REMOTE=https://github.com/<you>/<repo>.git
+UPDATE_BRANCH=master
+UPDATE_MODE=manual
+UPDATE_SECRET=<random hex — node -e "console.log(require('crypto').randomBytes(24).toString('hex'))">
+EOF
+chmod 600 .env
+```
+
+**Applying an update** — pick either:
+
+1. **Shell:** `bash scripts/update.sh` — fetches, fast-forwards, reinstall deps, logs to `data/updates.log`. `--check` only reports. Then **Restart** the Node app in cPanel (the running process keeps serving the old code until restarted).
+2. **HTTP:** with `UPDATE_SECRET` set, hit `POST /api/update/apply?key=YOUR_UPDATE_SECRET`, or add a cPanel cron for periodic auto-update:
+   ```cron
+   # Every hour: check GitHub; applies automatically only when UPDATE_MODE=auto
+   15 * * * * curl -s "https://yourdomain.com/api/update/tick?key=YOUR_UPDATE_SECRET" > /dev/null 2>&1
+   ```
+   `UPDATE_MODE=manual` (default) never applies on its own — the tick just checks, and you apply from the shell or admin panel. `UPDATE_MODE=auto` applies as soon as a newer commit is seen.
+
+**Safety rails built in:** the pipeline refuses to run if `data/jagaguru.db` or `.env` end up tracked in git, aborts on a diverged branch instead of merging, stashes stray local edits before pulling, and only fast-forwards. For rollback, archive a DB snapshot in **Admin → Backup & Restore** before major updates, and `git log --oneline -5` + `git checkout <old-rev>` lets you pin back code (data is never rolled back).
+
+---
+
+## 9. Troubleshooting
 
 | Symptom | Fix |
 |---|---|

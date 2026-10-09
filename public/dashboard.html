@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <meta name="theme-color" content="#060B18"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{50:'#EEF2FF',100:'#E0E7FF',200:'#C7D2FE',300:'#A5B4FC',400:'#818CF8',500:'#6366F1',600:'#4F46E5'},ink:'#060B18',panel:'#0B1222',panel2:'#101A30'}}}}</script>
+<style>/* responsive floor: usable down to 320px */
+@media (max-width:360px){html{font-size:14px}}
+</style>
 <title>Dashboard — JapaQuest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -1443,7 +1448,7 @@ const STATUS_LBL={visa_free:'Visa-Free',voa:'On Arrival',evisa:'eVisa',eta:'eTA'
 function stLbl(k){const s=_geoCache&&_geoCache.strings;return (s&&(s['st_'+k]||s['st_check']))||STATUS_LBL[k]||'Check Embassy';}
 
 async function api(path,opts={}){
-  const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok,...(opts.headers||{})}});
+  const r=await fetch(path,{...opts,credentials:'include',headers:{'Content-Type':'application/json',...(tok?{Authorization:'Bearer '+tok}:{}),...(opts.headers||{})}});
   if(r.status===401){localStorage.clear();window.location.href='/';}
   return r;
 }
@@ -1473,7 +1478,12 @@ async function init(){
     setUsage(usageToday,dailyLimit);
     if(meD.unread>0)setNotifBadge(meD.unread);
     buildMM();showEmpty();loadConvs();loadNotifs();loadPlans();loadTravelProfile();loadTpPartners();initGeoPickers();
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+    // PWA: register SW and warm the offline cache in the background while
+    // connectivity is good — data stays available on poor/no network later.
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(reg=>{
+      const warm=['/api/app-info','/api/ai/models','/api/user/plans','/api/visa/passports'];
+      if(reg.active)reg.active.postMessage({type:'WARM',urls:warm});
+    }).catch(()=>{});
   }catch(e){console.error('init:',e);}
 }
 
@@ -1766,7 +1776,10 @@ async function saveProfile(){const name=document.getElementById('p-name').value.
 async function saveTravelProfile(){const data={budget_min:parseFloat(document.getElementById('tp-min').value)||500,budget_max:parseFloat(document.getElementById('tp-max').value)||2000,budget_label:document.getElementById('tp-style').value,travel_style:document.getElementById('tp-style').value,purposes:[document.getElementById('tp-purpose').value]};const r=await api('/api/travel/profile',{method:'PUT',body:JSON.stringify(data)});if(r.ok)showToast('Travel profile saved ✅');}
 async function loadTravelProfile(){const r=await api('/api/travel/profile');const d=await r.json();if(d.profile){const p=d.profile;document.getElementById('tp-min').value=p.budget_min_usd||500;document.getElementById('tp-max').value=p.budget_max_usd||2000;for(const o of document.getElementById('tp-style').options)if(o.value===p.travel_style){o.selected=true;break;}}}
 async function changePassword(){const curr=document.getElementById('p-curr-pw').value;const newP=document.getElementById('p-new-pw').value;if(!curr||!newP)return showToast('Both required');const r=await api('/api/auth/password',{method:'PUT',body:JSON.stringify({current_password:curr,new_password:newP})});const d=await r.json();if(!r.ok)return showToast(d.error||'Failed');document.getElementById('p-curr-pw').value='';document.getElementById('p-new-pw').value='';showToast('Password updated ✅');}
-function doLogout(){localStorage.clear();window.location.href='/';}
+async function doLogout(){
+  try{ await fetch('/api/auth/logout',{method:'POST',credentials:'include'}); }catch{}
+  localStorage.clear();window.location.href='/';
+}
 
 function openM(id){document.getElementById(id).classList.add('open');setTimeout(()=>{const first=document.querySelector('#'+id+' input:not([disabled])');if(first)first.focus();},80);}
 function closeM(id){document.getElementById(id).classList.remove('open');}
