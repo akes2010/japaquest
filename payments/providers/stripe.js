@@ -1,7 +1,8 @@
 'use strict';
 /** Stripe — international cards + wallets. docs: stripe.com/docs */
 const { cfg, postJson, timingSafeEqual, toMinor } = require('../base');
-const { getWebhookSecret } = require('../registry');
+// NOTE: registry.js loads providers before exporting — destructure lazily
+// inside verifyWebhook instead of at module load, or this stays undefined.
 
 module.exports = {
   key: 'stripe',
@@ -45,7 +46,8 @@ module.exports = {
   // Stripe: HMAC-SHA256 over "t=<ts>,v1=<sig>" scheme — implement the check
   // against the raw body + Stripe-Signature header.
   verifyWebhook(rawBody, signature) {
-    const secret = cfg('stripe', 'webhook_secret', 'STRIPE_WEBHOOK_SECRET') || getWebhookSecret('stripe');
+    const secret = cfg('stripe', 'webhook_secret', 'STRIPE_WEBHOOK_SECRET')
+      || require('../registry').getWebhookSecret('stripe');
     if (!secret || !signature) return false;
     const parts = Object.fromEntries(String(signature).split(',').map(p => p.split('=')));
     if (!parts.t || !parts.v1) return false;

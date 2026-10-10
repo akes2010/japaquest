@@ -1,7 +1,8 @@
 'use strict';
 /** Flutterwave — pan-African gateway (cards, mobile money, bank). docs: developer.flutterwave.com */
 const { cfg, postJson, timingSafeEqual, toMinor } = require('../base');
-const { getWebhookSecret } = require('../registry');
+// NOTE: registry.js loads providers before exporting — destructure lazily
+// inside verifyWebhook instead of at module load, or this stays undefined.
 
 module.exports = {
   key: 'flutterwave',

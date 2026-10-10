@@ -1,7 +1,8 @@
 'use strict';
 /** Paystack — cards, bank transfer, USSD across Africa. docs: paystack.com/docs */
 const { cfg, postJson, timingSafeEqual, toMinor } = require('../base');
-const { getWebhookSecret } = require('../registry');
+// NOTE: registry.js loads providers before exporting — destructure lazily
+// inside verifyWebhook instead of at module load, or this stays undefined.
 
 module.exports = {
   key: 'paystack',
@@ -28,7 +29,7 @@ module.exports = {
 
   // Paystack signature: HMAC-SHA512 of the raw body with the secret key.
   verifyWebhook(rawBody, signature) {
-    const secret = cfg('paystack', 'secret_key', 'PAYSTACK_SECRET_KEY') || getWebhookSecret('paystack');
+    const secret = cfg('paystack', 'secret_key', 'PAYSTACK_SECRET_KEY') || require('../registry').getWebhookSecret('paystack');
     if (!secret || !signature) return false;
     const crypto = require('crypto');
     const expected = crypto.createHmac('sha512', secret).update(rawBody).digest('hex');
