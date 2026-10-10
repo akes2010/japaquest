@@ -38,16 +38,24 @@ function listProviders() {
 /** Env var name each provider's webhook secret is expected under. */
 const WEBHOOK_SECRET_ENV = {
   stripe: "STRIPE_WEBHOOK_SECRET",
-  paystack: "PAYSTACK_SECRET_KEY", // Paystack signs with the same secret key, no separate webhook secret
+  paystack: null, // signs webhooks with its secret key (cfg'd above), no separate hash
   flutterwave: "FLUTTERWAVE_WEBHOOK_SECRET_HASH",
-  opay: "OPAY_SECRET_KEY",
+  opay: null, // signs with SHA512 of the private key (read from cfg in opay.js)
   payoneer: null,
   crypto: null, // manual confirmation, no webhooks
 };
 
+// Webhook secrets resolve from Admin → Payment Gateways (DB setting
+// `gw_<provider>_<field>`) first, falling back to .env — mirrors base.cfg's
+// precedence so operators who only use the admin panel still go live.
 function getWebhookSecret(key) {
   const envVar = WEBHOOK_SECRET_ENV[key];
-  return envVar ? process.env[envVar] : null;
+  const fromEnv = envVar ? (process.env[envVar] || '') : '';
+  if (fromEnv) return fromEnv;
+  try {
+    const { Q } = require('../db');
+    return Q.getSetting(`gw_${key}_webhook_secret`) || Q.getSetting(`gw_${key}_webhook_hash`) || '';
+  } catch { return ''; }
 }
 
 module.exports = { getProvider, listProviders, getWebhookSecret, PROVIDERS };

@@ -11,6 +11,7 @@ module.exports = {
     ['secret_key', 'Secret key (FLWSECK-…)', true],
     ['public_key', 'Public key (FLWPUBK-…)', false],
     ['encryption_key', 'Encryption key', false],
+    ['webhook_hash', 'Webhook secret hash (verif-hash you set in your Flutterwave dashboard)', false],
   ],
   envMap: { secret_key: 'FLUTTERWAVE_SECRET_KEY', public_key: 'FLUTTERWAVE_PUBLIC_KEY' },
   isConfigured() { return !!cfg('flutterwave', 'secret_key', 'FLUTTERWAVE_SECRET_KEY'); },

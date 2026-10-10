@@ -12,7 +12,7 @@ module.exports = {
     ['public_key', 'Publishable key (pk_…)', false],
     ['webhook_secret', 'Webhook signing secret (whsec_…)', false],
   ],
-  envMap: { secret_key: 'STRIPE_SECRET_KEY' },
+  envMap: { secret_key: 'STRIPE_SECRET_KEY', webhook_secret: 'STRIPE_WEBHOOK_SECRET' },
   isConfigured() { return !!cfg('stripe', 'secret_key', 'STRIPE_SECRET_KEY'); },
   currencies: ['USD', 'EUR', 'GBP', 'CAD', 'AUD'],
 

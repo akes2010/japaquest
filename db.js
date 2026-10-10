@@ -406,6 +406,17 @@ async function reloadDB(buf) {
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
+/** Write-through helper for high-value config writes (API keys, gateway
+ *  credentials, SMTP). Flushes the in-memory DB to disk immediately so a
+ *  process restart can never lose the just-saved secret. Ordinary writes
+ *  (chats, logs, counters) keep the 200ms debounced persist(). */
+function execDurable(sql, params = []) {
+  _db.run(sql, params);
+  _dirty = true;
+  persist();
+  if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
+}
+
 function exec(sql, params = []) { _db.run(sql, params); markDirty(); }
 function queryAll(sql, params = []) {
   const stmt = _db.prepare(sql);
@@ -755,8 +766,8 @@ const Q = {
   // SETTINGS
   getSetting: (k) => queryOne('SELECT value FROM settings WHERE key=?',[k])?.value ?? '',
   setSetting: (k,v,grp) => {
-    if (queryOne('SELECT 1 FROM settings WHERE key=?',[k])) exec('UPDATE settings SET value=? WHERE key=?',[String(v??''),k]);
-    else exec('INSERT INTO settings(key,value,grp) VALUES(?,?,?)',[k,String(v??''),grp||'general']);
+    if (queryOne('SELECT 1 FROM settings WHERE key=?',[k])) execDurable('UPDATE settings SET value=? WHERE key=?',[String(v??''),k]);
+    else execDurable('INSERT INTO settings(key,value,grp) VALUES(?,?,?)',[k,String(v??''),grp||'general']);
   },
   setSettings: (obj) => Object.entries(obj).forEach(([k,v]) => Q.setSetting(k, v)),
   getSettingsByGroup: (grp) => queryAll('SELECT key,value FROM settings WHERE grp=?',[grp])
