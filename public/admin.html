@@ -298,18 +298,11 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
 .chart-row .db-card{animation:fadeUp .55s var(--ease) both}
 .chart-row .db-card:nth-child(1){animation-delay:.3s}
 .chart-row .db-card:nth-child(2){animation-delay:.38s}
-/* Auto-open the group that contains the active page, close the rest. */
-function toggleNavGroup(btn){
-  btn.classList.toggle('open');
-  document.getElementById(btn.dataset.g)?.classList.toggle('open');
-}
-function openActiveNavGroup(){
-  const act=document.querySelector('.sb-btn.active');
-  if(!act)return;
-  const pages=act.closest('.nav-pages');
-  document.querySelectorAll('.nav-pages.open').forEach(p=>{if(p!==pages){p.classList.remove('open');const g=document.querySelector(`.nav-group[data-g="${p.id}"]`);g&&g.classList.remove('open');}});
-  if(pages&&!pages.classList.contains('open')){pages.classList.add('open');const g=document.querySelector(`.nav-group[data-g="${pages.id}"]`);g&&g.classList.add('open');}
-}
+/* NOTE: toggleNavGroup()/openActiveNavGroup() were previously defined here
+ * but INSIDE the <style> block — browsers parsed them as CSS and discarded
+ * them, so sw() crashed with “openActiveNavGroup is not defined” and no
+ * admin view ever loaded. They now live with the rest of the JS below
+ * (search: toggleNavGroup). */
 /* mobile: metrics two-up then one-up on tiny phones */
 @media(max-width:900px){.db-hero-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:480px){
@@ -921,6 +914,43 @@ body.skin-light .sb-badge.gold{background:rgba(176,122,32,.12);color:#8A5A14;bor
   .view-wrap{padding:14px 12px}
   .m-box{border-radius:20px 20px 14px 14px;max-height:92dvh}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SAVE-BUTTON VISIBILITY — every Save action in the admin panel must stay
+   clearly readable in ALL five skins. The dark skins (night/ink) tune
+   .btn-primary for a navy/black canvas; the light skins (paper/snow/
+   daylight) re-point it with opaque ink-on-white values. The unsaved-changes
+   glow (.save-dirty) appears the moment any adjustment is made and clears
+   when the form is saved.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* light skins:Warm ember gradient with solid white label — high contrast on
+   white surfaces, unmistakably the primary action */
+body.skin-light .btn-primary{
+  background:linear-gradient(135deg,#C2491F,#E8613C);
+  color:#fff;
+  box-shadow:0 10px 26px -10px rgba(232,97,60,.5);
+}
+body.skin-light .btn-primary:hover{box-shadow:0 16px 38px -12px rgba(232,97,60,.65)}
+/* ink skin (pure black): a touch brighter gradient so the ember reads */
+body[data-skin="ink"] .btn-primary{
+  background:linear-gradient(135deg,#C14A1B,#E8613C);
+  color:#fff;
+}
+/* unsaved-changes cue: gentle ember pulse ring on ANY save button inside a
+   form that has been edited but not yet saved. Purely additive CSS — clears
+   when .save-dirty is removed on successful save. */
+@keyframes saveDirtyPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(232,97,60,.55)}
+  50%{box-shadow:0 0 0 6px rgba(232,97,60,0)}
+}
+.save-dirty{
+  outline:2px solid rgba(232,97,60,.8);
+  outline-offset:2px;
+  animation:saveDirtyPulse 1.6s ease-in-out infinite;
+}
+/* the AI panel save button carries an id — same treatment */
+#save-ai-btn.save-dirty{outline:2px solid rgba(232,97,60,.8)}
+@media(prefers-reduced-motion:reduce){.save-dirty{animation:none}}
 </style>
 </head>
 <body>
@@ -1484,7 +1514,7 @@ body.skin-light .sb-badge.gold{background:rgba(176,122,32,.12);color:#8A5A14;bor
           </div>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="saveEmail()">💾 Save Email Settings</button>
+      <button class="btn btn-primary" id="save-email-btn" onclick="saveEmail()">💾 Save Email Settings</button>
     </div>
   </div>
 
@@ -1502,7 +1532,7 @@ body.skin-light .sb-badge.gold{background:rgba(176,122,32,.12);color:#8A5A14;bor
         <div class="tgl-row"><div><div class="tgl-lbl">Concierge Emails — Travellers</div><div class="tgl-sub">Ticket confirmation, concierge replies and closure notices to the traveller. Respects each traveller's own concierge-email preference.</div></div><label class="toggle"><input type="checkbox" id="notif_email_concierge_user"/><span class="toggle-sl"></span></label></div>
         <div class="tgl-row"><div><div class="tgl-lbl">Concierge Emails — Concierge Inbox</div><div class="tgl-sub">Alert the concierge inbox when a new request arrives or a traveller replies, so nothing waits unseen in the app.</div></div><label class="toggle"><input type="checkbox" id="notif_email_concierge_admin"/><span class="toggle-sl"></span></label></div>
       </div>
-      <button class="btn btn-primary" onclick="saveNotifs()">💾 Save Settings</button>
+      <button class="btn btn-primary" id="save-notifs-btn" onclick="saveNotifs()">💾 Save Settings</button>
     </div>
   </div>
 
@@ -1555,7 +1585,7 @@ body.skin-light .sb-badge.gold{background:rgba(176,122,32,.12);color:#8A5A14;bor
           <div style="margin-top:10px;font-size:.7rem;color:var(--t4);line-height:1.7">Travellers see every USD price converted into their geo-detected currency (override from the 🌐 menu in their dashboard) and the interface in their detected language (en · fr · es · pt · ar · sw). Rates refresh daily from open.er-api.com, with a static fallback when offline.</div>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="saveGeneral()">💾 Save System Settings</button>
+      <button class="btn btn-primary" id="save-general-btn" onclick="saveGeneral()">💾 Save System Settings</button>
     </div>
   </div>
 
@@ -1636,7 +1666,7 @@ body.skin-light .sb-badge.gold{background:rgba(176,122,32,.12);color:#8A5A14;bor
       <label class="form-label" style="margin-top:10px">Meta description</label><textarea class="input" id="seo-desc" rows="2" placeholder="Shown under your link in search results"></textarea>
       <label class="form-label" style="margin-top:10px">Meta keywords (comma-separated, optional)</label><input class="input" id="seo-keywords" placeholder="visa, nigeria passport, travel"/>
       <label class="form-label" style="margin-top:10px">Site URL (used for canonical + sitemap)</label><input class="input" id="seo-url" placeholder="https://yourdomain.com"/>
-      <button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="saveSeo()">💾 Save SEO settings</button>
+      <button class="btn btn-primary btn-sm" id="save-seo-btn" style="margin-top:14px" onclick="saveSeo()">💾 Save SEO settings</button>
     </div>
     <div class="stats-grid" id="seo-summary" style="margin-bottom:14px"></div>
     <div id="seo-results"></div>
@@ -1906,6 +1936,19 @@ async function init(){
   }catch(e){console.error('Init:',e);}
 }
 
+// sidebar grouped nav — group open/close + auto-open the group holding the
+// active page (moved here from the <style> block where it never ran)
+function toggleNavGroup(btn){
+  btn.classList.toggle('open');
+  document.getElementById(btn.dataset.g)?.classList.toggle('open');
+}
+function openActiveNavGroup(){
+  const act=document.querySelector('.sb-btn.active');
+  if(!act)return;
+  const pages=act.closest('.nav-pages');
+  document.querySelectorAll('.nav-pages.open').forEach(p=>{if(p!==pages){p.classList.remove('open');const g=document.querySelector(`.nav-group[data-g="${p.id}"]`);g&&g.classList.remove('open');}});
+  if(pages&&!pages.classList.contains('open')){pages.classList.add('open');const g=document.querySelector(`.nav-group[data-g="${pages.id}"]`);g&&g.classList.add('open');}
+}
 function sw(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.sb-btn').forEach(el=>el.classList.remove('active'));
@@ -2451,6 +2494,27 @@ async function testEngine(){
 }
 async function testAI(model){showToast('Testing…');const KEYMAP={claude:'ai_anthropic_key',deepseek:'ai_openrouter_key',openai:'ai_openai_key',deepseek2:'ai_deepseek_key',groq:'ai_groq_key',gemini:'ai_gemini_key',together:'ai_together_key',mistral7b:'ai_huggingface_key',zephyr:'ai_huggingface_key',kimi:'ai_kimi_key',zai:'ai_zai_key',omniroute:'ai_omniroute_key',xkiro:'ai_xkiro_key',cheaperinference:'ai_ci_key',cloudflare:'ai_cloudflare_token'};const el=KEYMAP[model]?document.getElementById(KEYMAP[model]):null;const v=el&&el.value&&!el.value.startsWith('••••')?el.value.trim():'';const body={model};if(v)body.key=v;if(model==='cloudflare'){const a=document.getElementById('ai_cloudflare_account');if(a&&a.value.trim()&&!a.value.startsWith('••••'))body.accountId=a.value.trim();}const r=await apiFetch('/api/admin/settings/test-ai',{method:'POST',body:JSON.stringify(body)});const d=await r.json();const msg=r.ok?(d.message+(v?' — now click Save to store it':'')):(d.error||'Test failed');r.ok?showToast(msg):showToast(msg,'error');}
 
+// ── UNSAVED-CHANGES CUE ────────────────────────────────────────────────────────
+// When any adjustment is made to an admin form, its Save button lights up
+// (.save-dirty ember pulse) so the operator can't miss it in any theme; the
+// cue clears the moment the form saves. Purely additive — zero behaviour change.
+function wireSaveCue(btnIds, fieldIds){
+  const btns=btnIds.map(id=>document.getElementById(id)).filter(Boolean);
+  const fields=fieldIds.map(id=>document.getElementById(id)).filter(Boolean);
+  if(!btns.length)return;
+  const lite=()=>fields.filter(f=>f.type==='checkbox'||f.type==='radio');
+  const heavy=()=>fields.filter(f=>f.type!=='checkbox'&&f.type!=='radio');
+  heavy().forEach(f=>f.addEventListener('input',()=>btns.forEach(b=>b.classList.add('save-dirty'))));
+  lite().forEach(f=>f.addEventListener('change',()=>btns.forEach(b=>b.classList.add('save-dirty'))));
+  btns.forEach(b=>b.addEventListener('click',()=>setTimeout(()=>b.classList.remove('save-dirty'),50)));
+}
+// AI keys form → its big Save & Activate button
+wireSaveCue(['save-ai-btn'],['ai_default_model','ai_max_tokens','ai_stream','ai_system_prompt_addon','ai_engine_fallback','ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_ollama_key','ai_kimi_key','ai_zai_key','ai_omniroute_key','ai_xkiro_key','ai_ci_key','ai_cloudflare_token','ai_engine_models','ai_ollama_url','ai_vllm_url','ai_lmstudio_url','ai_omniroute_url','ai_cloudflare_account']);
+// Email · Notifications · General · SEO — each pairs its fields with its Save button
+wireSaveCue(['save-email-btn'],['smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from_name','smtp_from_email','smtp_secure']);
+wireSaveCue(['save-notifs-btn'],['notif_welcome_email','notif_new_user_alert','notif_usage_alert','notif_system_alerts','notif_email_reminders','notif_email_digest','notif_email_concierge_user','notif_email_concierge_admin','notif_usage_threshold']);
+wireSaveCue(['save-general-btn'],['app_name','app_tagline','app_logo','support_email','app_url','concierge_notify_email','maintenance_mode','registration_open']);
+wireSaveCue(['save-seo-btn'],['seo-title','seo-desc','seo-keywords','seo-url']);
 // ── EMAIL ─────────────────────────────────────────────────────────────────────
 async function loadEmail(){const r=await apiFetch('/api/admin/settings/email');const d=await r.json();const s=d.settings||{};['smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from_name','smtp_from_email','smtp_secure'].forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k]||'';});}
 async function saveEmail(){const fields=['smtp_host','smtp_port','smtp_user','smtp_from_name','smtp_from_email','smtp_secure'];const settings=fields.reduce((a,k)=>({...a,[k]:document.getElementById(k)?.value||''}),{});const pass=document.getElementById('smtp_pass').value;if(pass&&!pass.startsWith('••••'))settings.smtp_pass=pass;const r=await apiFetch('/api/admin/settings',{method:'PUT',body:JSON.stringify(settings)});const d=await r.json();r.ok?showToast('Email settings saved ✅'):showToast(d.error,'error');}

@@ -988,6 +988,45 @@ tbody tr:nth-child(even) td{background:rgba(255,255,255,.02)}
   .view-wrap{padding:14px 12px}
   .m-box{border-radius:20px 20px 14px 14px;max-height:92dvh}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SAVE-BUTTON VISIBILITY — every Save action in the user dashboard must stay
+   clearly readable in ALL five skins (night · ink · paper · snow · daylight).
+   The dark skins tune .btn-primary / .ex-save for a navy/black canvas; the
+   light skins (paper/snow/daylight) re-point them with opaque ink-on-white
+   values so labels never wash out. The unsaved-changes glow (.save-dirty)
+   appears the moment an adjustment is made and clears when the form saves.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* light skins: solid ember gradient with white label — high contrast on white */
+body.skin-light .btn-primary{
+  background:linear-gradient(135deg,#C2491F,#E8613C);
+  color:#fff;
+  box-shadow:0 10px 26px -10px rgba(232,97,60,.5);
+}
+body.skin-light .btn-primary:hover{box-shadow:0 16px 38px -12px rgba(232,97,60,.65)}
+/* ex-save (the 💾 Save chip in the document/exports bar): solid-enough tinted
+   backgrounds so the label passes contrast in EVERY skin — value picked to be
+   legible over both navy/black canvases and white/paper ones */
+.ex-save{background:rgba(232,97,60,.82);border:1px solid rgba(232,97,60,.9);color:#fff}
+body.skin-light .ex-save{background:rgba(14,123,79,.92);border-color:rgba(14,123,79,.95);color:#fff}
+/* ink skin (pure black): brighten the primary gradient so ember reads */
+body[data-skin="ink"] .btn-primary{
+  background:linear-gradient(135deg,#C14A1B,#E8613C);
+  color:#fff;
+}
+/* unsaved-changes cue: gentle ember pulse ring on ANY save button inside a
+   form that has been edited but not yet saved. Purely additive CSS — clears
+   when .save-dirty is removed on successful save. */
+@keyframes saveDirtyPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(232,97,60,.55)}
+  50%{box-shadow:0 0 0 6px rgba(232,97,60,0)}
+}
+.save-dirty{
+  outline:2px solid rgba(232,97,60,.8);
+  outline-offset:2px;
+  animation:saveDirtyPulse 1.6s ease-in-out infinite;
+}
+@media(prefers-reduced-motion:reduce){.save-dirty{animation:none}}
 </style>
 </head>
 <body>
@@ -1041,7 +1080,7 @@ tbody tr:nth-child(even) td{background:rgba(255,255,255,.02)}
       <input class="input" id="doc-dates" placeholder="e.g. 15 August – 25 August 2026" tabindex="5"/></div>
     <div id="doc-result" class="tool-out"></div>
     <div class="ex-bar" id="doc-exports" style="display:none">
-      <button class="ex-btn ex-save" onclick="saveDoc()">💾 Save</button>
+      <button class="ex-btn ex-save" id="save-doc-btn" onclick="saveDoc()">💾 Save</button>
       <button class="ex-btn ex-pdf" onclick="printDoc()">📄 PDF</button>
       <button class="ex-btn ex-doc" onclick="downloadDoc()">📝 DOCX</button>
     </div>
@@ -1468,7 +1507,7 @@ tbody tr:nth-child(even) td{background:rgba(255,255,255,.02)}
               <option value="Uganda" data-flag="🇺🇬" data-code="UG">🇺🇬 Uganda</option>
               <option value="Other Africa" data-flag="🌍" data-code="NG">🌍 Other Africa</option>
             </select></div>
-          <button class="btn btn-primary btn-sm" onclick="saveProfile()">Save Changes</button>
+          <button class="btn btn-primary btn-sm" id="save-profile-btn" onclick="saveProfile()">Save Changes</button>
         </div>
         <div class="ps-card"><div class="ps-title">✈️ Travel Profile</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -1484,7 +1523,7 @@ tbody tr:nth-child(even) td{background:rgba(255,255,255,.02)}
                 <option>Tourism</option><option>Business</option><option>Study</option><option>Work</option></select></div>
             <div id="tp-fx-hint" style="grid-column:1/-1;font-size:.64rem;color:var(--t4)"></div>
           </div>
-          <button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="saveTravelProfile()">Save Travel Profile</button>
+          <button class="btn btn-primary btn-sm" id="save-travel-btn" style="margin-top:14px" onclick="saveTravelProfile()">Save Travel Profile</button>
         </div>
         <div class="ps-card"><div class="ps-title">🔒 Change Password</div>
           <div class="form-group"><label class="form-label">Current Password</label><input class="input" id="p-curr-pw" type="password"/></div>
@@ -1871,6 +1910,31 @@ async function doLogout(){
 
 function openM(id){document.getElementById(id).classList.add('open');setTimeout(()=>{const first=document.querySelector('#'+id+' input:not([disabled])');if(first)first.focus();},80);}
 function closeM(id){document.getElementById(id).classList.remove('open');}
+// ── UNSAVED-CHANGES CUE ──────────────────────────────────────────────────────
+// When any adjustment is made to a user form, its Save button lights up
+// (.save-dirty ember pulse) so it's unmissable in any theme; the cue clears
+// the moment the form saves. Purely additive — zero behaviour change.
+function wireSaveCue(btnIds, fieldIds){
+  const btns=btnIds.map(id=>document.getElementById(id)).filter(Boolean);
+  const fields=fieldIds.map(id=>document.getElementById(id)).filter(Boolean);
+  if(!btns.length)return;
+  fields.forEach(f=>{
+    const ev=(f.type==='checkbox'||f.type==='radio'||f.tagName==='SELECT')?'change':'input';
+    f.addEventListener(ev,()=>btns.forEach(b=>b.classList.add('save-dirty')));
+  });
+  btns.forEach(b=>b.addEventListener('click',()=>setTimeout(()=>b.classList.remove('save-dirty'),0)));
+}
+wireSaveCue(['save-profile-btn'],['p-name','p-country']);
+wireSaveCue(['save-travel-btn'],['tp-min','tp-max','tp-style','tp-purpose']);
+// the doc-exports bar appears only after a document is generated — light the
+// 💾 Save chip then, and re-check on any further generation
+wireSaveCue(['save-doc-btn'],['doc-type','doc-name','doc-job','doc-purpose','doc-dest','doc-dates']);
+(function(){const mo=new MutationObserver(()=>{
+  const out=document.getElementById('doc-result');
+  const btn=document.getElementById('save-doc-btn');
+  if(out&&btn&&out.style.display!=='none')btn.classList.add('save-dirty');
+});
+const t=document.getElementById('doc-result');if(t)mo.observe(t,{childList:true,characterData:true,subtree:true});})();
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.m-ov.open').forEach(m=>m.classList.remove('open'));const gm=document.getElementById('geo-menu');if(gm)gm.style.display='none';}});
 function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');t.style.borderColor=type==='error'?'rgba(200,16,46,.35)':'rgba(217,90,35,.35)';clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
