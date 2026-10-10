@@ -1362,8 +1362,8 @@ body.skin-light .sb-badge.gold{background:rgba(176,122,32,.12);color:#8A5A14;bor
           <span>🕸️ OmniRoute</span><span class="provider-badge-free">Free</span>
           <a href="https://github.com/diegosouzapw/OmniRoute" target="_blank" class="get-key-link" style="margin-left:auto">Gateway docs →</a>
         </div>
-        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">Free AI gateway pooling 90+ free-tier providers. Hosted endpoint needs no key; self-host for full control (localhost:20128/v1).</div>
-        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Gateway URL</label><input class="input" id="ai_omniroute_url" placeholder="https://omniroute.online/v1"/></div>
+        <div style="font-size:.72rem;color:var(--t4);margin-bottom:10px">Free AI gateway pooling 90+ free-tier providers. Runs on YOUR machine/VPS: <code>npx omniroute</code> → localhost:20128/v1. omniroute.online is a marketing site with no API — put your gateway's own URL here.</div>
+        <div class="form-group" style="margin-bottom:8px"><label class="form-label">Gateway URL (self-hosted or your hosted instance)</label><input class="input" id="ai_omniroute_url" placeholder="http://localhost:20128/v1"/></div>
         <div class="form-group" style="margin-bottom:8px"><label class="form-label">API Key (optional)</label>
           <div class="key-wrap"><input class="input" id="ai_omniroute_key" type="password" placeholder="usually empty"/><button class="key-show" onclick="toggleKey('ai_omniroute_key')">Show</button></div></div>
         <button class="btn btn-ghost btn-sm" onclick="testAI('omniroute')">🔍 Verify</button>

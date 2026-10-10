@@ -109,7 +109,14 @@ router.get('/models', requireAuth, async (req, res) => {
         return { ...m, name: '♾️ Auto — never stops', isConfigured: rs.configured.length > 0, rotationTier: rs.tier, rotationPool: rs.configured.length };
       }
       const [envVar, settingKey] = MODEL_SOURCES[m.id];
-      const configured = !!(envVar && process.env[envVar]) || !!Q.getSetting(settingKey);
+      let configured = !!(envVar && process.env[envVar]) || !!Q.getSetting(settingKey);
+      // OmniRoute is local-first — an entry pointing only at the marketing
+      // site (omniroute.online, no API) must not count as configured.
+      if (m.id === 'omniroute' && configured) {
+        const u = String(process.env.OMNIROUTE_BASE_URL || Q.getSetting('ai_omniroute_url') || '').trim();
+        const hasKey = !!(process.env.OMNIROUTE_API_KEY || Q.getSetting('ai_omniroute_key'));
+        if (u && /^https?:\/\/(www\.)?omniroute\.online/i.test(u) && !hasKey) configured = false;
+      }
       return { ...m, isConfigured: configured };
     });
   const visible = req.user.role === 'admin'

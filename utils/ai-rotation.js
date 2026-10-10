@@ -56,7 +56,7 @@ const CONFIG_CHECKS = {
   'llama-local':    () => true, // engine reachability is checked at dispatch time
   'qwen-local':     () => true,
   'deepseek-local': () => true,
-  omniroute:        () => !!(process.env.OMNIROUTE_BASE_URL || setting('ai_omniroute_url') || process.env.OMNIROUTE_API_KEY || setting('ai_omniroute_key')),
+  omniroute:        () => omnirouteUsable(),
   xkiro:            () => !!(process.env.XKIRO_API_KEY || setting('ai_xkiro_key')),
   cheaperinference: () => !!(process.env.CHEAPERINFERENCE_API_KEY || setting('ai_ci_key')),
   cloudflare:       () => !!((process.env.CLOUDFLARE_ACCOUNT_ID || setting('ai_cloudflare_account')) && (process.env.CLOUDFLARE_API_TOKEN || setting('ai_cloudflare_token'))),
@@ -79,6 +79,20 @@ const CONFIG_CHECKS = {
 };
 
 function setting(key) { try { return Q.getSetting(key) || ''; } catch { return ''; } }
+
+// OmniRoute is local-first: its API only exists when the gateway is running
+// (npx omniroute → localhost:20128/v1). omniroute.online is a marketing site
+// with no API — pointing there yields 404s, so an entry that only names the
+// marketing domain does NOT make the provider usable; the chain skips it and
+// the cloud tail answers instead. A non-marketing http(s) URL (a genuine
+// hosted gateway on a VPS) or any localhost URL counts as usable.
+function omnirouteUsable() {
+  const url = String(process.env.OMNIROUTE_BASE_URL || setting('ai_omniroute_url') || '').trim();
+  const key = String(process.env.OMNIROUTE_API_KEY || setting('ai_omniroute_key') || '').trim();
+  if (!url) return !!process.env.OMNIROUTE_BASE_URL; // default localhost counts (checked live at dispatch)
+  if (/^https?:\/\/(www\.)?omniroute\.online/i.test(url) && !key) return false; // marketing site, no API
+  return true;
+}
 function isConfigured(id) {
   const check = CONFIG_CHECKS[id];
   return check ? !!check() : false;

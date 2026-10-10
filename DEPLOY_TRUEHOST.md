@@ -60,11 +60,27 @@ JWT_SECRET=<64-char random hex — see .env.example for the generator>
 APP_URL=https://japaquest.com
 CRON_SECRET=<random hex — enables the /api/cron/tick endpoint>
 
+# OmniRoute — optional, see "Using OmniRoute on TrueHost" below. Blank = off
+# (the pool has plenty of free cloud capacity without it).
+# OMNIROUTE_BASE_URL=http://localhost:20128/v1
+# OMNIROUTE_API_KEY=
+# OMNIROUTE_DEFAULT_MODEL=auto
+
 # At least one AI key (OpenRouter has free models):
 OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
-⚠️ **Port:** cPanel's Node.js app usually proxies your domain to the app — use the port cPanel shows on the app page. If cPanel didn't assign one, keep `PORT=4001`.
+### Using OmniRoute on TrueHost (optional)
+
+OmniRoute is a free gateway that pools 90+ free-tier providers, but it is **local-first software**: its API only exists where the gateway process runs. There is no public hosted API — `omniroute.online` is a marketing site, and pointing the gateway URL at it yields 404s. On TrueHost shared hosting you cannot keep a long-running `npx omniroute` process alive reliably.
+
+Options, in order of practicality:
+
+1. **Skip it (recommended).** The free cloud pool (OpenRouter, Groq, Gemini, HuggingFace, Cloudflare Workers AI) already gives the rotation engine plenty of free capacity with zero extra processes. Leave `OMNIROUTE_*` empty.
+2. **Run the gateway on a cheap VPS** and point JapaQuest at it: `OMNIROUTE_BASE_URL=https://gw.yourvps.com/v1` (plus `OMNIROUTE_API_KEY` if that instance requires one). Enter the same values in Admin → AI Engine → OmniRoute. A non-marketing http(s) URL is accepted; the marketing domain without a key is ignored by the rotation chain.
+3. **Same box, managed process (VPS only).** On a real VPS (not shared hosting): `npm i -g omniroute && omniroute` (or `pm2 start omniroute`), then `OMNIROUTE_BASE_URL=http://localhost:20128/v1`.
+
+Note the built-in safety: even if OmniRoute is configured but unreachable (e.g. `localhost` on a shared host with no gateway running), Auto mode simply skips it after a short cooldown and serves the answer from the cloud providers — one dead entry never blocks replies.
 
 ---
 
