@@ -16,9 +16,17 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
-const puppeteer = require(path.join('/tmp', 'verify-env', 'node_modules', 'puppeteer-core'));
+// Same discovery convention as the other verifiers: repo deps → dev fallback
+let puppeteer;
+try { puppeteer = require('puppeteer-core'); }
+catch { puppeteer = require(path.join('/tmp', 'verify-env', 'node_modules', 'puppeteer-core')); }
 
 const PORT = 4399;
+function findChrome() {
+  if (process.env.CHROME_PATH && fs.existsSync(process.env.CHROME_PATH)) return process.env.CHROME_PATH;
+  for (const p of ['/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser']) if (fs.existsSync(p)) return p;
+  throw new Error('No Chrome found. Set CHROME_PATH=/path/to/chrome');
+}
 const BASE = `http://localhost:${PORT}`;
 
 // relative luminance per WCAG 2.x
@@ -99,7 +107,7 @@ function waitForPort(url, ms) {
     await waitForPort(BASE, 20000);
     pass(`server up on :${PORT}`);
 
-    browser = await puppeteer.launch({ headless: true, executablePath: '/usr/bin/google-chrome-stable', protocolTimeout: 90000, args: ['--no-sandbox'] });
+    browser = await puppeteer.launch({ headless: true, executablePath: findChrome(), protocolTimeout: 90000, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
 
     // ── login as admin (seeded default creds, ids em/pw per admin-login.html) ─
     const pages = [await browser.newPage(), await browser.newPage()];

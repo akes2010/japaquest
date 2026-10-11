@@ -98,11 +98,12 @@ verify_run() {
   fi
   if [ "$needs_browser" = "1" ]; then
     if ! node -e "require('puppeteer-core')" >/dev/null 2>&1 \
+       && ! NODE_PATH="${NODE_PATH:-}" node -e "require('puppeteer-core')" >/dev/null 2>&1 \
        && [ ! -d /tmp/verify-env/node_modules/puppeteer-core ]; then
       if [ "$VERIFY_MODE" = "full" ]; then
         fail "puppeteer-core unavailable — browser verification required (UPDATE_VERIFY=full)."
       else
-        note "skipping $label (puppeteer-core not installed — only on dev boxes); run it locally before restart"
+        note "skipping $label (puppeteer-core not installed on this host — install dev deps or run with UPDATE_VERIFY=full to enforce)"
         return 0
       fi
     fi
@@ -117,7 +118,7 @@ if [ "$VERIFY_MODE" != "basic" ]; then
   verify_run "public pages (brand/logo/PWA/dashboard)" scripts/verify-public-pages.js 1
   verify_run "admin skins" scripts/verify-admin-skins.js 1
   verify_run "nav + responsive breakpoints" scripts/verify-nav-responsive.js 1
-  verify_run "save-button cues" scripts/verify-save-buttons.js 0
+  verify_run "save-button cues" scripts/verify-save-buttons.js 1
 fi
 
 NEW=$(git rev-parse HEAD)
