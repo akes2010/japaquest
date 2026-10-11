@@ -82,6 +82,44 @@ git pull --quiet --ff-only "$REMOTE" "$BRANCH" || {
 # 4. Sync dependencies (no-op when lockfile unchanged).
 npm install --omit=dev --no-audit --no-fund >/dev/null 2>&1 || note "npm install had warnings — check `npm ls` if the app misbehaves."
 
+# 5. PRE-RESTART VERIFICATION GATE.
+# The pull must be verified BEFORE the operator restarts, so a broken deploy
+# announces itself here rather than in front of users. Cheap checks always run
+# (server.js parses, core deps exist). Browser checks run only when a verifier
+# needs puppeteer — skipped with a visible warning, never a hard fail, because
+# shared cPanel hosts may not have Chrome/node_modules dev deps. Override the
+# skip with UPDATE_VERIFY=full (fail on missing puppeteer) or relax with
+# UPDATE_VERIFY=basic.
+VERIFY_MODE="${UPDATE_VERIFY:-auto}"
+verify_run() {
+  local label="$1" script="$2" needs_browser="$3"
+  if node --check "$script" >/dev/null 2>&1; then :; else
+    fail "$script failed syntax check — not deploying."
+  fi
+  if [ "$needs_browser" = "1" ]; then
+    if ! node -e "require('puppeteer-core')" >/dev/null 2>&1 \
+       && [ ! -d /tmp/verify-env/node_modules/puppeteer-core ]; then
+      if [ "$VERIFY_MODE" = "full" ]; then
+        fail "puppeteer-core unavailable — browser verification required (UPDATE_VERIFY=full)."
+      else
+        note "skipping $label (puppeteer-core not installed — only on dev boxes); run it locally before restart"
+        return 0
+      fi
+    fi
+  fi
+  note "verifying $label …"
+  if ! node "$script" >/dev/null 2>&1; then
+    fail "$label FAILED — deploy blocked. Run \`node $script\` for details, fix, and re-run update.sh."
+  fi
+  ok "$label passed"
+}
+if [ "$VERIFY_MODE" != "basic" ]; then
+  verify_run "public pages (brand/logo/PWA/dashboard)" scripts/verify-public-pages.js 1
+  verify_run "admin skins" scripts/verify-admin-skins.js 1
+  verify_run "nav + responsive breakpoints" scripts/verify-nav-responsive.js 1
+  verify_run "save-button cues" scripts/verify-save-buttons.js 0
+fi
+
 NEW=$(git rev-parse HEAD)
 mkdir -p data
 echo "$(date -Iseconds) updated ${LOCAL:0:8} → ${NEW:0:8}" >> data/updates.log

@@ -676,6 +676,15 @@ fetch('/api/app-info').then(r=>r.json()).then(d=>{
   if(name && name!=='JapaQuest'){
     const words=name.split(/\s+/); const head=words.slice(0,-1).join(' '); const tail=words[words.length-1]||'';
     document.querySelectorAll('.brand-name').forEach(b=>{b.innerHTML=head?esc(head)+' <span class="logo-quest">'+esc(tail)+'</span>':esc(name);});
+    // suite product cards follow the same brand ('JapaQuest Visa' → '<name> Visa')
+    if(Array.isArray(d.suite)){
+      const byKey=Object.fromEntries(d.suite.map(s=>[s.key,s.name]));
+      document.querySelectorAll('#suite .suite-card').forEach(c=>{
+        const h=c.querySelector('h3'); if(!h) return;
+        const key=Object.keys(byKey).find(k=>h.textContent.includes(k==='ai'?'AI':k[0].toUpperCase()+k.slice(1)));
+        if(key&&byKey[key])h.textContent=byKey[key];
+      });
+    }
     document.title=name+' — Your Journey. Our Intelligence.';
     const cp=document.getElementById('cp-fab-label'); if(cp)cp.textContent=name+' Concierge';
     document.querySelectorAll('.mk-brand').forEach(e=>e.textContent=name);

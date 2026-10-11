@@ -11,6 +11,26 @@
 const NAME = 'JapaQuest';
 const TAGLINE = 'Your Journey. Our Intelligence.';
 
+/**
+ * Suite product display names follow the operator's Admin → General app name
+ * (settings app_name). When an override is present, 'JapaQuest' inside each
+ * product label is replaced with the operator's brand, so `/suite/*` pages,
+ * the landing grid and dashboard menus all stay coherently branded.
+ * Falls back to the canonical JapaQuest-suite names when no override exists.
+ */
+function suiteName(product, appName) {
+  const base = String(product?.name || '').trim();
+  const app = String(appName || '').trim();
+  if (!app || !base) return base;
+  // Rebuild the label around the canonical product keyword instead of blind
+  // string replace — 'JapaQuest Travel' + 'Akmustech Travel' yields
+  // 'Akmustech Travel' exactly once, and 'Akmustech Ltd' yields 'Akmustech Ltd Travel'.
+  const pretty = s => s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  const keyword = base.split(/\s+/).pop(); // 'AI' | 'Visa' | 'Travel' | …
+  if (pretty(app).endsWith(' ' + pretty(keyword))) return app; // already contains it
+  return app + ' ' + keyword;
+}
+
 /** The JapaQuest product suite, in canonical order. */
 const SUITE = [
   { key: 'ai',        icon: '💬', name: 'JapaQuest AI',        short: 'Conversational AI travel agent',
@@ -96,4 +116,4 @@ const SLA_POLICY = [
 ];
 const slaFor = p => SLA_POLICY.find(s => s.key === p) || SLA_POLICY[2];
 
-module.exports = { NAME, TAGLINE, SUITE, SLA_POLICY, slaFor };
+module.exports = { NAME, TAGLINE, SUITE, SLA_POLICY, slaFor, suiteName };

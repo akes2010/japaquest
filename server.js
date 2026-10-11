@@ -181,7 +181,7 @@ app.get('/api/app-info', (_req,res) => res.json({
   supportEmail:Q.getSetting('support_email')|| '',
   maintenance: Q.getSetting('maintenance_mode')==='1',
   regOpen:     Q.getSetting('registration_open')!=='0',
-  suite:       BRAND.SUITE,
+  suite:       BRAND.SUITE.map(x => ({ ...x, name: BRAND.suiteName(x, Q.getSetting('app_name')) })),
   // Full SEO head block (canonical/OG/Twitter/JSON-LD) rendered live from
   // settings so the landing page always matches current branding.
   seo: seo.metaTags(),
@@ -356,8 +356,10 @@ app.use('/api', (_req,res) => res.status(404).json({ error: 'Endpoint not found'
 const esc5 = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 app.get('/suite',        (_req,res) => res.redirect('/#suite'));
 app.get('/suite/:key', (req,res) => {
+  const pView = name => ({ ...p, name }); // display view: product label follows the admin app name
   const p = BRAND.SUITE.find(x => x.key === req.params.key);
   if (!p) return res.redirect('/#suite');
+  const appOverride = Q.getSetting('app_name') || '';
   const others = BRAND.SUITE.filter(x => x.key !== p.key);
   // Server-side i18n: ?lang= > cookie > Accept-Language > geo languages.
   const L = i18n.negotiate({
@@ -369,13 +371,13 @@ app.get('/suite/:key', (req,res) => {
   const dirAttr = i18n.RTL.has(L) ? ' dir="rtl"' : '';
   const feats = p.features.map(([ic,t,d]) => `
       <div class="f-card"><div class="f-ic">${ic}</div><div><div class="f-t">${esc5(t)}</div><p>${esc5(d)}</p></div></div>`).join('');
-  const nav = others.map(o => `<a class="pl" href="/suite/${o.key}${req.query.lang ? '?lang='+encodeURIComponent(req.query.lang) : ''}">${o.icon} ${esc5(o.name)}</a>`).join('');
+  const nav = others.map(o => `<a class="pl" href="/suite/${o.key}${req.query.lang ? '?lang='+encodeURIComponent(req.query.lang) : ''}">${o.icon} ${esc5(BRAND.suiteName(o, appOverride))}</a>`).join('');
   const langOpts = i18n.LANGUAGES.map(l => `<option value="${l.code}"${l.code===L?' selected':''}>${l.flag} ${l.name}</option>`).join('');
   res.send(`<!DOCTYPE html><html lang="${L}"${dirAttr}><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>${esc5(p.name)} — ${esc5(p.short)} | ${esc5(BRAND.NAME)}</title>
+<title>${esc5(BRAND.suiteName(p, appOverride))} — ${esc5(p.short)} | ${esc5(BRAND.NAME)}</title>
 <meta name="description" content="${esc5(p.desc)}"/>
-${seo.metaTags({ title: `${p.name} — ${p.short}`, description: p.desc, path: `/suite/${p.key}` })}
+${seo.metaTags({ title: `${BRAND.suiteName(p, appOverride)} — ${p.short}`, description: p.desc, path: `/suite/${p.key}` })}
 <link rel="icon" href="${brandFavicon()}"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet"/>
@@ -415,7 +417,7 @@ footer{border-top:1px solid var(--line);padding:24px 0;font-size:.78rem;color:va
     <a class="top-link" href="/#suite">${esc5(T('suite_all'))}</a>
   </div></nav>
 <section class="hero">
-  <div class="kick">${p.icon} ${esc5(BRAND.NAME)} suite · ${esc5(p.name)}</div>
+  <div class="kick">${p.icon} ${esc5(BRAND.suiteName(p, appOverride))} suite</div>
   <h1>${esc5(p.short.replace(/\s*&\s*/,' & '))}, <em>${esc5(T('suite_handled'))}</em></h1>
   <p class="sub">${esc5(p.desc)}</p>
   <a class="btn btn-acc" href="/">${esc5(p.cta)} →</a><a class="btn btn-line" href="/#suite">${esc5(T('suite_compare'))}</a>

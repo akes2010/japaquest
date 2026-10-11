@@ -2462,6 +2462,10 @@ async function loadEarnings(){
     const base=d.link.replace('/r/'+d.code,'');
     const mkR=(tag)=>d.link+'?s='+tag;
     const mkS=(tag,u)=>u+(u.includes('?')?'&':'?')+'ref='+encodeURIComponent(d.code)+'&s='+tag;
+    // product labels follow the operator brand (app-info /suite names); falls back to canonical
+    // fetch app-info once for this share sheet
+    let appSuite={};
+    try{const ar=await fetch('/api/app-info');const ad=await ar.json();(ad.suite||[]).forEach(s=>{if(s.name)appSuite[s.key]=s.name;});}catch{}
     const links=[
       ['Referral link · auto',d.link],
       ['WhatsApp',mkR('wa')],
@@ -2470,9 +2474,9 @@ async function loadEarnings(){
       ['Telegram',mkR('tg')],
       ['Landing page',mkS('bio',base+'/')],
       ['Create account',mkS('bio',base+'/register')],
-      ['JapaQuest Visa',mkS('visa',base+'/suite/visa')],
-      ['JapaQuest Study',mkS('study',base+'/suite/study')],
-      ['JapaQuest Work',mkS('work',base+'/suite/work')],
+      [appSuite.visa||'JapaQuest Visa',mkS('visa',base+'/suite/visa')],
+      [appSuite.study||'JapaQuest Study',mkS('study',base+'/suite/study')],
+      [appSuite.work||'JapaQuest Work',mkS('work',base+'/suite/work')],
     ];
     const shareTxt=encodeURIComponent('Plan your visa, studies, work or relocation abroad with JapaQuest AI — start free:');
     const linkRows=links.map(([n,u])=>`
