@@ -951,6 +951,30 @@ body[data-skin="ink"] .btn-primary{
 /* the AI panel save button carries an id — same treatment */
 #save-ai-btn.save-dirty{outline:2px solid rgba(232,97,60,.8)}
 @media(prefers-reduced-motion:reduce){.save-dirty{animation:none}}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODAL + TABLE CHIP POLISH — token-only accents layered on top of the
+   existing modal/table styles (no backsplash on earlier rules):
+   • translucent modal backdrop gains a blur veil in every skin
+   • inputs inside modals get the same ember ring focus as the rest of the
+     app, plus 12px radius for consistency
+   • table rows breathe: gentle padding bump + hairline separators use --b0
+   • header cells get uppercase micro-label treatment
+   ═══════════════════════════════════════════════════════════════════════════ */
+.m-over{backdrop-filter:blur(8px)}
+.m-box .input,.m-over .input{border-radius:12px}
+.m-box .input:focus,.m-over .input:focus{
+  outline:none;border-color:rgba(240,123,79,.65);box-shadow:0 0 0 3px var(--ring,rgba(232,97,60,.28));
+}
+.tbl-card{overflow:visible}
+tbody td{padding:11px 14px}
+thead th{font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--b1)}
+tbody tr{transition:background .25s var(--ease)}
+tbody tr:hover{background:var(--glass2)}
+/* toast buttons keyboard focus ring */
+.btn:focus-visible,.sb-btn:focus-visible,.m-close:focus-visible{
+  outline:2px solid rgba(232,97,60,.55);outline-offset:2px;
+}
 </style>
 </head>
 <body>
