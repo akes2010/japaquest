@@ -102,7 +102,21 @@ app.use('/api', rateLimit({ windowMs:15*60*1000, max:300, standardHeaders:true, 
 // static serves public/manifest.json (and any on-disk /favicon.ico) first and
 // the brand settings below never take effect.
 const FAVICON_TYPES = { '.ico':'image/x-icon','.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp','.jpg':'image/jpeg','.jpeg':'image/jpeg' };
-const brandFavicon = () => String(Q.getSetting('app_favicon_url') || '/icons/icon.svg');
+const brandFavicon = () => {
+  const u = brandFileOrEmpty('app_favicon_url');
+  return u || '/icons/icon.svg';
+};
+// Return a settings-stored brand URL only when the file actually exists on
+// disk — guards against stale DB rows (older uploads used fixed names like
+// /uploads/logo.png; later unique-named files mean the row can 404) so pages
+// fall back to the built-in λ glyph instead of rendering a broken image.
+function brandFileOrEmpty(key){
+  const u = String(Q.getSetting(key) || '');
+  if (!u) return '';
+  if (!/^\/uploads\/[\w.-]+$/.test(u)) return ''; // only local upload paths are servable
+  try { return fs.existsSync(path.join(__dirname, 'public', u)) ? u : ''; }
+  catch { return ''; }
+}
 
 // Browsers request /favicon.ico directly — serve the uploaded favicon with the
 // right type, or fall back to the built-in icon. no-cache so brand changes
@@ -124,11 +138,11 @@ app.get('/manifest.json', (_req,res) => {
     const m = JSON.parse(fs.readFileSync(path.join(__dirname,'public','manifest.json'),'utf8'));
     const name = Q.getSetting('app_name');
     if (name) { m.name = name + ' — ' + BRAND.TAGLINE; m.short_name = name; }
-    const fav = String(Q.getSetting('app_favicon_url') || '');
-    const logo = String(Q.getSetting('app_logo_url') || '');
+    const fav = brandFileOrEmpty('app_favicon_url');
+    const logo = brandFileOrEmpty('app_logo_url');
     const icons = [];
-    if (fav) icons.push({ src: fav, sizes: 'any', type: FAVICON_TYPES[path.extname(fav).toLowerCase()] || 'image/png', purpose: 'any' });
-    if (logo && /\.(png|webp|svg)$/i.test(logo)) icons.push({ src: logo, sizes: 'any', type: FAVICON_TYPES[path.extname(logo).toLowerCase()] || 'image/png', purpose: 'any' });
+    if (fav) icons.push({ src: fav, sizes: 'any', type: FAVICON_TYPES[path.extname(fav).toLowerCase()] || 'image/png', purpose: 'any maskable' });
+    if (logo && /\.(png|webp|svg)$/i.test(logo)) icons.push({ src: logo, sizes: 'any', type: FAVICON_TYPES[path.extname(logo).toLowerCase()] || 'image/png', purpose: 'any maskable' });
     if (icons.length) m.icons = icons;
     res.json(m);
   } catch { res.sendFile(path.join(__dirname,'public','manifest.json')); }
@@ -162,8 +176,8 @@ app.get('/api/app-info', (_req,res) => res.json({
   name:        Q.getSetting('app_name')    || BRAND.NAME,
   tagline:     Q.getSetting('app_tagline') || BRAND.TAGLINE,
   logo:        Q.getSetting('app_logo')    || '✈',
-  logoUrl:     Q.getSetting('app_logo_url')|| '',
-  faviconUrl:  Q.getSetting('app_favicon_url')|| '',
+  logoUrl:     brandFileOrEmpty('app_logo_url'),
+  faviconUrl:  brandFileOrEmpty('app_favicon_url'),
   supportEmail:Q.getSetting('support_email')|| '',
   maintenance: Q.getSetting('maintenance_mode')==='1',
   regOpen:     Q.getSetting('registration_open')!=='0',
