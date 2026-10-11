@@ -74,6 +74,15 @@ async function waitUp() {
     `], { cwd: path.join(__dirname, '..'), stdio: 'ignore' });
     c.on('exit', code => code === 0 ? res() : rej(new Error('db write failed')));
   });
+  // a killed server flushes its IN-MEMORY db on SIGTERM exit (db.js exit hook),
+  // which would clobber a newer write made after it started dying. So: wait for
+  // the dying server to FULLY EXIT (not just a timer) before the next DB write.
+  const stopServer = s => new Promise(res => {
+    if (!s || s.exitCode !== null) return res();
+    s.on('exit', () => res());
+    s.kill('SIGTERM');
+    setTimeout(() => { try { s.kill('SIGKILL'); } catch {} }, 4000);
+  });
 
   const browser = await puppeteer.launch({ headless: true, executablePath: findChrome(), protocolTimeout: 90000, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   const pg = await browser.newPage();
@@ -98,21 +107,28 @@ async function waitUp() {
   // ── CASE A: real uploaded logo ──
   console.log('## case: uploaded logo present');
   try {
-    await setLogoSetting('/uploads/logo-1791709992.png'); // file known to exist in this repo's uploads
-    let s2; const srv2 = { kill() {} };
-    // reuse running server — it loaded settings at boot → restart needed per case
-        server.kill('SIGTERM'); await new Promise(r => setTimeout(r, 1200));
+    // Self-sufficient fixture: uploads/ is gitignored, so a fresh clone may
+    // have no PNG to point at. Create a deterministic 1x1 PNG ourselves.
+    const fxPath = path.join(__dirname, '..', 'public', 'uploads', 'verify-fx-logo.png');
+    fs.mkdirSync(path.dirname(fxPath), { recursive: true });
+    if (!fs.existsSync(fxPath)) {
+      // minimal valid 1x1 RGBA PNG
+      fs.writeFileSync(fxPath, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+    }
+    const fxRel = '/uploads/verify-fx-logo.png';
+    await stopServer(server);              // srv-from-boot would flush stale memory on exit
+    await setLogoSetting(fxRel);           // write AFTER it is fully dead
     const srvA = spawn('node', ['server.js'], { cwd: path.join(__dirname, '..'), env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
     if (!(await waitUp())) throw new Error('case-A server not up');
     const ai = await httpJson('/api/app-info');
-    ok('app-info serves real logoUrl', ai.status === 200 && ai.body.logoUrl === '/uploads/logo-1791709992.png', ai.body.logoUrl);
+    ok('app-info serves real logoUrl', ai.status === 200 && ai.body.logoUrl === fxRel, ai.body.logoUrl);
     const logo = await httpGet(ai.body.logoUrl);
     ok('uploaded logo file reachable', logo.status === 200 && logo.bytes > 0, logo.status + '/' + logo.bytes + 'B');
     const man = await httpJson('/manifest.json');
     ok('PWA manifest uses uploaded logo', man.status === 200 && (man.body.icons || []).some(i => i.src === ai.body.logoUrl), JSON.stringify((man.body.icons || []).map(i => i.src)));
     const home = await bootAndCheckLanding('A');
     ok('landing renders uploaded logo in all badges', home.marks > 0 && home.imgCount === home.marks && home.src === ai.body.logoUrl, `${home.imgCount}/${home.marks}`);
-    srvA.kill('SIGTERM'); await new Promise(r => setTimeout(r, 1200));
+    await stopServer(srvA);
   } catch (e) { ok('case A completed', false, e.message.slice(0, 90)); }
 
   // ── CASE B: stale path → guarded fallback ──
@@ -127,7 +143,7 @@ async function waitUp() {
     ok('landing falls back to λ glyph (no broken img)', home.imgCount === 0 && home.glyph >= 1, JSON.stringify(home));
     const man = await httpJson('/manifest.json');
     ok('PWA manifest falls back to built-in icons', man.status === 200 && (man.body.icons || []).every(i => !String(i.src).startsWith('/uploads')), JSON.stringify((man.body.icons || []).map(i => i.src)));
-    srvB.kill('SIGTERM');
+    await stopServer(srvB);
   } catch (e) { ok('case B completed', false, e.message.slice(0, 90)); }
 
   // ── CASE C: dashboard renders (night skin) — needs a real user session ──
@@ -152,7 +168,7 @@ async function waitUp() {
       }
       ok('dashboard renders with night skin active', rendered, pg.url());
     }
-    srvC.kill('SIGTERM');
+    await stopServer(srvC);
   } catch (e) { ok('case C completed', false, e.message.slice(0, 90)); }
 
   console.log('\n════ PUBLIC PAGES VERIFICATION: ' + (fail ? fail + ' FAILED ✗' : 'ALL ' + pass + ' CHECKS PASSED ✅') + ' ════');
