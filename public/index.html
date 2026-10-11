@@ -66,10 +66,35 @@ nav{position:sticky;top:0;z-index:100;background:rgba(247,243,234,.86);backdrop-
 .logo-mark::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 25%,rgba(232,97,60,.55),transparent 55%)}
 .logo-mark span{position:relative;z-index:1}
 .logo-quest{color:var(--accent)}
-.nav-links{display:flex;gap:4px}
-.nav-link{padding:8px 14px;border-radius:99px;font-size:.92rem;font-weight:500;color:var(--mut);transition:all .25s var(--ease)}
+.nav-links{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:center}
+.nav-link{padding:8px 14px;border-radius:99px;font-size:.92rem;font-weight:500;color:var(--mut);transition:all .25s var(--ease);white-space:nowrap}
 .nav-link:hover{color:var(--ink);background:rgba(10,20,40,.06)}
-.nav-cta{display:flex;gap:10px;align-items:center}
+.nav-cta{display:flex;gap:10px;align-items:center;flex-shrink:0}
+/* ── Mobile nav drawer (opens ≤960px; JS-injected toggle lives in .nav-in) ── */
+.nav-burger{display:none;width:42px;height:42px;border:1px solid rgba(10,20,40,.14);border-radius:12px;background:transparent;cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:5px;padding:0 10px}
+.nav-burger i{display:block;width:20px;height:2px;background:var(--ink);border-radius:2px;transition:transform .25s var(--ease),opacity .2s}
+.nav-burger.open i:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.nav-burger.open i:nth-child(2){opacity:0}
+.nav-burger.open i:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.nav-drawer{display:none;position:fixed;top:0;right:0;bottom:0;width:min(84vw,320px);background:#fff;z-index:90;box-shadow:-18px 0 44px rgba(10,20,40,.14);padding:88px 22px 24px;flex-direction:column;gap:4px;transform:translateX(100%);transition:transform .3s var(--ease);overflow-y:auto}
+/* hide the off-canvas resting state from the horizontal scroll layout without
+   breaking the slide-in animation (visibility during translate, not display) */
+.nav-drawer.open{transform:translateX(0)}
+.nav-drawer .nav-link{padding:13px 16px;font-size:1.02rem;border-radius:12px}
+.nav-drawer .nav-drawer-cta{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.nav-drawer .lang-pill{min-height:42px}
+.nav-scrim{position:fixed;inset:0;background:rgba(10,20,40,.4);opacity:0;pointer-events:none;transition:opacity .25s;z-index:85}
+.nav-scrim.open{opacity:1;pointer-events:auto}
+@media(max-width:960px){
+  .nav-in{height:64px;padding:0 16px}
+  .nav-links{display:none}
+  .nav-burger{display:flex}
+  .nav-drawer{display:flex}
+  .nav-cta{display:none}
+  .nav-drawer .nav-drawer-cta{display:flex}
+}
+@media(max-width:400px){ .logo{font-size:1.15rem} .nav-in{padding:0 12px} }
+@media(max-width:340px){ .logo{font-size:1.02rem} .nav-burger{width:38px} }
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 26px;border-radius:99px;font-size:.95rem;font-weight:600;transition:transform .3s var(--ease),box-shadow .3s var(--ease),background .3s var(--ease);position:relative;overflow:hidden}
 .btn:active{transform:scale(.97)}
@@ -274,7 +299,7 @@ select.f-input option{background:#fff;color:var(--ink)}
 
 /* ═══ DEVICE-ADAPTIVE LAYER — fluid type, safe areas, RTL, touch ═══ */
 :root{ --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px); }
-html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; scroll-behavior:smooth }
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; scroll-behavior:smooth; overflow-x:clip }
 img,svg,video{max-width:100%;height:auto}
 nav{ padding-top:var(--sat) }
 .btn,a,.plan,select,.lang-pill{ touch-action:manipulation }
@@ -301,23 +326,38 @@ nav{ padding-top:var(--sat) }
 <!-- ══════════ NAV ══════════ -->
 <nav>
   <div class="nav-in">
-    <a class="logo" href="/">
+    <a class="logo" href="/" id="brand-home" aria-label="Home">
       <div class="logo-mark"><span>λ</span></div>
-      Japa<span class="logo-quest">Quest</span>
+      <span class="brand-name">Japa<span class="logo-quest">Quest</span></span>
     </a>
-    <div class="nav-links">
-      <a href="#how" class="nav-link">How it works</a>
-      <a href="#features" class="nav-link">What you get</a>
-      <a href="#destinations" class="nav-link">Destinations</a>
-      <a href="#suite" class="nav-link">The Suite</a>
-      <a href="#pricing" class="nav-link">Pricing</a>
+    <div class="nav-links" role="navigation" aria-label="Primary">
+      <a href="#how" class="nav-link" data-i18n="tag_nav_how">How it works</a>
+      <a href="#features" class="nav-link" data-i18n="tag_nav_what">What you get</a>
+      <a href="#destinations" class="nav-link" data-i18n="tag_nav_dest">Destinations</a>
+      <a href="#suite" class="nav-link" data-i18n="tag_nav_suite">The Suite</a>
+      <a href="#pricing" class="nav-link" data-i18n="tag_nav_pricing">Pricing</a>
     </div>
     <div class="nav-cta">
       <button class="btn btn-line btn-sm" onclick="openModal('login-modal')">Sign in</button>
       <button class="btn btn-ink btn-sm" onclick="openModal('register-modal')">Start free</button>
     </div>
+    <button class="nav-burger" id="nav-burger" aria-label="Menu" aria-expanded="false" aria-controls="nav-drawer">
+      <i></i><i></i><i></i>
+    </button>
   </div>
 </nav>
+<div class="nav-scrim" id="nav-scrim"></div>
+<aside class="nav-drawer" id="nav-drawer" aria-label="Menu">
+  <a href="#how" class="nav-link" data-i18n="tag_nav_how">How it works</a>
+  <a href="#features" class="nav-link" data-i18n="tag_nav_what">What you get</a>
+  <a href="#destinations" class="nav-link" data-i18n="tag_nav_dest">Destinations</a>
+  <a href="#suite" class="nav-link" data-i18n="tag_nav_suite">The Suite</a>
+  <a href="#pricing" class="nav-link" data-i18n="tag_nav_pricing">Pricing</a>
+  <div class="nav-drawer-cta">
+    <button class="btn btn-line" onclick="openModal('login-modal')">Sign in</button>
+    <button class="btn btn-ink" onclick="openModal('register-modal')">Start free</button>
+  </div>
+</aside>
 
 <!-- ══════════ HERO ══════════ -->
 <section id="hero">
@@ -539,8 +579,8 @@ nav{ padding-top:var(--sat) }
       </ul></div>
     </div>
     <div class="fb-bottom">
-      <p>© 2026 JapaQuest. Not a substitute for official embassy advice — we always show you the source.</p>
-      <p>Made with 🌍 for African travellers</p>
+      <p>© <span id="ft-year">2026</span> <span class="mk-brand">JapaQuest</span>. Not a substitute for official embassy advice — we always show you the source.</p>
+      <p>Made with 🌍 for African passports</p>
       <p>Developed and maintained by <a href="https://akmustech.com" target="_blank" rel="noopener" style="color:var(--ember-hi,var(--ink));font-weight:600;text-decoration:underline">Akmustech Technology Limited</a></p>
     </div>
   </div>
@@ -632,6 +672,14 @@ fetch('/api/app-info').then(r=>r.json()).then(d=>{
   if(name && name!=='JapaQuest')document.title=name+' — Your Journey. Our Intelligence.';
   // Uploaded brand logo replaces the fallback λ glyph in every logo-mark badge
   if(d.logoUrl)document.querySelectorAll('.logo-mark').forEach(m=>{m.innerHTML='<img src="'+d.logoUrl+'" alt="" style="position:relative;z-index:1;width:100%;height:100%;object-fit:contain"/>';});
+  // Brand name follows Admin → General (first word keeps the accent styling)
+  if(name && name!=='JapaQuest'){
+    const words=name.split(/\s+/); const head=words.slice(0,-1).join(' '); const tail=words[words.length-1]||'';
+    document.querySelectorAll('.brand-name').forEach(b=>{b.innerHTML=head?esc(head)+' <span class="logo-quest">'+esc(tail)+'</span>':esc(name);});
+    document.title=name+' — Your Journey. Our Intelligence.';
+    const cp=document.getElementById('cp-fab-label'); if(cp)cp.textContent=name+' Concierge';
+    document.querySelectorAll('.mk-brand').forEach(e=>e.textContent=name);
+  }
   if(d.supportEmail)document.getElementById('fn-support').href='mailto:'+d.supportEmail;
   if(d.maintenance){document.body.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px;background:#0A1428;color:#F7F3EA;text-align:center;padding:24px;font-family:Outfit,sans-serif"><div style="font-size:3rem">🛠️</div><h2 style="font-family:Fraunces,serif">We're tidying up</h2><p style="opacity:.7">Back shortly — your plans are safe.</p></div>`;return;}
 }).catch(()=>{});
@@ -791,7 +839,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(
 <div class="cp-panel" id="cp-panel" role="dialog" aria-label="JapaQuest concierge chat">
   <div class="cp-head">
     <div class="cp-ava">🛃</div>
-    <div class="cp-head-t"><b>JapaQuest Concierge</b><small>Online · answers from our verified visa data</small></div>
+    <div class="cp-head-t"><b><span class="mk-brand">JapaQuest</span> Concierge</b><small>Online · answers from our verified visa data</small></div>
     <button class="cp-x" id="cp-close" aria-label="Close chat">×</button>
   </div>
   <div class="cp-msgs" id="cp-msgs"></div>
@@ -883,8 +931,12 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(
     });
     document.documentElement.lang = lang;
     if (g.rtl) { document.documentElement.dir = 'rtl'; }
-    // Language picker pill in the nav.
-    const nav = document.querySelector('nav .nav-links, nav');
+  // Language picker pill in the nav — laid into the drawer on mobile so it
+  // isn't stranded in the hidden .nav-links container.
+  const nav = document.querySelector('nav .nav-links, nav');
+  const mobileHost = document.getElementById('nav-drawer');
+  const pillHost = () => (window.innerWidth <= 960 && mobileHost) ? mobileHost : (document.querySelector('nav .nav-links') || nav);
+  const putPill = el => { const h=pillHost(); const cta=h.querySelector?.('.nav-drawer-cta'); cta ? h.insertBefore(el,cta) : h.appendChild(el); };
     if (nav && !document.getElementById('lang-pill')) {
       const sel = document.createElement('select');
       sel.id = 'lang-pill'; sel.className = 'lang-pill'; sel.setAttribute('aria-label','Language');
@@ -899,7 +951,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(
         } catch {}
         location.reload();
       };
-      (nav.querySelector('.nav-links') || nav).appendChild(sel);
+      putPill(sel);
     }
     // Currency picker pill (stored locally for guests; saved server-side when signed in).
     if (nav && !document.getElementById('cur-pill')) {
@@ -918,12 +970,35 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(
         } catch {}
         location.reload();
       };
-      (nav.querySelector('.nav-links') || nav).appendChild(cur);
+      putPill(cur);
     }
     const st = document.createElement('style');
     st.textContent = '.lang-pill{background:transparent;border:1px solid rgba(10,20,40,.15);border-radius:99px;padding:7px 12px;font:inherit;font-size:.8rem;cursor:pointer;color:inherit}';
     document.head.appendChild(st);
   } catch {}
+})();
+
+/* ── MOBILE NAV DRAWER ────────────────────────────────────────────────────── */
+(function(){
+  const y=document.getElementById('ft-year'); if(y) y.textContent=new Date().getFullYear();
+  const burger = document.getElementById('nav-burger');
+  const drawer = document.getElementById('nav-drawer');
+  const scrim  = document.getElementById('nav-scrim');
+  if (!burger || !drawer || !scrim) return;
+  const setOpen = open => {
+    burger.classList.toggle('open', open);
+    drawer.classList.toggle('open', open);
+    scrim.classList.toggle('open', open);
+    burger.setAttribute('aria-expanded', String(open));
+    document.body.style.overflow = open ? 'hidden' : '';
+  };
+  burger.addEventListener('click', () => setOpen(!drawer.classList.contains('open')));
+  scrim.addEventListener('click', () => setOpen(false));
+  // close after tapping any drawer link (anchors scroll to the section)
+  drawer.addEventListener('click', e => { if (e.target.closest('a')) setOpen(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
+  // orientation-change / resize safety: reset zombie state
+  window.addEventListener('resize', () => { if (window.innerWidth > 960) setOpen(false); }, { passive: true });
 })();
 </script>
 </body>
