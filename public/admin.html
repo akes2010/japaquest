@@ -34,7 +34,7 @@ html,body{height:100%;overflow:hidden}
 .logout-btn{width:100%;padding:7px;background:rgba(200,16,46,.07);border:1px solid rgba(200,16,46,.2);border-radius:var(--r-sm);color:#FF8F9C;font-size:.74rem;cursor:pointer;transition:all var(--ease)}
 .logout-btn:hover{background:rgba(200,16,46,.15)}
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-#topbar{height:54px;border-bottom:1px solid var(--b0);background:rgba(10,20,40,.88);backdrop-filter:blur(20px);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
+#topbar{height:54px;border-bottom:1px solid var(--b0);background:rgba(10,20,40,.88);backdrop-filter:blur(20px);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0;position:relative;z-index:151}
 .tb-title{font-family:var(--fd);font-size:.95rem;color:var(--a300);flex:1}
 .maint-pill{padding:3px 10px;background:rgba(200,16,46,.1);border:1px solid rgba(200,16,46,.25);border-radius:var(--r-pill);font-size:.63rem;color:#FF8F9C;display:none}
 #content{flex:1;overflow-y:auto;padding:20px}
@@ -506,8 +506,13 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
   .dest-card:hover,.tc:hover,.qc:hover,.plan-card:hover,.book-card:hover{transform:translateY(-4px)}
 }
 
+/* SIDEBAR SCRIM — inert (opacity 0, pointer-events:none) when closed so the
+   body.sb-open rule below can fade it in; must live here, NOT as an inline
+   style (inline would out-rank the class rule and keep it dead when open). */
+#sb-ov{position:fixed;inset:0;background:rgba(2,5,12,.55);z-index:149;opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
+
 @media(max-width:900px){
-  #sb{position:fixed;left:0;top:0;height:100%;z-index:150;transform:translateX(-100%);transition:transform .3s var(--ease);width:min(86vw,300px);box-shadow:30px 0 80px rgba(0,0,0,.5)}
+  #sb{position:fixed;left:0;top:0;height:100%;z-index:200;transform:translateX(-100%);transition:transform .3s var(--ease);width:min(86vw,300px);box-shadow:30px 0 80px rgba(0,0,0,.5)}
   body.sb-open #sb{transform:translateX(0)}
   body.sb-open #sb-ov{opacity:1;pointer-events:auto}
 }
@@ -979,7 +984,6 @@ tbody tr:hover{background:var(--glass2)}
 </head>
 <body>
 <div id="toast"></div>
-<div id="sb-ov" onclick="document.body.classList.remove('sb-open')" style="display:none;position:fixed;inset:0;background:rgba(2,5,12,.55);z-index:149;opacity:0;pointer-events:none;transition:opacity .25s var(--ease)"></div>
 
 <!-- USER EDIT MODAL -->
 <div class="m-over" id="cq-modal" onclick="if(event.target===this)closeM('cq-modal')">
@@ -1057,6 +1061,11 @@ tbody tr:hover{background:var(--glass2)}
 </div>
 
 <div id="app">
+<!-- SIDEBAR SCRIM — lives inside #app so it layers within the app's
+     stacking context (scrim z149 < topbar z151 < drawer #sb z200). As a
+     body-level sibling it sat above #app entirely (#app has z-index:1 via
+     the landing-theme override), dimming the WHOLE screen incl. the drawer. -->
+<div id="sb-ov" onclick="document.body.classList.remove('sb-open')"></div>
 <div id="sb">
   <div class="sb-top">
     <div class="sb-brand">
