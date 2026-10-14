@@ -21,6 +21,15 @@ const path = require('path');
 
 const PORT = process.env.VERIFY_PORT || 4392;
 const BASE = `http://127.0.0.1:${PORT}`;
+// TRUE scratch isolation: every case boots against a throwaway database.
+// (It used to boot the REAL data/jagaguru.db — which both trampled the
+// operator's brand settings and made the blank-state PWA fallback check
+// fail the moment a real favicon was uploaded in Admin.)
+const SCRATCH = '/tmp/verify-pages-data';
+const DB_PATH = path.join(SCRATCH, 'jagaguru.db');
+fs.rmSync(SCRATCH, { recursive: true, force: true });
+fs.mkdirSync(SCRATCH, { recursive: true });
+const ENV = () => ({ ...process.env, PORT: String(PORT), DB_PATH });
 
 let pass = 0, fail = 0; const failures = [];
 const ok = (name, cond, extra) => {
@@ -57,7 +66,7 @@ async function waitUp() {
   const puppeteer = requirePuppeteer();
   const server = spawn('node', ['server.js'], {
     cwd: path.join(__dirname, '..'),
-    env: { ...process.env, PORT: String(PORT) },
+    env: ENV(),
     stdio: 'ignore'
   });
   if (!(await waitUp())) { console.error('❌ server did not come up on ' + PORT); server.kill('SIGTERM'); process.exit(1); }
@@ -65,15 +74,16 @@ async function waitUp() {
   const httpJson = async p => { const r = await fetch(BASE + p); return { status: r.status, body: await r.json() }; };
   const httpGet = async p => { const r = await fetch(BASE + p); return { status: r.status, bytes: (await r.arrayBuffer()).byteLength }; };
 
-  // helper: set the brand setting on disk DB (server's sql.js memory is per-process,
-  // so each case boots its own server — see verify loop below)
-  const setLogoSetting = v => new Promise((res, rej) => {
+  // helper: set a brand setting in the scratch DB (server's sql.js memory is
+  // per-process, so each case boots its own server — see verify loop below)
+  const setBrandSetting = (key, v) => new Promise((res, rej) => {
     const c = spawn('node', ['-e', `
       const { initDB, Q, persist } = require('./db');
-      initDB().then(async () => { Q.setSetting('app_logo_url', ${JSON.stringify(v)}); await persist(); process.exit(0); }).catch(e => { console.error(e.message); process.exit(1); });
-    `], { cwd: path.join(__dirname, '..'), stdio: 'ignore' });
+      initDB().then(async () => { Q.setSetting(${JSON.stringify(key)}, ${JSON.stringify(v)}); await persist(); process.exit(0); }).catch(e => { console.error(e.message); process.exit(1); });
+    `], { cwd: path.join(__dirname, '..'), env: ENV(), stdio: 'ignore' });
     c.on('exit', code => code === 0 ? res() : rej(new Error('db write failed')));
   });
+  const setLogoSetting = v => setBrandSetting('app_logo_url', v);
   // a killed server flushes its IN-MEMORY db on SIGTERM exit (db.js exit hook),
   // which would clobber a newer write made after it started dying. So: wait for
   // the dying server to FULLY EXIT (not just a timer) before the next DB write.
@@ -118,7 +128,7 @@ async function waitUp() {
     const fxRel = '/uploads/verify-fx-logo.png';
     await stopServer(server);              // srv-from-boot would flush stale memory on exit
     await setLogoSetting(fxRel);           // write AFTER it is fully dead
-    const srvA = spawn('node', ['server.js'], { cwd: path.join(__dirname, '..'), env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
+    const srvA = spawn('node', ['server.js'], { cwd: path.join(__dirname, '..'), env: ENV(), stdio: 'ignore' });
     if (!(await waitUp())) throw new Error('case-A server not up');
     const ai = await httpJson('/api/app-info');
     ok('app-info serves real logoUrl', ai.status === 200 && ai.body.logoUrl === fxRel, ai.body.logoUrl);
@@ -135,7 +145,8 @@ async function waitUp() {
   console.log('## case: stale logo path (file missing)');
   try {
     await setLogoSetting('/uploads/logo.png'); // known-missing fixed name from the old scheme
-    const srvB = spawn('node', ['server.js'], { cwd: path.join(__dirname, '..'), env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
+    await setBrandSetting('app_favicon_url', ''); // blank brand state is what this case verifies
+    const srvB = spawn('node', ['server.js'], { cwd: path.join(__dirname, '..'), env: ENV(), stdio: 'ignore' });
     if (!(await waitUp())) throw new Error('case-B server not up');
     const ai = await httpJson('/api/app-info');
     ok('app-info drops stale logoUrl', ai.status === 200 && ai.body.logoUrl === '', JSON.stringify(ai.body.logoUrl));
@@ -150,7 +161,7 @@ async function waitUp() {
   console.log('## case: dashboard render');
   try {
     // srvB was killed at the end of case B — bring the server back up first
-    const srvC = spawn('node', ['server.js'], { cwd: path.join(__dirname, '..'), env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
+    const srvC = spawn('node', ['server.js'], { cwd: path.join(__dirname, '..'), env: ENV(), stdio: 'ignore' });
     if (!(await waitUp())) throw new Error('case-C server not up');
     // login as the seeded admin (dashboards render for any valid user, admins included)
     const lr = await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: process.env.ADMIN_EMAIL || 'admin@jagaguru.ai', password: process.env.ADMIN_PASSWORD || 'Admin@1234!' }) });

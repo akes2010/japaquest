@@ -980,6 +980,68 @@ tbody tr:hover{background:var(--glass2)}
 .btn:focus-visible,.sb-btn:focus-visible,.m-close:focus-visible{
   outline:2px solid rgba(232,97,60,.55);outline-offset:2px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMINESQUE UI LAYER — AdminJS / TailAdmin-inspired structure polish for
+   the admin panel. PURE VISUAL: no handler, id, endpoint, skin or token set
+   is removed or renamed; every rule below resolves from the existing skin
+   tokens so night · ink · paper · snow · daylight keep working unchanged,
+   and the light-skin hardcoded surfaces are left alone (only shadows,
+   radii, spacing, typography and decorations are added).
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* — Sidebar: AdminJS-style nav — icon column aligned, active pill + ember
+   rail dot, collapsible group captions in micro-caps with rotating caret — */
+.sb-btn{display:flex;align-items:center;gap:10px;border-radius:10px;font-weight:600;position:relative;transition:background .25s var(--ease),color .25s var(--ease),transform .25s var(--ease),box-shadow .25s var(--ease)}
+#sb{scrollbar-width:thin;scrollbar-color:var(--b2) transparent}
+.sb-btn:hover:not(.active){background:var(--glass2);color:var(--t2);transform:translateX(3px)}
+.sb-btn.active{background:rgba(232,97,60,.13);box-shadow:inset 0 0 0 1px rgba(232,97,60,.22)}
+.sb-btn.active::before{content:'';position:absolute;left:0;top:22%;bottom:22%;width:3px;border-radius:99px;background:rgba(232,97,60,.95)}
+.nav-group{font-size:.56rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--t4);align-items:center;display:flex;gap:8px;margin:14px 2px 6px;padding:2px 6px;transition:color .3s var(--ease)}
+.nav-group:hover{color:var(--t3)}
+.nav-group .ng-caret{display:inline-block;transition:transform .3s var(--ease)}
+.nav-group.open .ng-caret{transform:rotate(90deg)}
+.nav-pages{margin:0 2px 4px}
+.sb-brand{align-items:center}
+.admin-badge{font-size:.54rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--ember-hi,var(--o400));background:rgba(232,97,60,.14);border:1px solid rgba(232,97,60,.3);border-radius:99px;padding:3px 9px}
+/* — Topbar: hairline elevation + page-title underline accent — */
+#topbar{box-shadow:0 1px 0 var(--b0),0 10px 28px -24px rgba(0,0,0,.45)}
+.tb-title{font-weight:800;letter-spacing:-.01em}
+.tb-title{position:relative}
+.tb-title::after{content:'';position:absolute;left:1px;bottom:-5px;height:2px;width:30px;border-radius:99px;background:rgba(232,97,60,.75)}
+.notif-btn,.menu-btn,.model-pill{transition:box-shadow .3s var(--ease),background .3s var(--ease),border-color .3s var(--ease)}
+.notif-btn:hover,.menu-btn:hover,.model-pill:hover{box-shadow:0 6px 18px -10px rgba(0,0,0,.5)}
+/* — KPI stat cards: higher radius, layered soft shadow, ember top hairline — */
+.stat-card{position:relative;overflow:hidden;border-radius:16px;box-shadow:0 12px 30px -24px rgba(0,0,0,.55)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,rgba(232,97,60,.65),rgba(232,97,60,.06))}
+.stat-card b,.stat-num,.stat-value{font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+/* — Cards & tables: one surface language — */
+.card,.s-card,.tbl-card,.chart-card{border-radius:16px;box-shadow:0 12px 30px -26px rgba(0,0,0,.5)}
+.tbl-card{overflow:visible}
+.tbl-card table{border-radius:12px}
+tbody td{line-height:1.45}
+tbody tr{transition:background .2s var(--ease)}
+/* — Forms: micro-caps labels, even input rhythm, hover border — */
+.form-label{font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.input{border-radius:12px;transition:border-color .25s var(--ease),box-shadow .25s var(--ease),background .25s var(--ease)}
+input.input,select.input{min-height:36px}
+.input:not(:focus):hover{border-color:var(--b2)}
+/* — Buttons: ghost gets a real outline, sm keeps rhythm — */
+.btn-ghost{border:1px solid var(--b1)}
+.btn-ghost:hover{background:var(--glass2)}
+/* — Modals: deeper radius, head/foot hairlines — */
+.m-box{border-radius:22px;box-shadow:0 34px 90px -28px rgba(0,0,0,.55),0 0 0 1px var(--b0)}
+.m-head{border-bottom:1px solid var(--b0);padding:16px 20px 14px}
+.m-foot{border-top:1px solid var(--b0);padding:14px 20px}
+.m-close{border-radius:10px;transition:background .25s var(--ease)}
+.m-close:hover{background:var(--glass2)}
+/* — Status pills & toast — */
+.pst-pill{border-radius:10px}
+.pst-dot{font-size:.6rem}
+/* — Global slim scrollbars, ember-tinted thumb (skin-safe) — */
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-thumb{background:var(--b2);border-radius:99px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:rgba(232,97,60,.45);border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>

@@ -1098,6 +1098,58 @@ body[data-skin="ink"] .btn-primary{
 .usage-row{max-width:900px;margin:7px auto 0;padding:0 4px}
 /* error toast inside thread — replaced w/ skin tokens (was hardcoded pink) */
 .chat-err{background:color-mix(in srgb,var(--r500) 9%,transparent);border:1px solid color-mix(in srgb,var(--r500) 30%,transparent);color:var(--r400,var(--r300));border-radius:14px;padding:11px 14px;font-size:.8rem;margin:2px auto 0;max-width:76%}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMINESQUE UI LAYER (user dashboard) — the same AdminJS / TailAdmin-
+   inspired structure polish as the admin panel, tuned for the user views.
+   PURE VISUAL: no handler, id, i18n key, endpoint, skin or token set is
+   removed or renamed; every rule resolves from the existing skin tokens so
+   night · ink · paper · snow · daylight keep working, and the light-skin
+   hardcoded surfaces are left alone (shadows, radii, spacing, typography
+   and decorations only).
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* — Sidebar: aligned icon column, active pill + ember rail dot, micro-caps
+   section captions, badge pushed to the right edge (AdminJS nav style) — */
+#sb{scrollbar-width:thin;scrollbar-color:var(--b2) transparent}
+.sb-btn{border-radius:10px;transition:background .25s var(--ease),color .25s var(--ease),transform .25s var(--ease),box-shadow .25s var(--ease)}
+.sb-btn.active{background:rgba(232,97,60,.13);box-shadow:inset 0 0 0 1px rgba(232,97,60,.22)}
+.sb-btn.active::before{content:'';position:absolute;left:0;top:22%;bottom:22%;width:3px;border-radius:99px;background:rgba(232,97,60,.95)}
+.sb-btn .ni{min-width:22px;text-align:center}
+.nb-badge{margin-left:auto}
+.nav-sec{font-size:.56rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--t4);margin:14px 2px 6px;padding:2px 6px}
+.sh-label{font-size:.56rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--t4)}
+#sb-hist>*{border-radius:10px;transition:background .25s var(--ease),color .25s var(--ease)}
+#sb-hist>*:hover{background:var(--glass2)}
+/* — Topbar: hairline elevation + page-title underline accent — */
+#topbar{box-shadow:0 1px 0 var(--b0),0 10px 28px -24px rgba(0,0,0,.45)}
+.tb-title{font-weight:800;letter-spacing:-.01em;position:relative}
+.tb-title::after{content:'';position:absolute;left:1px;bottom:-5px;height:2px;width:30px;border-radius:99px;background:rgba(232,97,60,.75)}
+.notif-btn,.menu-btn,.model-pill{transition:box-shadow .3s var(--ease),background .3s var(--ease),border-color .3s var(--ease)}
+.notif-btn:hover,.menu-btn:hover,.model-pill:hover{box-shadow:0 6px 18px -10px rgba(0,0,0,.5)}
+/* — KPI stat cards: higher radius, layered soft shadow, ember top hairline — */
+.stat-card{position:relative;overflow:hidden;border-radius:16px;box-shadow:0 12px 30px -24px rgba(0,0,0,.55)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,rgba(232,97,60,.65),rgba(232,97,60,.06))}
+.stat-card b,.stat-num,.stat-value,.sc-val{font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+/* — Cards & tables: one surface language — */
+.card,.s-card,.tbl-card,.chart-card,.book-card,.dest-card,.plan-card{border-radius:16px;box-shadow:0 12px 30px -26px rgba(0,0,0,.5)}
+tbody td{line-height:1.45}
+/* — Forms: micro-caps labels, even input rhythm, hover border — */
+.form-label{font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+input.input,select.input{min-height:36px}
+.input:not(:focus):hover{border-color:var(--b2)}
+/* — Buttons — */
+.btn-ghost{border:1px solid var(--b1)}
+.btn-ghost:hover{background:var(--glass2)}
+/* — Modals: deeper radius, head/foot hairlines — */
+.m-box{border-radius:22px;box-shadow:0 34px 90px -28px rgba(0,0,0,.55),0 0 0 1px var(--b0)}
+.m-head{border-bottom:1px solid var(--b0);padding:16px 20px 14px}
+.m-close{border-radius:10px;transition:background .25s var(--ease)}
+.m-close:hover{background:var(--glass2)}
+/* — Global slim scrollbars, ember-tinted thumb (skin-safe) — */
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-thumb{background:var(--b2);border-radius:99px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:rgba(232,97,60,.45);border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>
