@@ -1042,6 +1042,51 @@ input.input,select.input{min-height:36px}
 *::-webkit-scrollbar-thumb{background:var(--b2);border-radius:99px;border:2px solid transparent;background-clip:padding-box}
 *::-webkit-scrollbar-thumb:hover{background:rgba(232,97,60,.45);border:2px solid transparent;background-clip:padding-box}
 *::-webkit-scrollbar-track{background:transparent}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HUMANISED UI LAYER — the dashboard should feel hand-set, not generated.
+   Builder details: warm ambient embers breathing behind the canvas, organic
+   "hand-cut" card radii that alternate softly, human-rhythm (not uniform)
+   entrance stagger, breathing rail dot, and slightly tilted hover lifts.
+   PURE VISUAL + additive script before </body>; skin tokens only; zero
+   changes to any handler, id, endpoint or skin — motion respects
+   prefers-reduced-motion and the tilt/count-up script is ids-deaf.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* warm ambient canvas: two breathing embers + a dusk gold ember */
+@keyframes glowDrift{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-3%,2.2%) scale(1.05)}}
+body::after{content:'';position:fixed;inset:-12%;pointer-events:none;z-index:0;opacity:.6;
+  background:
+    radial-gradient(38% 30% at 78% 12%,rgba(232,120,70,.09),transparent 70%),
+    radial-gradient(30% 26% at 13% 86%,rgba(220,160,80,.08),transparent 70%),
+    radial-gradient(46% 40% at 90% 70%,rgba(232,120,70,.05),transparent 74%);
+  animation:glowDrift 26s ease-in-out infinite}
+/* hand-cut radii: three alternating silhouettes so no two stacked cards match */
+.card,.s-card,.tbl-card,.chart-card,.ps-card,.notif-card,.bc-card,.pa-card{border-radius:18px 22px 19px 15px}
+.card:nth-child(3n),.s-card:nth-child(3n){border-radius:22px 16px 15px 20px}
+.card:nth-child(3n+2),.s-card:nth-child(3n+2){border-radius:15px 20px 22px 17px}
+.stat-card{border-radius:21px 16px 19px 23px;transition:transform .45s cubic-bezier(.34,1.56,.64,1),box-shadow .45s var(--ease)}
+.stat-card:nth-child(2n):hover{transform:translateY(-3px) rotate(.4deg)}
+.stat-card:nth-child(2n+1):hover{transform:translateY(-3px) rotate(-.4deg)}
+/* human rhythm: entrance stagger lands slightly early, then holds — like a
+   person placing cards one by one, then straightening the stack */
+.view.active>*:nth-child(1),.view.active .view-wrap>*:nth-child(1){animation-delay:.01s}
+.view.active>*:nth-child(2),.view.active .view-wrap>*:nth-child(2){animation-delay:.07s}
+.view.active>*:nth-child(3),.view.active .view-wrap>*:nth-child(3){animation-delay:.15s}
+.view.active>*:nth-child(4),.view.active .view-wrap>*:nth-child(4){animation-delay:.22s}
+.view.active>*:nth-child(5),.view.active .view-wrap>*:nth-child(5){animation-delay:.31s}
+.view.active>*:nth-child(6),.view.active .view-wrap>*:nth-child(6){animation-delay:.42s}
+.view.active>*:nth-child(7),.view.active .view-wrap>*:nth-child(7){animation-delay:.5s}
+.view.active>*:nth-child(8),.view.active .view-wrap>*:nth-child(8){animation-delay:.63s}
+/* the active rail dot breathes — the nav feels alive */
+@keyframes railBreath{0%,100%{opacity:.96}50%{opacity:.55}}
+.sb-btn.active::before{animation:railBreath 3.4s ease-in-out infinite}
+/* warmer edges on controls: softer but grounded */
+.btn{border-radius:14px}
+.btn:hover{transform:translateY(-1.5px)}
+.input{border-radius:14px}
+.m-box{border-radius:24px 26px 22px 22px}
+.tbl-card td b,.tbl-card td strong{font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){body::after,.sb-btn.active::before{animation:none!important}}
 </style>
 </head>
 <body>
@@ -3324,5 +3369,84 @@ async function afPay(id){
       <div id="afd-body"></div>
     </div>
   </div>
+</script>
+<script>
+/* ══ HUMANISED DYNAMICS — additive only ═════════════════════════════════
+   Reads existing DOM, never rebinds or modifies any handler/id/logic:
+   • stat numbers count up when they (re)appear or change — the dashboard
+     feels alive without touching the render pipeline,
+   • a barely-there tilt on cards under the pointer for a hand-held feel.
+   Both features are ids-deaf, self-guard, and switch themselves off under
+   prefers-reduced-motion and on coarse pointers. */
+(function(){
+  'use strict';
+  try{
+    if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    var NUMSEL=['.stat-card b','.stat-num','.stat-value','.sc-val'].join(',');
+    var fmt=function(num,dec){try{return num.toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec})}catch(e){return String(num)}};
+    function countTo(el,target,pre,suf,dec,ms){
+      var t0=performance.now(),from=0;
+      function frame(t){
+        var p=Math.min(1,(t-t0)/ms);var ease=1-Math.pow(1-p,3);var v=from+ease*(target-from);
+        el.textContent=pre+fmt(v,dec)+(suf||'');
+        if(p<1)requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+    function refresh(el){
+      if(!el||el._humanised)return;
+      var txt=el.textContent||'';
+      var m=/^([^\d]{0,12})([\d.,]+)(.*)$/.exec(String(txt).trim());
+      if(!m)return;
+      var num=parseFloat(m[2].replace(/,/g,''));
+      if(!isFinite(num))return;
+      el._humanised=true;
+      // mark it permanently — count up once per value change
+      var str=m[2];var dec=(str.indexOf('.')>=0)?((str.split('.')[1]||'').length):0;
+      countTo(el,num,m[1],''+txt.slice(m[1].length+str.length-0)+'',dec,900);
+      var obs=new MutationObserver(function(){
+        var cur=(el.textContent||'').trim();
+        var mm=/^([^\d]{0,12})([\d.,]+)/.exec(cur);
+        if(!mm)return;
+        var nn=parseFloat(mm[2].replace(/,/g,''));
+        if(isFinite(nn)&&nn!==el._lastVal&&String(nn)!==el._animating){
+          el._lastVal=nn;el._animating=String(nn);
+          var dec2=(mm[2].indexOf('.')>=0)?((mm[2].split('.')[1]||'').length):0;
+          countTo(el,nn,mm[1],'',dec2,500);
+        }
+      });
+      obs.observe(el,{childList:true,characterData:true,subtree:true});
+    }
+    function walk(){document.querySelectorAll(NUMSEL).forEach(refresh)}
+    walk();
+    setInterval(walk,2000);
+    // gentle tilt for fine-pointer devices only
+    if(window.matchMedia&&window.matchMedia('(hover:hover) and (pointer:fine)').matches){
+      var TILT='.stat-card,.chart-card,.card,.s-card,.ps-card,dest-card'.replace('dest-card','.dest-card');
+      var el=null;
+      document.addEventListener('pointermove',function(e){
+        try{
+          el=e.target.closest&&e.target.closest(TILT);
+          if(!el||el._tilting)return;
+          el._tilting=true;
+          var r=el.getBoundingClientRect();
+          var dx=(e.clientX-(r.left+r.width/2))/r.width;
+          var dy=(e.clientY-(r.top+r.height/2))/r.height;
+          el.style.transition='transform .2s ease-out';
+          el.style.transform='perspective(700px) rotateX('+(-dy*2).toFixed(2)+'deg) rotateY('+(dx*2).toFixed(2)+'deg) translateY(-2px)';
+        }catch(err){}
+      },{passive:true});
+      document.addEventListener('pointerout',function(e){
+        try{
+          el=e.target.closest&&e.target.closest(TILT);
+          if(!el)return;
+          el.style.transform='';
+          setTimeout(function(){el.style.transition='';el._tilting=false;},220);
+        }catch(err){}
+      },{passive:true});
+    }
+  }catch(e){/* silent: the layer must never disturb the app */}
+})();
+</script>
 </body>
 </html>
