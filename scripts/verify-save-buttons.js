@@ -6,7 +6,9 @@
  * the admin panel and the user dashboard, and asserts:
  *   1. every Save button has a background + foreground color with a
  *      contrast ratio >= 3:1 (button labels), in EVERY skin,
- *   2. .save-dirty appears when a field is adjusted and clears on click.
+ *   2. the save confirmation pop-up (#toast) stays light-text-on-navy and
+ *      legible (>= 4.5:1) in EVERY skin,
+ *   3. .save-dirty appears when a field is adjusted and clears on click.
  *
  *   node scripts/verify-save-buttons.js        # exit 0 = all pass
  * ══════════════════════════════════════════════════════════════════════════ */
@@ -100,6 +102,18 @@ function waitForPort(url, ms) {
       }
       if (checked >= 1) pass(`[${label}/${skin}] ${checked} save button(s) legible`);
       else if (failures === 0) bad(`[${label}/${skin}] nothing passed contrast check`);
+
+      // Save confirmation pop-up (#toast) — the pop-up shown after Save. Its
+      // background is skin-INDEPENDENT navy, so its text must be a fixed
+      // light color in every skin (regression: color used var(--t1), which is
+      // dark ink on paper/snow/daylight → dark-on-dark, invisible pop-up).
+      const toast = await pg.$eval('#toast', el => { const c = getComputedStyle(el); return { bg: c.backgroundColor, fg: c.color }; }).catch(() => null);
+      if (!toast) bad(`[${label}/${skin}] #toast element missing`);
+      else {
+        let tr; try { tr = contrast(toast.fg, toast.bg); } catch { tr = 0; }
+        if (tr >= 4.5) pass(`[${label}/${skin}] save pop-up (#toast) text legible (${tr.toFixed(1)}:1)`);
+        else bad(`[${label}/${skin}] save pop-up (#toast) unreadable: fg=${toast.fg} on ${toast.bg} = ${tr.toFixed(2)}:1`);
+      }
     }
   }
 

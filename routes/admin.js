@@ -49,7 +49,7 @@ router.get('/journey-insights', (req, res) => {
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
 router.get('/settings/:group', (req, res) => {
   const settings = Q.getSettingsByGroup(req.params.group);
-  const MASK = ['smtp_pass','ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_openai_key','ai_deepseek_key','ai_kimi_key','ai_zai_key','ai_omniroute_key','ai_cloudflare_token','ai_ollama_key'];
+  const MASK = ['smtp_pass','ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_openai_key','ai_deepseek_key','ai_kimi_key','ai_zai_key','ai_omniroute_key','ai_cloudflare_token','ai_ollama_key','ai_xkiro_key','ai_ci_key','ai_vllm_key','ai_lmstudio_key'];
   for (const k of MASK) { if (settings[k]) settings[k] = '••••'+settings[k].slice(-4); }
   res.json({ settings });
 });
@@ -57,7 +57,7 @@ router.get('/settings/:group', (req, res) => {
 router.put('/settings', (req, res) => {
   try {
     const updates = { ...req.body };
-    const MASK = ['smtp_pass','ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_openai_key','ai_deepseek_key','ai_kimi_key','ai_zai_key','ai_omniroute_key','ai_cloudflare_token','ai_ollama_key'];
+    const MASK = ['smtp_pass','ai_anthropic_key','ai_openrouter_key','ai_huggingface_key','ai_groq_key','ai_gemini_key','ai_together_key','ai_openai_key','ai_deepseek_key','ai_kimi_key','ai_zai_key','ai_omniroute_key','ai_cloudflare_token','ai_ollama_key','ai_xkiro_key','ai_ci_key','ai_vllm_key','ai_lmstudio_key'];
     for (const k of MASK) { if (updates[k]?.startsWith('••••')) delete updates[k]; }
     // SMTP host must be a hostname (mail.example.com), never an email —
     // 'mail.user@domain' fails DNS with a cryptic EBADNAME at send time.

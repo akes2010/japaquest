@@ -118,7 +118,8 @@ if [ "$VERIFY_MODE" != "basic" ]; then
   verify_run "public pages (brand/logo/PWA/dashboard)" scripts/verify-public-pages.js 1
   verify_run "admin skins" scripts/verify-admin-skins.js 1
   verify_run "nav + responsive breakpoints" scripts/verify-nav-responsive.js 1
-  verify_run "save-button cues" scripts/verify-save-buttons.js 1
+  verify_run "save-button cues + save pop-up legibility" scripts/verify-save-buttons.js 1
+  verify_run "keys survive update (AI/gateway credentials)" scripts/verify-keys-survive-update.js 0
 fi
 
 NEW=$(git rev-parse HEAD)

@@ -586,6 +586,14 @@ function seedDefaults() {
     ['notif_email_digest','0','notifications'],
   ];
   DEFAULTS.forEach(([k,v,g]) => exec(`INSERT OR IGNORE INTO settings(key,value,grp) VALUES(?,?,?)`, [k,v,g]));
+  // Group realignment: a settings row can exist BEFORE its key is added to
+  // DEFAULTS (saved by an older build) and the INSERT path then lands it in
+  // grp='general'. Group-scoped admin tabs (GET /settings/ai │ /email │
+  // /notifications) read by grp, so after a code UPDATE those rows silently
+  // vanish from their form — AI/gateway keys look "removed" though they are
+  // still stored. One idempotent sweep re-homes every seeded key to its
+  // canonical group so old databases line up again on boot.
+  DEFAULTS.forEach(([k,,g]) => exec(`UPDATE settings SET grp=? WHERE key=? AND grp<>?`, [g,k,g]));
 
   // Migrate stale localhost URLs (e.g. app moved off port 4000) to the current port.
   // Only rewrites http://localhost:<port> — real (non-localhost) URLs are left alone.
