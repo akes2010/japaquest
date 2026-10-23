@@ -99,9 +99,14 @@ npm run start:prod
 ```
 The start script pre-flights everything: installs dependencies if missing, warns about weak/missing secrets, tightens `.env` to `chmod 600`, verifies `data/` is writable, and prints the recommended cron jobs on boot.
 
-First boot seeds the database and creates the admin account — the log/banner shows:
+First boot seeds the database and creates the admin account with factory-default
+credentials — the seed log prints them, and the boot banner shows the current
+admin account plus the command to reset it:
+
 ```
-Admin: admin@jagaguru.ai / Admin@1234!
+  ✅ Admin created: admin@jagaguru.ai / Admin@1234!
+  Admin:    admin@jagaguru.ai
+  Reset:    node reset-admin.js '<email>' '<password>'
 ```
 **Change this password immediately** — the admin panel has no self-service password form, so use the reset utility from the app folder:
 ```bash

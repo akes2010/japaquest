@@ -90,10 +90,10 @@ In the cPanel **Setup Node.js App** page click **Start** (or via terminal: `npm 
 
 `npm run start:prod` runs a pre-flight check first: installs dependencies if missing, warns about weak/missing secrets (JWT_SECRET, AI keys), verifies `data/` is writable, then boots in production mode. `npm start` skips the checks if you prefer.
 
-First boot creates the database and the admin account — the log/banner shows the credentials:
+First boot creates the database and the admin account with factory-default credentials — the seed log prints them (the boot banner shows the current admin account and the reset command instead of a password):
 
 ```
-Admin: admin@jagaguru.ai / Admin@1234!
+  ✅ Admin created: admin@jagaguru.ai / Admin@1234!
 ```
 
 **Change that password immediately** (Dashboard → Profile → Change Password) and set your real **Admin → System Settings** (app name, tagline — defaults are already `JapaQuest / Your Journey. Our Intelligence.`). The prod start script (`npm run start:prod`) auto-tightens `.env` to `chmod 600` on boot, and prints the recommended cron lines for schedulers and the nightly DB backup.

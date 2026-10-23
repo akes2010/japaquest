@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 /**
  * scripts/verify-admin-mobile.js — permanent phone-UX QA for the admin app.
  * Boots a scratch server, logs in, and asserts at real viewports that the

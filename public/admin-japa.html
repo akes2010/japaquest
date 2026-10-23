@@ -296,7 +296,7 @@ tr:hover td{background:rgba(10,20,40,.03);color:var(--t1)}
     <button class="nb" onclick="window.open('/admin','_blank')">⚙️ Main Admin</button>
   </div>
   <div class="sb-foot">
-    <div class="sf-email" id="sf-email">admin@jagaguru.ai</div>
+    <div class="sf-email" id="sf-email">akmustechconcept@gmail.com</div>
     <button class="logout-btn" onclick="doLogout()">↩ Sign Out</button>
   </div>
 </div>
@@ -481,7 +481,7 @@ async function init(){
     document.title='Japa Console — '+(appD.name||'JapaQuest');
     if(appD.faviconUrl){const fl=document.querySelector('link[rel="icon"]');if(fl)fl.href=appD.faviconUrl;}
     const u=JSON.parse(localStorage.getItem('vg_user')||'{}');
-    document.getElementById('sf-email').textContent=u.email||'admin@jagaguru.ai';
+    document.getElementById('sf-email').textContent=u.email||'akmustechconcept@gmail.com';
     allPassports=ppD.passports||[];allDests=dpD.destinations||[];allPlans=plD.plans||[];
     renderStats(statsD);buildPassportFilters();
     buildAIProviders();loadAISettings();

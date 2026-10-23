@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 /**
  * scripts/verify-dashboard-mobile.js — permanent phone-UX QA for the user
  * dashboard. Boots a scratch server, logs in, and asserts at real viewports

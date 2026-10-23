@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 /* ══════════════════════════════════════════════════════════════════════════
  * scripts/verify-save-buttons.js — prove the fix in the browser, not the grep.
  *

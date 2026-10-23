@@ -65,20 +65,21 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opac
 
     <div class="f-group">
       <label class="f-label">Email address</label>
-      <input class="f-input" id="em" type="email" value="admin@jagaguru.ai" autocomplete="username" placeholder="admin@jagaguru.ai"/>
+      <input class="f-input" id="em" type="email" value="akmustechconcept@gmail.com" autocomplete="username" placeholder="you@yourdomain.com"/>
     </div>
     <div class="f-group" style="margin-bottom:22px">
       <label class="f-label">Password</label>
-      <input class="f-input" id="pw" type="password" value="Admin@1234!" autocomplete="current-password" placeholder="Your admin password" onkeydown="if(event.key==='Enter')go()"/>
+      <input class="f-input" id="pw" type="password" value="" autocomplete="current-password" placeholder="Your admin password" onkeydown="if(event.key==='Enter')go()"/>
     </div>
 
     <button id="btn" class="btn-ink" onclick="go()">Sign in to admin</button>
 
     <div class="hint-box">
-      <strong>Default credentials:</strong><br/>
-      Email: <code>admin@jagaguru.ai</code><br/>
-      Password: <code>Admin@1234!</code><br/><br/>
-      If login fails: <code>node reset-admin.js</code>
+      <strong>Admin account:</strong><br/>
+      Email: <code>akmustechconcept@gmail.com</code><br/>
+      Password: never shown here (set in the database) —<br/>
+      forgot/locked out? run <code>node reset-admin.js</code><br/>
+      from the app folder to set new credentials.
     </div>
     <a class="back-link" href="/">← Back to main site</a>
   </div>

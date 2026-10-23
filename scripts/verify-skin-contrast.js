@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 /**
  * scripts/verify-skin-contrast.js — permanent skin-contrast QA for both apps.
  *
