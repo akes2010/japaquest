@@ -1087,9 +1087,51 @@ body::after{content:'';position:fixed;inset:-12%;pointer-events:none;z-index:0;o
 .m-box{border-radius:24px 26px 22px 22px}
 .tbl-card td b,.tbl-card td strong{font-variant-numeric:tabular-nums}
 @media(prefers-reduced-motion:reduce){body::after,.sb-btn.active::before{animation:none!important}}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DAWN — the default skin: warm JapaQuest paper, terracotta warmth, human
+   rhythm. Brand paper (#F7F3EA) matches the landing page so the suite reads
+   as one product. Colour changes are scoped to data-skin="daylight" only;
+   structure rules are colour-neutral so the other four skins render exactly
+   as before.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* daylight tokens — brand paper canvas, warm-white cards, softer warm shadows */
+body[data-skin="daylight"]{
+  --canvas:#F7F3EA; --surface:#F7F3EA;
+  --elev1:#FFFFFF; --elev2:#F0E9D8; --elev3:#E6DDC7;
+  --shadow-sm:0 2px 10px rgba(120,60,20,.07);
+  --shadow-md:0 14px 38px -14px rgba(120,60,20,.20);
+  --shadow-lg:0 34px 80px -34px rgba(120,60,20,.38);
+}
+/* calm the sun-wash: warmth you feel rather than see */
+body[data-skin="daylight"]::before{opacity:.4;animation-duration:40s}
+/* warm paper chrome instead of plain white (daylight only) */
+body[data-skin="daylight"] #sb{background:rgba(251,247,238,.92)}
+body[data-skin="daylight"] #topbar{background:rgba(251,247,238,.86)}
+body[data-skin="daylight"] .m-ov,body[data-skin="daylight"] .m-over{background:rgba(58,32,12,.42);backdrop-filter:blur(6px)}
+body[data-skin="daylight"] #sb-ov{background:rgba(58,32,12,.42)}
+/* one radii family — soft, tactile, consistent */
+.stat-card,.chart-card,.tbl-card,.s-card,.pa-card,.bc-card,.ps-card,.sr-card,.notif-card,.book-card,.tc,.dest-card,.plan-card{border-radius:20px}
+/* tables that breathe */
+tbody td{padding:12px 14px}
+/* display type gets room to speak */
+.tb-title{letter-spacing:-.01em}
+@media(min-width:901px){
+  /* generous desktop rhythm — content and the hero metric row (mobile untouched) */
+  .view-wrap{padding:24px 24px 44px}
+  .db-hero-grid{gap:18px}
+}
 </style>
 </head>
 <body>
+<script>
+/* First-paint skin — runs before anything paints so the warm paper default
+   never flashes the dark Nightflight layer. Mirrors applySkin() below. */
+(function(){var s=null;try{s=localStorage.getItem('jquest_skin')}catch(e){}
+var all=['night','ink','paper','snow','daylight'];if(all.indexOf(s)<0)s='daylight';
+document.body.setAttribute('data-skin',s);
+document.body.classList.toggle('skin-light',['paper','snow','daylight'].indexOf(s)>=0);})();
+</script>
 <div id="toast"></div>
 
 <!-- USER EDIT MODAL -->
@@ -2014,17 +2056,17 @@ if(!tok||role!=='admin'){window.location.href='/admin-login';}
 
 // ── SKIN ENGINE (same engine as dashboard: night · ink · paper · snow · daylight) ──
 const SKINS=[
-  {id:'night', name:'Night',       light:false, desc:'Deep-space navy + ember accents (default)'},
+  {id:'night', name:'Night',       light:false, desc:'Deep-space navy + ember accents'},
   {id:'ink',   name:'Ink',         light:false, desc:'Pure black OLED skin'},
   {id:'paper', name:'Paper',       light:true,  desc:'Warm off-white editorial'},
   {id:'snow',  name:'Snow',        light:true,  desc:'Bright white minimal'},
-  {id:'daylight', name:'Daylight', light:true,  desc:'Warm cream with orange accents'}
+  {id:'daylight', name:'Daylight', light:true,  desc:'Warm JapaQuest paper + terracotta (default)'}
 ];
-function getSkin(){const i=SKINS.findIndex(s=>s.id===localStorage.getItem('jquest_skin'));return i>=0?i:0;}
+function getSkin(){const i=SKINS.findIndex(s=>s.id===localStorage.getItem('jquest_skin'));return i>=0?i:SKINS.findIndex(s=>s.id==='daylight');}
 function applySkin(animFlash){
   const s=SKINS[getSkin()],b=document.body;
   b.dataset.skin=s.id;b.classList.toggle('skin-light',!!s.light);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',s.light?'#FFFFFF':'#060B18');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',s.id==='daylight'?'#F7F3EA':(s.light?'#FFFFFF':'#060B18'));
   document.querySelectorAll('#skin-dots .skin-dot').forEach((d,i)=>d.classList.toggle('skin-dot-on',i===getSkin()));
   if(animFlash){b.style.transition='opacity .18s ease';b.style.opacity='.5';setTimeout(()=>{b.style.opacity='1';setTimeout(()=>b.style.transition='',200)},120);}
 }

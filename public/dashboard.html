@@ -44,7 +44,7 @@ html,body{height:100%;overflow:hidden}
 .u-ava{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#152742,#C14A1B);display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;color:#fff;flex-shrink:0;cursor:pointer}
 .u-name{font-size:.78rem;font-weight:600;color:var(--t1)}
 .u-plan{font-size:.62rem;color:var(--t4)}
-.sb-logout{background:none;border:none;color:var(--t3);font-size:.78rem;padding:4px;margin-left:auto;cursor:pointer;border-radius:var(--r-xs)}
+.sb-logout{background:none;border:none;color:var(--t3);font-size:.78rem;font-weight:600;padding:4px 8px;margin-left:auto;cursor:pointer;border-radius:var(--r-xs);white-space:nowrap}
 .sb-logout:hover{color:var(--r300)}
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 #topbar{height:56px;border-bottom:1px solid var(--b0);background:rgba(10,20,40,.9);backdrop-filter:blur(20px);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;position:relative;z-index:150}
@@ -1188,9 +1188,57 @@ body::after{content:'';position:fixed;inset:-12%;pointer-events:none;z-index:0;o
 .m-box{border-radius:24px 26px 22px 22px}
 .tbl-card td b,.tbl-card td strong{font-variant-numeric:tabular-nums}
 @media(prefers-reduced-motion:reduce){body::after,.sb-btn.active::before{animation:none!important}}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DAWN — the default skin: warm JapaQuest paper, terracotta warmth, human
+   rhythm. Brand paper (#F7F3EA) matches the landing page so the suite reads
+   as one product. Colour changes are scoped to data-skin="daylight" only;
+   structure rules are colour-neutral so the other four skins render exactly
+   as before.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* daylight tokens — brand paper canvas, warm-white cards, softer warm shadows */
+body[data-skin="daylight"]{
+  --canvas:#F7F3EA; --surface:#F7F3EA;
+  --elev1:#FFFFFF; --elev2:#F0E9D8; --elev3:#E6DDC7;
+  --shadow-sm:0 2px 10px rgba(120,60,20,.07);
+  --shadow-md:0 14px 38px -14px rgba(120,60,20,.20);
+  --shadow-lg:0 34px 80px -34px rgba(120,60,20,.38);
+}
+/* calm the sun-wash: warmth you feel rather than see */
+body[data-skin="daylight"]::before{opacity:.4;animation-duration:40s}
+/* warm paper chrome instead of plain white (daylight only) */
+body[data-skin="daylight"] #sb{background:rgba(251,247,238,.92)}
+body[data-skin="daylight"] #topbar{background:rgba(251,247,238,.86)}
+body[data-skin="daylight"] #ia{background:rgba(251,247,238,.94)}
+body[data-skin="daylight"] .m-ov,body[data-skin="daylight"] .m-over{background:rgba(58,32,12,.42);backdrop-filter:blur(6px)}
+body[data-skin="daylight"] #sb-ov{background:rgba(58,32,12,.42)}
+/* one radii family — soft, tactile, consistent */
+.stat-card,.chart-card,.tbl-card,.s-card,.pa-card,.bc-card,.ps-card,.sr-card,.notif-card,.book-card,.tc,.dest-card,.plan-card{border-radius:20px}
+/* tables that breathe */
+tbody td{padding:12px 14px}
+/* display type gets room to speak */
+.tb-title{letter-spacing:-.01em}
+@media(min-width:901px){
+  /* generous desktop rhythm (mobile paddings untouched) */
+  .view-wrap{padding:24px 24px 44px}
+}
+/* sidebar footer: a long display name truncates with an ellipsis instead of
+   pushing Sign out past the sidebar edge where #sb{overflow:hidden} clips
+   it invisible (the button must always stay reachable) */
+.sb-user>div{min-width:0;flex:1}
+.u-name,.u-plan{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-logout{flex-shrink:0}
 </style>
 </head>
 <body>
+<script>
+/* First-paint skin — runs before anything paints so the warm paper default
+   never flashes the dark Nightflight layer. Mirrors applySkin() below. */
+(function(){var s=null;try{s=localStorage.getItem('jquest_skin')}catch(e){}
+var all=['night','ink','paper','snow','daylight'];if(all.indexOf(s)<0)s='daylight';
+document.body.setAttribute('data-skin',s);
+document.body.classList.toggle('skin-light',['paper','snow','daylight'].indexOf(s)>=0);})();
+</script>
 <div id="toast"></div>
 
 <!-- VISA CHECK MODAL -->
@@ -1334,7 +1382,7 @@ body::after{content:'';position:fixed;inset:-12%;pointer-events:none;z-index:0;o
     <div class="u-ava" id="u-ava" onclick="sw('profile')">U</div>
     <div><div class="u-name" id="u-name">Loading…</div><div class="u-plan" id="u-plan">Free Plan</div></div>
     <span id="u-flag" title="Detected country" style="display:none;font-size:1.05rem;margin-left:2px;cursor:pointer" onclick="sw('profile')"></span>
-    <button class="sb-logout" onclick="doLogout()" title="Sign out">↩</button>
+    <button class="sb-logout" onclick="doLogout()" title="Sign out" aria-label="Sign out">↩ <span>Sign out</span></button>
   </div>
   <div style="padding:6px 12px 10px;border-top:1px solid var(--b0);font-size:.58rem;color:var(--t4);text-align:center;line-height:1.6">Developed and maintained by <a href="https://akmustech.com" target="_blank" rel="noopener" style="color:var(--o300);font-weight:600;text-decoration:none">Akmustech Technology Limited</a></div>
 </div>
@@ -1711,17 +1759,17 @@ if(!tok){window.location.href='/';}
 // set on <body data-skin>, so all var()-based rules above re-resolve.
 // Persisted in localStorage so the choice survives reloads.
 const SKINS=[
-  {id:'night', name:'Night',       light:false, desc:'Deep-space navy + ember accents (default)'},
+  {id:'night', name:'Night',       light:false, desc:'Deep-space navy + ember accents'},
   {id:'ink',   name:'Ink',         light:false, desc:'Pure black OLED skin'},
   {id:'paper', name:'Paper',       light:true,  desc:'Warm off-white editorial'},
   {id:'snow',  name:'Snow',        light:true,  desc:'Bright white minimal'},
-  {id:'daylight', name:'Daylight', light:true,  desc:'Warm cream with orange accents'}
+  {id:'daylight', name:'Daylight', light:true,  desc:'Warm JapaQuest paper + terracotta (default)'}
 ];
-function getSkin(){const i=SKINS.findIndex(s=>s.id===localStorage.getItem('jquest_skin'));return i>=0?i:0;}
+function getSkin(){const i=SKINS.findIndex(s=>s.id===localStorage.getItem('jquest_skin'));return i>=0?i:SKINS.findIndex(s=>s.id==='daylight');}
 function applySkin(animFlash){
   const s=SKINS[getSkin()],b=document.body;
   b.dataset.skin=s.id;b.classList.toggle('skin-light',!!s.light);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',s.light?'#FFFFFF':'#060B18');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',s.id==='daylight'?'#F7F3EA':(s.light?'#FFFFFF':'#060B18'));
   document.querySelectorAll('#skin-dots .skin-dot').forEach((d,i)=>d.classList.toggle('skin-dot-on',i===getSkin()));
   if(animFlash){b.style.transition='opacity .18s ease';b.style.opacity='.5';setTimeout(()=>{b.style.opacity='1';setTimeout(()=>b.style.transition='',200)},120);}
 }
