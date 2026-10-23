@@ -22,6 +22,23 @@ const RUNTIMES = [
   { key: 'lmstudio',label: 'LM Studio',icon: '🧪', urlSetting: 'ai_lmstudio_url', urlEnv: 'LMSTUDIO_BASE_URL',defaultUrl: 'http://localhost:1234',  keySetting: 'ai_lmstudio_key',keyEnv: 'LMSTUDIO_API_KEY',modelsPath: '/v1/models' },
 ];
 
+// ── Dynamic engine base (AI_BASE_URL) ───────────────────────────────────
+// Operator's explicit pointer to ANY OpenAI-compatible /v1 server — a local
+// Ollama (http://localhost:11434/v1), a vLLM box, or an ngrok tunnel to a
+// home GPU (https://xxxx.ngrok-free.app/v1). When set it is probed FIRST,
+// ahead of the built-in local runtimes, so one env var moves the whole
+// engine. Optional AI_BASE_KEY is sent as a Bearer token when the server
+// needs auth (most local instances ignore it).
+const AI_BASE_RUNTIME = {
+  key: 'ai-base-url', label: 'AI_BASE_URL', icon: '🔗',
+  urlSetting: 'ai_base_url', urlEnv: 'AI_BASE_URL', defaultUrl: '',
+  keySetting: 'ai_base_key', keyEnv: 'AI_BASE_KEY', modelsPath: '/v1/models',
+};
+function activeRuntimes() {
+  const hasBase = !!(process.env.AI_BASE_URL || s('ai_base_url', ''));
+  return hasBase ? [AI_BASE_RUNTIME, ...RUNTIMES] : RUNTIMES;
+}
+
 // Model-family detection from an engine's served model ids. The family is
 // what routes a user-visible model id (llama-local) to a concrete model.
 const FAMILIES = [
@@ -86,7 +103,7 @@ async function probeRuntime(rt) {
 
 /** Probe every configured runtime (one with an explicit URL set, or the default Ollama). */
 async function engineStatus() {
-  const results = await Promise.all(RUNTIMES.map(probeRuntime));
+  const results = await Promise.all(activeRuntimes().map(probeRuntime));
   const up = results.filter(r => r.up);
   const families = [...new Set(up.flatMap(r => r.families))];
   return {
@@ -140,6 +157,40 @@ async function engineTarget(localModelId, convModel) {
   const model = (wanted && fam.match.test(wanted)) ? wanted
               : served || listed || fam.id;
   return { runtime: runtime.key, base: runtime.base, key: runtimeKey(runtime), model };
+}
+
+/**
+ * Exact engine tag target — for orchestrator phases that name a concrete
+ * model tag ("deepseek-r1", "phi4", "qwen2.5-coder:7b", "llama3.3", …) the
+ * way the operator's OpenAI snippets do. Probes each runtime's LIVE model
+ * list (status caches only the first 20) and returns {runtime, base, key,
+ * model} for an exact tag, then a tag-with-variant match ("deepseek-r1"
+ * matches "deepseek-r1:8b"). Null when no online runtime serves the tag —
+ * the caller then falls through to cloud providers / rotation.
+ */
+async function engineTagTarget(tag) {
+  if (!tag) return null;
+  const status = await engineStatusCached(5000);
+  if (!status.online) return null;
+  const upKeys = status.runtimes.filter(r => r.up).map(r => r.key);
+  const fetch = require('node-fetch');
+  for (const rt of activeRuntimes()) {
+    if (!upKeys.includes(rt.key)) continue;
+    const base = runtimeBase(rt);
+    try {
+      const headers = {};
+      const key = runtimeKey(rt);
+      if (key) headers.Authorization = `Bearer ${key}`;
+      const r = await fetch(base + rt.modelsPath, { headers, timeout: 2500 });
+      if (!r.ok) continue;
+      const d = await r.json();
+      const ids = (d.data || d.models || []).map(m => (typeof m === 'string' ? m : (m.id || m.name || '')));
+      const hit = ids.find(id => id === tag)
+               || ids.find(id => id.startsWith(tag + ':') || id.startsWith(tag + '@') || id.startsWith(tag + '-latest'));
+      if (hit) return { runtime: rt.key, base, key, model: hit };
+    } catch { /* runtime gone between probe and now — try the next one */ }
+  }
+  return null;
 }
 
 /** OpenAI-compatible chat call against the engine. Returns reply text. */
@@ -201,8 +252,8 @@ async function engineStatusCached(maxAgeMs = 15000) {
 function invalidateEngineCache() { _statusCache = null; }
 
 module.exports = {
-  FAMILIES, FAMILY_META, RUNTIMES,
+  FAMILIES, FAMILY_META, RUNTIMES, activeRuntimes,
   engineStatus, engineStatusCached, invalidateEngineCache,
-  servedLocalModel, engineTarget, engineChat, cloudFallbacksFor,
+  servedLocalModel, engineTarget, engineTagTarget, engineChat, cloudFallbacksFor,
   fallbackEnabled, engineModelList,
 };

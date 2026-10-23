@@ -10,6 +10,15 @@ function keyAvailable(envVar, settingKey) {
   } catch { return false; }
 }
 
+/** Env var OR admin-panel setting must both exist and be non-empty. */
+function envOrSetting(envVar, settingKey) {
+  if (envVar && (process.env[envVar] || '').trim()) return process.env[envVar].trim();
+  try {
+    const { Q } = require('../db');
+    return (Q.getSetting(settingKey) || '').trim();
+  } catch { return ''; }
+}
+
 // Self-hosted AI Engine models — always listed as configured; routes/ai.js
 // shows them with the engine's actual online/offline state so users know
 // whether a reply will come from their own box or a cloud fallback.
@@ -24,13 +33,28 @@ const LOCAL_META = {
 const PROVIDERS = {
   claude:       { name:'Claude Sonnet 4',      tag:'Anthropic',   icon:'✨', free:false, configured:()=>keyAvailable('ANTHROPIC_API_KEY','ai_anthropic_key') },
   openai:       { name:'GPT-4o',               tag:'OpenAI',      icon:'🧠', free:false, configured:()=>keyAvailable('OPENAI_API_KEY','ai_openai_key') },
-  deepseek:     { name:'DeepSeek R1',          tag:'OpenRouter',  icon:'🔍', free:true,  configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
-  qwen:         { name:'Qwen 2.5 72B',         tag:'OpenRouter',  icon:'🔭', free:true,  configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
-  llama:        { name:'Llama 3.3 70B',        tag:'OpenRouter',  icon:'🦙', free:true,  configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
-  gemma:        { name:'Gemma 3 27B',          tag:'OpenRouter',  icon:'💎', free:true,  configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
-  mistral:      { name:'Mistral 7B',           tag:'OpenRouter',  icon:'🌪️', free:true,  configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
-  'llama-groq': { name:'Llama 70B (Groq)',     tag:'Groq',        icon:'⚡', free:true,  configured:()=>keyAvailable('GROQ_API_KEY','ai_groq_key') },
-  'mixtral-groq':{ name:'Mixtral (Groq)',      tag:'Groq',        icon:'⚡', free:true,  configured:()=>keyAvailable('GROQ_API_KEY','ai_groq_key') },
+  deepseek:     { name:'DeepSeek V3',          tag:'OpenRouter',  icon:'🔍', free:false, configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') }, // V3 chat — R1 retired upstream
+  qwen:         { name:'Qwen 2.5 72B',         tag:'OpenRouter',  icon:'🔭', free:false, configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
+  llama:        { name:'Llama 3.3 70B',        tag:'OpenRouter',  icon:'🦙', free:false, configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
+  gemma:        { name:'Gemma 3 27B',          tag:'OpenRouter',  icon:'💎', free:false, configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
+  mistral:      { name:'Mistral Nemo 12B',     tag:'OpenRouter',  icon:'🌪️', free:false, configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
+  // ── OpenRouter FREE tier (live-verified ids) ───────────────────────────────
+  'or-free':    { name:'♾️ Free Model Router',   tag:'OpenRouter', icon:'♾️', free:true,  configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
+  'north-code': { name:'North Mini Code',       tag:'OpenRouter', icon:'⌨️', free:true,  configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
+  laguna:       { name:'Laguna S Coding',       tag:'OpenRouter', icon:'🌊', free:true,  configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
+  flint:        { name:'Flint',                 tag:'OpenRouter', icon:'🪨', free:true,  configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
+  gemma4:       { name:'Gemma 4 31B',           tag:'OpenRouter', icon:'💎', free:true,  configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
+  phi4:         { name:'Phi-4 (reasoning)',     tag:'OpenRouter', icon:'➕', free:false, configured:()=>keyAvailable('OPENROUTER_API_KEY','ai_openrouter_key') },
+  // ── xKiro FREE pool (live-verified ids) ──────────────────────────────────
+  qwen3max:     { name:'Qwen 3.8 Max',          tag:'xKiro',       icon:'🔭', free:true,  configured:()=>keyAvailable('XKIRO_API_KEY','ai_xkiro_key') },
+  qwen3coder:   { name:'Qwen3 Coder Plus',      tag:'xKiro',       icon:'⌨️', free:true,  configured:()=>keyAvailable('XKIRO_API_KEY','ai_xkiro_key') },
+  'mistral-xk': { name:'Mistral Large (xKiro)', tag:'xKiro',       icon:'🌪️', free:true,  configured:()=>keyAvailable('XKIRO_API_KEY','ai_xkiro_key') },
+  // ── Flowise agent flow (optional, self-hosted OSS — runs a chatflow) ─────
+  flowise:      { name:'Flowise Agent Flow',    tag:'Flowise',     icon:'🧩', free:true,  configured:()=>!!(envOrSetting('FLOWISE_BASE_URL','ai_flowise_url') && (envOrSetting('FLOWISE_CHATFLOW_ID','ai_flowise_flow')))},
+  'llama-groq': { name:'GPT-OSS 120B (Groq)',   tag:'Groq',        icon:'⚡', free:true,  configured:()=>keyAvailable('GROQ_API_KEY','ai_groq_key') }, // id kept for plan/DB compat — Groq decommissioned llama-3.3-70b
+  'mixtral-groq':{ name:'GPT-OSS 20B (Groq)',    tag:'Groq',        icon:'⚡', free:true,  configured:()=>keyAvailable('GROQ_API_KEY','ai_groq_key') }, // id kept — Groq decommissioned mixtral-8x7b
+  'qwen3-groq': { name:'Qwen 3.8 27B (Groq)',   tag:'Groq',        icon:'⚡', free:true,  configured:()=>keyAvailable('GROQ_API_KEY','ai_groq_key') },
+  'allam-groq': { name:'Allam 7B (Groq)',       tag:'Groq',        icon:'⚡', free:true,  configured:()=>keyAvailable('GROQ_API_KEY','ai_groq_key') },
   'gemini-flash':{ name:'Gemini 1.5 Flash',    tag:'Google',      icon:'🔮', free:true,  configured:()=>keyAvailable('GEMINI_API_KEY','ai_gemini_key') },
   'gemini-pro': { name:'Gemini 1.5 Pro',       tag:'Google',      icon:'🔮', free:false, configured:()=>keyAvailable('GEMINI_API_KEY','ai_gemini_key') },
   'llama-together':{ name:'Llama (Together)',  tag:'Together AI', icon:'🤝', free:true,  configured:()=>keyAvailable('TOGETHER_API_KEY','ai_together_key') },

@@ -16,16 +16,21 @@ const { Q } = require('../db');
 // the self-hosted engine is up (they're free and fast); 'auto' itself is
 // resolved by this module, never included.
 const FREE_POOL = [
-  'llama-local', 'qwen-local', 'deepseek-local',   // self-hosted engine (skipped when offline)
-  'omniroute',                                      // free AI gateway (90+ free models)
-  'xkiro',                                          // xKiro aggregator — 500K free tokens/day, 40+ :free models
-  'deepseek', 'qwen', 'llama', 'gemma', 'mistral',  // OpenRouter free tier
-  'llama-groq', 'mixtral-groq',                     // Groq free tier
+  'llama-local', 'qwen-local', 'deepseek-local',   // self-hosted engine (llama3.3, qwen2.5:7/14/72, nemo, deepseek, phi4…)
+  'omniroute',                                      // free AI gateway (90+ free models when the gateway runs)
+  'xkiro', 'qwen3max', 'qwen3coder', 'mistral-xk',  // xKiro free tier — live-verified
+  'qwen3-groq', 'allam-groq', 'llama-groq', 'mixtral-groq', // Groq free tier — live-verified (gpt-oss/qwen3.8/allam)
+  'or-free', 'north-code', 'laguna', 'flint', 'gemma4',     // OpenRouter free tier — live-verified
   'gemini-flash',                                   // Google free tier
   'cloudflare',                                     // Workers AI free tier
   'mistral7b',                                      // HuggingFace free tier
+  'flowise',                                        // self-hosted Flowise agent flow (free; only when configured)
 ];
-const PREMIUM_EXTRA = ['kimi', 'zai', 'deepseek2', 'llama-together', 'gemini-pro', 'cheaperinference', 'openai', 'claude'];
+// Premium tail: paid/dedicated providers. The five legacy OpenRouter slots
+// (deepseek/qwen/llama/gemma/mistral) moved here — their ":free" model ids
+// were retired upstream, the paid ids bill the operator's balance, so they
+// must never ride the FREE rotation.
+const PREMIUM_EXTRA = ['kimi', 'zai', 'deepseek2', 'llama-together', 'gemini-pro', 'cheaperinference', 'openai', 'claude', 'deepseek', 'qwen', 'llama', 'gemma', 'mistral', 'phi4'];
 // Quality-ordered premium tail for Unlimited: best models first.
 const ULTIMATE_EXTRA = ['zai', 'kimi', 'claude', 'cheaperinference', 'openai', 'gemini-pro', 'deepseek2'];
 
@@ -58,6 +63,18 @@ const CONFIG_CHECKS = {
   'deepseek-local': () => true,
   omniroute:        () => omnirouteUsable(),
   xkiro:            () => !!(process.env.XKIRO_API_KEY || setting('ai_xkiro_key')),
+  qwen3max:         () => !!(process.env.XKIRO_API_KEY || setting('ai_xkiro_key')),
+  qwen3coder:       () => !!(process.env.XKIRO_API_KEY || setting('ai_xkiro_key')),
+  'mistral-xk':     () => !!(process.env.XKIRO_API_KEY || setting('ai_xkiro_key')),
+  'qwen3-groq':     () => !!(process.env.GROQ_API_KEY || setting('ai_groq_key')),
+  'allam-groq':     () => !!(process.env.GROQ_API_KEY || setting('ai_groq_key')),
+  'or-free':        () => !!(process.env.OPENROUTER_API_KEY || setting('ai_openrouter_key')),
+  'north-code':     () => !!(process.env.OPENROUTER_API_KEY || setting('ai_openrouter_key')),
+  laguna:           () => !!(process.env.OPENROUTER_API_KEY || setting('ai_openrouter_key')),
+  flint:            () => !!(process.env.OPENROUTER_API_KEY || setting('ai_openrouter_key')),
+  gemma4:           () => !!(process.env.OPENROUTER_API_KEY || setting('ai_openrouter_key')),
+  phi4:             () => !!(process.env.OPENROUTER_API_KEY || setting('ai_openrouter_key')),
+  flowise:          () => !!((process.env.FLOWISE_BASE_URL || setting('ai_flowise_url')) && (process.env.FLOWISE_CHATFLOW_ID || setting('ai_flowise_flow'))),
   cheaperinference: () => !!(process.env.CHEAPERINFERENCE_API_KEY || setting('ai_ci_key')),
   cloudflare:       () => !!((process.env.CLOUDFLARE_ACCOUNT_ID || setting('ai_cloudflare_account')) && (process.env.CLOUDFLARE_API_TOKEN || setting('ai_cloudflare_token'))),
   kimi:             () => !!(process.env.KIMI_API_KEY || setting('ai_kimi_key')),
@@ -106,9 +123,10 @@ const cooldowns = new Map(); // provider id → until (epoch ms)
 // the whole group fails identically — cool (or skip) them together so the
 // chain doesn't hammer the same API five times with the same dead key.
 const UPSTREAM_GROUPS = {
-  openrouter: ['deepseek', 'qwen', 'llama', 'gemma', 'mistral'],
-  groq:       ['llama-groq', 'mixtral-groq'],
+  openrouter: ['deepseek', 'qwen', 'llama', 'gemma', 'mistral', 'or-free', 'north-code', 'laguna', 'flint', 'gemma4', 'phi4'],
+  groq:       ['llama-groq', 'mixtral-groq', 'qwen3-groq', 'allam-groq'],
   gemini:     ['gemini-flash', 'gemini-pro'],
+  xkiro:      ['xkiro', 'qwen3max', 'qwen3coder', 'mistral-xk'],
 };
 function upstreamOf(id) {
   for (const [up, ids] of Object.entries(UPSTREAM_GROUPS)) if (ids.includes(id)) return up;

@@ -43,12 +43,17 @@ fi
 
 # Real chat round-trip
 BODY="{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with exactly: JAPAQUEST-AI-OK\"}],\"ground\":false}"
-RESP=$(curl -s --max-time 60 -X POST "$BASE/api/ai/chat" \
+# 180s budget: model=auto walks the whole rotation pool (several providers
+# may fail fast before a slow free-tier one answers) — the assertion is a
+# real reply, not a latency target.
+RESP=$(curl -s --max-time 180 -X POST "$BASE/api/ai/chat" \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$BODY")
 
-# chat route returns { reply, servedBy } on success, { error } on failure
+# chat route returns { text, servedBy } on success, { error } on failure
+# (older docs said { reply } — `text` is the field the dashboard reads too;
+#  `reply` is kept as a tolerated alias for any client still using it.)
 ERR=$(node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const j=JSON.parse(d);console.log(j.error||"")}catch{console.log("unparseable response")}})' <<<"$RESP")
-REPLY=$(node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const j=JSON.parse(d);console.log((j.reply||"").slice(0,200))}catch{}})' <<<"$RESP")
+REPLY=$(node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const j=JSON.parse(d);console.log((j.text||j.reply||"").slice(0,200))}catch{}})' <<<"$RESP")
 SERVED=$(node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const j=JSON.parse(d);console.log(j.servedBy||"")}catch{}})' <<<"$RESP")
 
 if [ -n "$REPLY" ]; then

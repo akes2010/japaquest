@@ -288,7 +288,9 @@ app.use('/api/', (req,res,next) => {
 
 // ── ROUTES ────────────────────────────────────────────────────────────────────
 app.use('/api/auth',   require('./routes/auth'));
-app.use('/api/ai',     require('./routes/ai'));
+const aiRoutes = require('./routes/ai');
+app.use('/api/ai',     aiRoutes);
+app.use('/v1',         aiRoutes.v1Router); // OpenAI-compatible surface (Qoder/Kiro/LangChain/arena-bridge clients)
 app.use('/api/user',   require('./routes/user'));
 app.use('/api/admin',  require('./routes/admin'));
 app.use('/api/travel', require('./routes/travel'));
@@ -610,6 +612,8 @@ async function start() {
   warnEmptyAiPool(); // audit the plan pools before the first chat hits a dead end
   app.listen(PORT, () => {
     const name = Q.getSetting('app_name')||BRAND.NAME;
+    const adm = Q.queryAllSafe(`SELECT email FROM users WHERE role='admin' ORDER BY id LIMIT 1`)[0];
+    const admWho = (adm && adm.email) || 'no admin seeded';
     console.log(`
 ╔══════════════════════════════════════════════════════╗
 ║   ${name.padEnd(50)} ║
@@ -620,7 +624,8 @@ async function start() {
 ║  Admin:    http://localhost:${PORT}/admin              ║
 ║  Japa:     http://localhost:${PORT}/admin-japa         ║
 ╠══════════════════════════════════════════════════════╣
-║  Admin:    admin@jagaguru.ai / Admin@1234!           ║
+║  Admin:    ${admWho.padEnd(42)}║
+║  Reset:    node reset-admin.js '<email>' '<password>'║
 ╚══════════════════════════════════════════════════════╝
     `);
   });
